@@ -1,7 +1,8 @@
 # FULLA — Requirements Digest (MVP)
 
-**Sources:** [`docs/requirements.md`](../requirements.md) (journeys, story map, scope) and the 16 MVP stories in [`user stories/`](../../user%20stories/UserStoriesREADME.md).
-**Scope rule:** only stories marked **In Scope** are treated as requirements. Out-of-Scope stories (US-02…07, US-11…15, US-17, US-18, US-20, US-23, US-24, US-27…30) are cited only where they explain *why* something is absent.
+**Sources:** [`docs/requirements.md`](../requirements.md) (journeys, story map, scope) and the 19 MVP stories in [`user stories/`](../../user%20stories/UserStoriesREADME.md).
+**Revision 28.10.2026:** US-02 and US-03 (buyer registration/login with favourites transfer) moved to In Scope; US-21.1 (brand login/logout) added; gaps G-01, G-02, G-04…G-22 closed in the stories or ADRs (see §4 status column). The original analysis text below is kept and marked where it changed.
+**Scope rule:** only stories marked **In Scope** are treated as requirements. Out-of-Scope stories (US-04…07, US-11…15, US-17, US-18, US-20, US-23, US-24, US-27…30) are cited only where they explain *why* something is absent.
 **Conventions:**
 - `US-xx S1/S2` = Scenario 1 (Happy Path) / Scenario 2 (Edge Case); `US-xx CL` = business-rule checklist.
 - Requirement quotes are translated from Ukrainian. **UI strings are kept verbatim in Ukrainian** because they are literal requirements (button labels, messages).
@@ -15,12 +16,13 @@ The journeys in §1–2 of `requirements.md` describe more than the MVP. The fol
 
 | Journey text | Why it is not a requirement |
 |---|---|
-| Buyer step 1: "register via email so my preferences are saved" | US-02, US-03 Out of Scope — "storage within the session is sufficient". Buyer is anonymous. |
 | Buyer step 2: categories, size, brand selection | US-04…07 Out of Scope — "in MVP a shared catalog". |
 | Buyer step 4: card "flips", composition, size chart, availability of S | US-13, US-14, US-15 Out of Scope — "in MVP basic data on the front side" (name, brand, price; US-08.2). |
 | Buyer step 5: "compare prices and composition, delete unneeded items" | US-17, US-18 Out of Scope. Favorites are **append-only** in MVP. |
 | Brand step 3: "composition, sizes XS–M with availability" | US-14 Out of Scope; card has no composition/size attributes. |
 | Brand steps 2, 4, 5: site connection, auto-sync of stock/prices | Explicitly Post-MVP (note under Brand Journey). "In MVP the brand adds products manually … and updates availability and prices itself." |
+
+**Buyer step 1 ("register via email so my preferences are saved") is a requirement since 28.10.2026** (US-02, US-03). Registration is **optional**: every buyer function works anonymously and the registration form is never shown before the feed. Anonymous favourites live in the browser and move into the account on registration or login. Previously: "US-02, US-03 Out of Scope — storage within the session is sufficient. Buyer is anonymous."
 
 ---
 
@@ -44,7 +46,7 @@ The identity of a brand owner ("власниця бренду").
 
 On success: "a brand cabinet is created, and the user is automatically redirected to the profile completion page" (US-21 CL). No other account state (verified / blocked / deleted) is mentioned.
 
-> There is **no login story** for brands (see Gap G-01).
+> ~~There is **no login story** for brands (see Gap G-01).~~ Resolved: US-21.1 adds brand login and logout (no password reset in MVP).
 
 ### 1.2. Brand Profile
 
@@ -129,9 +131,9 @@ Feed screen states (per buyer session):
 | **Catalog exhausted** | Last card liked or skipped | «Ви переглянули всі доступні речі» + active button to «Вподобане» | US-08.1 CL, S2 |
 | **Catalog empty** (0 published cards) | — | **Not specified** (Gap G-10) | — |
 
-### 1.5. Buyer Session (anonymous)
+### 1.5. Buyer Session (anonymous by default)
 
-Buyer has no account. All buyer state lives in "the storage of the current browser session" (US-09 CL).
+A buyer needs no account. Without one, all buyer state lives in "the storage of the current browser session" (US-09 CL). A buyer may register or log in (US-02, US-03); then favourites are also kept in the Buyer Account (§1.9), while viewing progress stays in the browser.
 
 | Attribute | Evidence | Source |
 |---|---|---|
@@ -175,6 +177,22 @@ The transition from FULLA to the brand's product page. Not a stored entity in th
 | Opening mode | New browser tab; FULLA tab stays open | US-19 CL, S1 |
 
 No click counting / reporting to the brand is required — the brand "sees on their side" via UTM (US-32 CL).
+
+### 1.9. Buyer Account (optional, added 28.10.2026)
+
+| Attribute | Constraint | Source |
+|---|---|---|
+| Email | Required; format `name@domain.tld`; unique among buyers | US-02 CL |
+| Password | Required; minimum 8 characters | US-02 CL |
+| Favourites | Set of product IDs; each product at most once | US-02 CL; US-03 CL |
+
+| From | To | Initiator | Condition / effect | Source |
+|---|---|---|---|---|
+| Anonymous | **Logged in** | Buyer, «Зареєструватися» | Valid, unused email + password ≥ 8; browser favourites move into the account | US-02 S1 |
+| Anonymous | (rejected) | Buyer | Email taken or malformed → «Цей email вже використовується або має некоректний формат»; browser favourites unchanged | US-02 S2 |
+| Anonymous | **Logged in** | Buyer, «Увійти» | Correct credentials; browser ∪ account favourites, each once | US-03 S1 |
+| Anonymous | (rejected) | Buyer | Wrong credentials → «Невірний email або пароль»; browser favourites unchanged | US-03 S2 |
+| Logged in | Anonymous | Buyer, «Вийти» | Session ends; favourites and progress cleared on this device | US-03 CL |
 
 ---
 
@@ -252,11 +270,11 @@ No click counting / reporting to the brand is required — the brand "sees on th
 
 | ID | NFR | Basis |
 |---|---|---|
-| NFR-01 | **Anonymous buyer access.** All buyer functions (start page, feed, like/skip, Favorites, redirect) work without authentication. | US-01.1 CL; US-01.2 CL; US-02/03 Out of Scope |
+| NFR-01 | **Anonymous buyer access.** All buyer functions (start page, feed, like/skip, Favorites, redirect) work without authentication; registration is optional and never precedes the feed. | US-01.1 CL; US-01.2 CL; US-02 CL |
 | NFR-02 | **Authenticated brand access.** The cabinet (profile, cards, publishing) must be accessible only to the owning brand. Implied by "account", "password", "cabinet"; not specified anywhere. | US-21; INV-07 |
 | NFR-03 | **Credential security.** Passwords must not be stored or transmitted in recoverable form; registration and login traffic must be protected. Implied by email+password (US-21) and the Out-of-Scope reason for US-02: "requires … secure data storage". | US-21; scope table US-02 |
 | NFR-04 | **Uniqueness under concurrency.** Email uniqueness (BR-31) must hold if two registrations with the same email arrive simultaneously — a check-then-insert is insufficient. | US-21 CL |
-| NFR-05 | **Client-side persistence of buyer state.** Favorites and progress survive reload and navigation (BR-04, BR-14) with no server-side buyer identity. | US-09 CL, S2; US-01.2 S2 |
+| NFR-05 | **Client-side persistence of buyer state.** Favorites and progress survive reload and navigation (BR-04, BR-14) with no server-side buyer identity for anonymous buyers. For registered buyers, favourites are also stored in the account and survive device changes. | US-09 CL, S2; US-01.2 S2; US-02, US-03 |
 | NFR-06 | **Input debouncing / idempotency.** Card actions must be idempotent per card: < 200 ms double-press counts once; a like can never create a duplicate. | US-10 S2; US-09 CL |
 | NFR-07 | **Publish-to-feed latency.** "immediately becomes available" — newly published cards must be visible to buyers without manual steps or a batch window. Same must reasonably apply to unpublishing (sold-out items). | US-31 CL |
 | NFR-08 | **Responsive layout.** Mobile from 320 px width and desktop; no horizontal scroll, no overlapping text. Explicit for the start page; the journey ("I open the site from my phone") implies it for the whole buyer flow. | US-01.1 CL, S2; Buyer Journey step 1 |
@@ -270,13 +288,38 @@ No click counting / reporting to the brand is required — the brand "sees on th
 | NFR-16 | **Localization.** UI in Ukrainian; prices in UAH with "грн". | All UI strings; US-08.2 CL |
 | NFR-17 | **Preview fidelity.** Brand preview must use the same rendering as the buyer feed ("the same template and proportions"), so the two must not drift. | US-25.2 CL |
 | NFR-18 | **Demo-scale capacity.** MVP is "an end-to-end set that the team implements and demonstrates"; catalog is manually curated ("in MVP different brands are added manually", US-11 note). No load, availability or performance targets are stated. | requirements.md §3 |
-| NFR-19 | **Data minimisation for buyers.** FULLA collects no buyer personal data (no account, no payment, address or size). | US-32 CL; US-02 Out of Scope |
+| NFR-19 | **Data minimisation for buyers.** Anonymous buyers: no personal data is collected. Registered buyers: only email, a non-recoverable password hash and the liked product IDs; never payment, address or size. The registration form states what is stored. | US-32 CL; US-02 CL |
 
 ---
 
 ## 4. Gaps and open questions
 
 Ordered by how strongly they block design. "Cheapest MVP answer" = the answer that needs the least new scope while keeping the stories consistent.
+
+**Status (28.10.2026):**
+
+| Gap | Status | Where |
+|---|---|---|
+| G-01 | Resolved | US-21.1; ADR-0006 |
+| G-02 | Resolved | US-25.1 CL (URL required), US-31 S2 rewritten |
+| G-03 | **Accepted risk** | `architecture/risks.md` R-P03 |
+| G-04, G-05 | Resolved: logo optional; active profile = brand name set | US-22.1 CL, US-22.2, US-25.1 CL/S1 |
+| G-06 | Resolved: published cards read-only | ADR-0009 (A-06) |
+| G-07 | Resolved: no deletion, only unpublish | US-31 CL |
+| G-08 | Resolved: consent locked in UI, operator can withdraw | ADR / risks R-P10 (A-08) |
+| G-09 | Resolved | A-09 (revised), US-02, US-03; ADR-0008, ADR-0012 |
+| G-10 | Resolved: empty catalog = "all viewed" state | US-08.1 CL |
+| G-11, G-12 | Resolved | ADR-0009 |
+| G-13 | Resolved: PNG/JPG/WEBP ≤ 5 MB, `https://` image URLs | US-22.1 CL, US-25.1 CL; ADR-0007 |
+| G-14 | Resolved: display "2400 грн" | US-08.2 CL; journeys in `requirements.md` |
+| G-15 | Resolved: product name 1–100 chars | US-25.1 CL |
+| G-16 | Resolved: `name@domain.tld` format | US-02 CL, US-21 CL |
+| G-17, G-18 | Resolved | ADR-0009; `architecture/integrations.md` |
+| G-19 | Resolved: buyer cards show brand name only | US-08.2 CL, US-22.1 CL |
+| G-20 | Resolved: «Вподобане» + buyer login on all buyer screens, not in the cabinet | US-16 CL |
+| G-21 | Resolved: login/logout only; no email/password change or deletion | US-21.1; ADR-0006 |
+| G-22 | Resolved: one account = one brand; buyer and brand accounts separate | ADR-0006 (A-03) |
+| G-23 | **Accepted risk** | `architecture/risks.md` (A-19) |
 
 | ID | Gap | Why it blocks | Cheapest MVP answer |
 |---|---|---|---|
@@ -320,7 +363,7 @@ Risk = impact on the design if the assumption turns out to be wrong.
 | A-06 | Published cards are read-only; to edit, unpublish → edit → republish. | G-06 | Low | Brands may find it clumsy; allowing edits of Published later is additive. |
 | A-07 | No card deletion; unpublish is the only removal. | G-07 | Low | Additive later; drafts may accumulate. |
 | A-08 | Consent cannot be withdrawn in the UI once given. | G-08 | Medium | A legal requirement to withdraw (consent must be revocable) would force "withdraw ⇒ unpublish all" logic. |
-| A-09 | Buyer session = this browser/device, shared across tabs, no expiry, survives reload and browser restart until site data is cleared. | G-09 | Medium | A "per-tab" or "expires" interpretation changes where state is kept and the US-01.2/US-09 test expectations. |
+| A-09 | Anonymous buyer session = this browser/device, shared across tabs, no expiry, survives reload and browser restart until site data is cleared. Registered buyer (US-02, US-03): favourites live in the account and are merged with the browser list on registration/login (each product once); viewing progress stays per device; logout clears favourites and progress on the device. | G-09 | Medium | A "per-tab" or "expires" interpretation changes where state is kept and the US-01.2/US-09 test expectations. |
 | A-10 | Feed order is a single fixed global order by publication time; newly published cards are appended at the end of a buyer's remaining feed; no personalisation, shuffling or brand interleaving. | G-12, G-11 | Medium | If "discover different brands" (journey step 3) is a demo goal, a few brands with many cards will dominate; changing ordering later affects progress tracking. |
 | A-11 | Favorites hold references; feed/Favorites always show current card data; unpublished favorites stay listed with the inactive «Тимчасово недоступно на сайті бренду» button. | G-11 | Medium | If snapshots are expected (buyer sees what they liked), data model changes; if unpublished items must disappear, US-19 S2 behaviour changes. |
 | A-12 | Empty catalog shows the "all viewed" state. | G-10 | Low | Only UI text. |
@@ -341,6 +384,8 @@ Risk = impact on the design if the assumption turns out to be wrong.
 |---|---|---|
 | US-01.1 | — (static) | BR-01, BR-02; NFR-01, NFR-08 |
 | US-01.2 | Buyer Session | BR-03, BR-04 |
+| US-02 | Buyer Account, Favorite Item | NFR-01, NFR-03, NFR-04, NFR-19; INV-04 |
+| US-03 | Buyer Account, Favorite Item, Buyer Session | NFR-03, NFR-05; INV-04 |
 | US-08.1 | Catalog/Feed, Card Impression | BR-05, BR-06, BR-07 |
 | US-08.2 | Product Card (display) | BR-08, BR-09, BR-10 |
 | US-09 | Card Impression, Favorite Item, Buyer Session | BR-11, BR-12, BR-13, BR-14; INV-04 |
@@ -348,6 +393,7 @@ Risk = impact on the design if the assumption turns out to be wrong.
 | US-16 | Favorite Item | BR-17, BR-18, BR-19 |
 | US-19 | Favorite Item, Outbound Redirect | BR-20, BR-21, BR-22 |
 | US-21 | Brand Account | BR-30…BR-33; NFR-03, NFR-04 |
+| US-21.1 | Brand Account | NFR-02, NFR-03; INV-07 |
 | US-22.1 | Brand Profile | BR-34…BR-38; INV-03 |
 | US-22.2 | Brand Profile (consent) | BR-39, BR-40; NFR-14 |
 | US-25.1 | Product Card | BR-41, BR-44 |
