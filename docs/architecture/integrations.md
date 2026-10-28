@@ -11,7 +11,7 @@ Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites
 | Brand-hosted image URLs | Link only (`<img src>`) | The image bytes, loaded by the browser | Buyer's / brand's browser | US-22.1, US-25.1 (URL variant) |
 | Image storage | Internal (Postgres) | — | Our API | US-22.1, US-25.1 (upload variant) |
 | Database | Infrastructure | Data storage | Our API | Always |
-| Hosting (Render) | Infrastructure, optional | Building the Docker image, running the Spring Boot JAR, TLS, URL | — | Public demo only |
+| Hosting (Render) | Infrastructure, optional step, not used for the demo | Building the Docker image, running the Spring Boot JAR, TLS, URL | — | Public demo only |
 | GitHub, Maven Central, npm registry, JDK/Node installers | Dev-time | Code, CI, Java and JS packages, embedded Postgres binaries, runtimes | Developers, CI | Development only |
 
 ---
@@ -45,14 +45,15 @@ Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites
 ## 4. Database
 
 - **Local:** embedded Postgres (zonky `embedded-postgres`), started by the Spring `dev` profile from binaries downloaded as a Maven dependency on first run; data in `backend/.data/pg`. No Docker, no account; offline after the first build.
-- **Deployed:** Neon Postgres free tier (no card), via `SPRING_DATASOURCE_URL` (TLS). Spring Session JDBC keeps login sessions here too (ADR-0006). Neon suspends idle compute; the first query after idle takes slightly longer.
+- **Deployed (optional step, ADR-0010):** Neon Postgres free tier (no card), via `SPRING_DATASOURCE_URL` (TLS). Neon suspends idle compute; the first query after idle takes slightly longer.
 - **Kind:** infrastructure (Postgres protocol), not a product integration.
 - **If unavailable:** Spring Boot does not start without the DB (Flyway runs on startup). If the DB drops while running, the API returns `503` with the envelope `{ error: { code: "SERVICE_UNAVAILABLE" } }`. The feed and «Вподобане» show an error state with a retry button. The buyer's local favourite IDs are kept in localStorage and appear again once the DB is back. Cabinet forms keep the entered data.
 
 ## 5. Hosting
 
-- **Render free web service** (optional public URL, ADR-0010): builds the multi-stage Dockerfile on Render (no local Docker) and runs the Spring Boot JAR with the React build inside; one origin serves the SPA and `/api`. 512 MB RAM (R-T15).
-- **If unavailable or asleep:** cold start ~1–2 min (R-T02); fallback is a `cloudflared` quick tunnel from a laptop running the local app (no account). The local launch never depends on hosting.
+- **Not used for the demo.** The demo runs on a laptop (ADR-0010); the phone opens it over the same Wi-Fi.
+- **Render free web service** (documented optional step, ADR-0010): builds the multi-stage Dockerfile on Render (no local Docker) and runs the Spring Boot JAR with the React build inside; one origin serves the SPA and `/api`. 512 MB RAM (R-T15); in-memory sessions are lost on every sleep (ADR-0006).
+- **If unavailable or asleep:** cold start ~1–2 min (R-T02); a `cloudflared` quick tunnel from the laptop gives a temporary link instead (no account). The local launch never depends on hosting.
 
 ## 6. Development-time dependencies
 

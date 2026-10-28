@@ -8,7 +8,7 @@ Two Java developers and two React developers, all at a basic level, have ~7 week
 
 ## Options
 1. **React SPA built into the Spring Boot app (one origin); package-by-feature backend, feature folders in the frontend.**
-   + Each pair owns one folder; the contract (OpenAPI, ADR-0005) is explicit; no CORS.
+   + Each pair owns one folder; the contract (`docs/contracts/api.md`, ADR-0005) is explicit; no CORS.
    − The frontend build must be copied into the JAR for deploys (ADR-0010).
 2. **SPA and API deployed separately.**
    + Independent deploys.
@@ -24,7 +24,7 @@ Option 1.
 - One deliberate abstraction: `ImageStore`. No other interfaces "for the future".
 
 ## Consequences
-- **Simpler:** both pairs work in parallel from week 1 against the committed OpenAPI file. A story maps to one package and one feature folder, so Claude Code prompts can name them.
+- **Simpler:** both pairs work in parallel from week 1 against `docs/contracts/api.md`. A story maps to one package and one feature folder, so Claude Code prompts can name them.
 - **Harder:** the contract must be agreed before screens are wired; the two apps are deployed as one artifact (ADR-0010).
 - **Postponed:** domain isolation, multiple services.
 

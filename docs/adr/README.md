@@ -8,15 +8,15 @@ Short records of decisions that are expensive to reverse. Options and ratings ar
 |---|---|---|
 | [0001](0001-architecture-style.md) | Architecture style: React SPA served by a Spring Boot API, package-by-feature | Proposed |
 | [0002](0002-platform-responsive-web.md) | Platform: responsive mobile-first web | Proposed |
-| [0003](0003-repository-structure.md) | Repository structure: `backend/`, `frontend/`, committed OpenAPI contract | Proposed |
+| [0003](0003-repository-structure.md) | Repository structure: `backend/`, `frontend/`, contract in `docs/contracts/api.md` | Proposed |
 | [0004](0004-postgres-embedded-neon-jdbcclient.md) | Postgres (Neon deployed, embedded locally) + Flyway + `JdbcClient` | Proposed |
-| [0005](0005-backend-spring-boot-rest-openapi.md) | Backend: Spring Boot 3, REST, Bean Validation, error envelope, OpenAPI | Proposed |
-| [0006](0006-auth-spring-security-jdbc-sessions.md) | Auth: Spring Security, BCrypt, Spring Session JDBC, one cookie | Proposed |
+| [0005](0005-backend-spring-boot-rest.md) | Backend: Spring Boot 3, REST, Bean Validation, error envelope, hand-written contract | Proposed |
+| [0006](0006-auth-spring-security-sessions.md) | Auth: Spring Security, BCrypt, in-memory sessions, one cookie | Proposed |
 | [0007](0007-image-storage-in-db.md) | Image storage in Postgres behind `ImageStore` | Proposed |
 | [0008](0008-frontend-stack.md) | Frontend stack | Proposed |
 | [0009](0009-consistency-and-concurrency.md) | Consistency and concurrency rules | Proposed |
-| [0010](0010-deployment-and-hosting.md) | Deployment and hosting | Proposed |
-| [0011](0011-quality-and-tooling.md) | Quality and tooling | Proposed |
+| [0010](0010-deployment-and-hosting.md) | Deployment: local demo; Render + Neon optional | Proposed |
+| [0011](0011-quality-and-tooling.md) | Quality and tooling: minimal CI | Proposed |
 | [0012](0012-buyer-accounts-favorites-sync.md) | Buyer accounts and moving «Вподобане» to the server | Proposed |
 | [0013](0013-frontend-language-typescript.md) | Frontend language: TypeScript (strict) | Proposed |
 
@@ -28,7 +28,7 @@ Write one when **at least one** is true:
 
 - reversing it later would take more than ~1 day of work or touch both `backend/` and `frontend/`;
 - it adds an external service, an account, or a runtime/tool that every developer must install;
-- it changes a shared contract: DB schema conventions, API/error format, `contract/openapi.json`;
+- it changes a shared contract: DB schema conventions, API/error format, `docs/contracts/api.md`;
 - it resolves a gap from `requirements-digest.md` in a way that affects code (e.g. "Favorites are references");
 - two team members disagreed and the answer must not be re-argued.
 

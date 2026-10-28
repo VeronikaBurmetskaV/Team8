@@ -21,7 +21,7 @@ Key fact: favourites are **append-only** in the MVP (removal, US-17, is Out of S
 
 ## Decision
 Option 1.
-- **Data:** `buyer_accounts(id, email UNIQUE (normalized), password_hash)` and `favorites(buyer_id, product_id, created_at, PRIMARY KEY (buyer_id, product_id))`. Auth (Spring Security, BCrypt, JDBC sessions) is shared with brands (ADR-0006). The account tables are separate, and there is **one session cookie** whose principal records the account type.
+- **Data:** `buyer_accounts(id, email UNIQUE (normalized), password_hash)` and `favorites(buyer_id, product_id, created_at, PRIMARY KEY (buyer_id, product_id))`. Auth (Spring Security, BCrypt, in-memory server sessions) is shared with brands (ADR-0006). The account tables are separate, and there is **one session cookie** whose principal records the account type.
 - **API:** `POST /api/buyer/register|login|logout`; `GET /api/me/favorites`; `POST /api/me/favorites` with `{ productIds: uuid[] }` (max 500) → `INSERT … ON CONFLICT DO NOTHING` via `JdbcClient` (ADR-0004), unknown IDs ignored, returns the full list. The same endpoint is used for a single like and for the merge.
 - **Merge on register/login:** the client sends its local `favoriteIds`; the response (server ∪ local) replaces the local set.
 - **Like while logged in:** the local set is updated first (instant counter, US-09 S1), then `POST [id]`. If the request fails, the ID stays local and is re-sent on the next sync (app start, window focus). Double clicks are harmless thanks to the primary key.

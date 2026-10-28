@@ -3,6 +3,7 @@
 **Purpose:** rate the options for every technical decision against **our** constraints, not against general best practice. Each decision is fixed in an ADR (`docs/adr/`).
 **Inputs:** [`requirements-digest.md`](requirements-digest.md) (assumptions A-01…A-20, revised 28.10.2026), [`../requirements.md`](../requirements.md), MVP stories in [`user stories/`](../../user%20stories/UserStoriesREADME.md).
 **Revision 28.10.2026:** the backend language changed from Node.js to **Java**. The team's preferred stack (Java 21, Spring Boot 3, Maven Wrapper, Spring Data JPA + Flyway, Neon + embedded Postgres, Spring Security + BCrypt + JDBC sessions, springdoc-openapi + openapi-typescript, JUnit 5 + MockMvc, Render Dockerfile + Neon, GitHub Actions) is rated below against alternatives, not accepted as given. Where the rating disagrees (data access, D3b), the reason is stated.
+**Simplification 28.10.2026:** for a 7-week MVP with a basic-level team, three choices were simplified without changing the core (Java 21 + Spring Boot, React + TypeScript, Postgres): in-memory sessions instead of Spring Session JDBC (D5), hand-written FE types from `docs/contracts/api.md` instead of OpenAPI generation (D4), and a local-only demo with Render + Neon as a documented optional step (D9). CI is minimal (D10). The rejected options stay in the tables, marked as postponed.
 
 ## Constraints used for rating
 
@@ -11,7 +12,7 @@
 | **Sk** | Skills: 2 backend devs with **basic Java** (university courses); 2 frontend devs with **basic JS/React**; 1 designer, 1 lead. |
 | **Dl** | Deadline: 15 Dec 2026, about **7 weeks** from 28 Oct 2026. |
 | **St** | Stack: **Java** backend, **React** frontend (TypeScript or JavaScript, see D7a). |
-| **€0** | Budget: 0 UAH, **no bank card** for any service. A public URL is nice-to-have; local is the baseline. |
+| **€0** | Budget: 0 UAH, **no bank card** for any service. The demo is **local only**; hosting is a documented optional step. |
 | **Lo** | Local start as simple as possible after `git clone`; **no Docker** on every laptop. Each laptop must have JDK 21 and Node installed. Neither Maven Wrapper nor Gradle installs a JDK. |
 | **CC** | Claude Code writes most of the code: well-known libraries, one obvious place for each thing, and code that a basic-level reviewer can still read. |
 
@@ -30,7 +31,7 @@ The backend is Java and the UI is React, so a JS full-stack framework (Next.js) 
 
 | Option | Sk | Dl | St | €0 | Lo | CC | Notes |
 |---|---|---|---|---|---|---|---|
-| **React SPA built into the Spring Boot app (one origin, one deployable)** | + | + | + | + | + | + | Each pair owns one folder; the contract is explicit (OpenAPI). Cookies work without CORS. |
+| **React SPA built into the Spring Boot app (one origin, one deployable)** | + | + | + | + | + | + | Each pair owns one folder; the contract is explicit (`docs/contracts/api.md`). Cookies work without CORS. |
 | SPA and API deployed separately (static host + API host) | + | 0 | + | + | + | 0 | Cross-origin cookies (`SameSite=None`, CORS, Safari third-party cookie blocking). |
 | Server-side templates (Thymeleaf) + React only for the swipe | 0 | − | + | + | + | 0 | Two UI technologies; FE devs would write Thymeleaf; the preview must match the feed card (NFR-17). |
 
@@ -81,12 +82,12 @@ Unchanged by the language switch.
 
 | Option | Sk | Dl | St | €0 | Lo | CC | Notes |
 |---|---|---|---|---|---|---|---|
-| **One repo: `backend/` (Maven Wrapper) + `frontend/` (Vite) + `contract/openapi.json` + root `package.json` with scripts only** | + | + | + | + | + | + | Each pair works in its own folder with its own tool. Root `npm install` + `npm run dev` starts both. |
+| **One repo: `backend/` (Maven Wrapper) + `frontend/` (Vite) + `docs/contracts/api.md` + root `package.json` with scripts only** | + | + | + | + | + | + | Each pair works in its own folder with its own tool. Root `npm install` + `npm run dev` starts both. |
 | Maven multi-module, `frontend-maven-plugin` builds the React app | 0 | 0 | + | + | + | 0 | One build tool, but FE devs run Maven for every change and Maven downloads its own Node. Slower FE dev loop. |
 | Two repositories (frontend, backend) | 0 | − | + | + | − | − | The contract is copied between repos; two clones; Claude Code sees half the system. |
 
 - **Tipping criterion:** each pair uses its native tool (Maven, npm) day to day, with one clone and one start command.
-- **Would change if:** the team wanted a single `./mvnw package` to produce everything locally. The Dockerfile (D9) already does that for deploys.
+- **Would change if:** the team wanted a single `./mvnw package` to produce everything locally. The optional Dockerfile (D9) would do that for deploys.
 
 ---
 
@@ -129,31 +130,31 @@ The three operations that carry our invariants are plain SQL: the conditional pu
 | Option | Sk | Dl | St | €0 | Lo | CC | Notes |
 |---|---|---|---|---|---|---|---|
 | **Spring Boot 3 (Java 21 LTS)** | + | + | + | + | + | + | Taught in many courses; huge ecosystem; Claude Code knows it best. Check the OSS support status of the latest 3.x at setup. If 3.x is out of support, Boot 4 changes nothing in these ADRs. |
-| Javalin | + | 0 | + | + | + | 0 | Tiny and explicit, but security, validation, sessions and OpenAPI are all hand-assembled. |
-| Micronaut / Quarkus | 0 | 0 | + | + | + | 0 | Fast startup and low memory (good for Render's 512 MB), but less familiar, with fewer examples. |
+| Javalin | + | 0 | + | + | + | 0 | Tiny and explicit, but security, validation and sessions are all hand-assembled. |
+| Micronaut / Quarkus | 0 | 0 | + | + | + | 0 | Fast startup and low memory, but less familiar, with fewer examples. |
 
 | Validation | Sk | Dl | CC | Notes |
 |---|---|---|---|---|
-| **Jakarta Bean Validation (`@NotBlank`, `@Size`, `@Email`, custom `@HttpUrl`) on request records** | + | + | + | Standard in Spring. Constraints also appear in the OpenAPI schema (length, pattern). |
+| **Jakarta Bean Validation (`@NotBlank`, `@Size`, `@Email`, custom `@HttpUrl`) on request records** | + | + | + | Standard in Spring. |
 | Manual checks in services | + | 0 | − | Inconsistent, easy to forget. |
 
 Rules are now written twice: Bean Validation in the backend, form schema in the frontend (D7). The backend is the authority; drift is caught by tests (R-T17).
 
 | Error format | Sk | Dl | CC | Notes |
 |---|---|---|---|---|
-| **Own envelope `{ error: { code, message, fields? } }` via `@RestControllerAdvice`** | + | + | + | Kept from the original design (language-independent API contract). `code` is an enum exported in OpenAPI. `message` is developer-facing English; **Ukrainian UI texts live in the frontend, keyed by `code`.** |
+| **Own envelope `{ error: { code, message, fields? } }` via `@RestControllerAdvice`** | + | + | + | Kept from the original design (language-independent API contract). `code` is a Java enum listed in `docs/contracts/api.md`. `message` is developer-facing English; **Ukrainian UI texts live in the frontend, keyed by `code`.** |
 | Spring `ProblemDetail` (RFC 9457) | + | + | + | Built into Spring 6, but we would still add `code`/`fields` as extensions, and the frontend already expects the envelope. |
 
 | FE contract | Sk | Dl | CC | Notes |
 |---|---|---|---|---|
-| **springdoc-openapi → committed `contract/openapi.json` → `openapi-typescript` types + `openapi-fetch` client** | 0 | + | + | Types only, no generated runtime code. FE can work from the committed file without running the backend. CI regenerates and fails on diff. |
+| **`docs/contracts/api.md` (method, path, auth, request/response JSON, error codes, one example per endpoint) → hand-written `frontend/src/api/types.ts`** | + | + | 0 | Nothing to generate or set up; readable by the whole team. Drift is possible and is caught by review and by MockMvc tests that assert the JSON field names of the `api.md` examples (R-T12). |
+| springdoc-openapi → `openapi.json` → `openapi-typescript` types (postponed) | 0 | 0 | + | Types can't drift, but adds a generation step, committed generated files and a CI drift check. Can be added later without changing endpoints. |
 | openapi-generator full TS client | 0 | 0 | 0 | Large generated code base; harder to read. |
-| Hand-written TS types | + | 0 | − | Drift guaranteed. |
 
 API style stays **REST/JSON**; endpoints and error codes are unchanged (ADR-0005).
 
-- **Tipping criterion:** the most familiar Java framework, and a contract the FE gets as generated types.
-- **Would change if:** Render memory or cold start became the blocker (then Micronaut/Quarkus), or the frontend moved to JS (then generated types lose most of their value, D7a).
+- **Tipping criterion:** the most familiar Java framework, and a contract that needs no tooling in a 7-week project.
+- **Would change if:** hand-written types drift repeatedly (then add OpenAPI generation), or a JVM host's memory became the blocker (then Micronaut/Quarkus).
 
 ---
 
@@ -163,17 +164,17 @@ Buyers: everything works **without an account** (NFR-01); optional registration 
 
 | Option | Sk | Dl | €0 | Lo | CC | Notes |
 |---|---|---|---|---|---|---|
-| **Spring Security + `BCryptPasswordEncoder` + Spring Session JDBC (sessions in Postgres), one session cookie** | 0 | + | + | + | + | The standard Spring way; sessions survive Render restarts and sleep; logout invalidates the row. Configuring JSON login, two account types and CSRF for an SPA is the hardest part of the backend. |
-| Spring Security with in-memory `HttpSession` | 0 | + | + | + | + | **Every login is lost when the free Render instance sleeps (~15 min idle) or redeploys.** |
+| **Spring Security + `BCryptPasswordEncoder` + default in-memory `HttpSession`, one session cookie** | 0 | + | + | + | + | The textbook Spring Security setup; no extra dependency or tables; logout invalidates the session. **A server restart logs everyone out**: accepted for a local demo. Configuring JSON login, two account types and CSRF for an SPA is still the hardest part of the backend. |
+| Spring Security + Spring Session JDBC (sessions in Postgres) (postponed) | 0 | 0 | + | + | + | Logins survive restarts and host sleep. Needed only if the app is deployed to a sleeping free host; adding it later is one dependency + one migration. |
 | Own servlet filter + sessions table | 0 | 0 | + | + | 0 | Fewer concepts, but re-implements what Spring Security already does correctly (session fixation, CSRF). |
 | JWT (stateless) | 0 | 0 | + | + | 0 | Logout can't revoke; refresh-token handling; more for the FE to manage. |
 
 | CSRF for the SPA | Notes |
 |---|---|
-| **CSRF on, cookie token repository (`XSRF-TOKEN` cookie → `X-XSRF-TOKEN` header added by an `openapi-fetch` middleware)** | Spring's default protection kept; one small FE middleware. |
+| **CSRF on, cookie token repository (`XSRF-TOKEN` cookie → `X-XSRF-TOKEN` header added by the frontend `fetch` client)** | Spring's default protection kept; a few lines in the FE client. |
 | CSRF off, relying on `SameSite=Lax` + same origin + JSON-only endpoints | Simpler, but turns off a default that Claude Code-generated code would otherwise rely on. |
 
-- **Tipping criterion:** sessions must survive the free host sleeping, and logout must really end the session.
+- **Tipping criterion:** the demo is local (D9), so sessions don't need to survive host sleep; the simplest setup where logout really ends the session wins.
 - **Would change if:** password reset or email verification became required (adds an email provider), or the API had to serve a separate mobile client (then tokens).
 
 ### D5b. Buyer accounts: what moves to the server, and how
@@ -218,8 +219,8 @@ Both stories allow **"upload or URL"** (`https://` image URLs; PNG/JPG/WEBP ≤ 
 |---|---|---|
 | Build | **Vite** (+/+/+) · Create React App (deprecated, −) | Vite |
 | Routing | **React Router** (+/+/+) · TanStack Router (0/0/+) | React Router |
-| Server data | **TanStack Query + `openapi-fetch`** (0/+/+: cache, refetch on focus that D8 relies on, typed calls) · SWR (0/+/0) · `fetch` + `useEffect` (+/−/−) | TanStack Query + openapi-fetch |
-| API types | **generated from `contract/openapi.json`** (D4) · hand-written (−) | generated |
+| Server data | **TanStack Query + a small typed `fetch` client** (0/+/+: cache, refetch on focus that D8 relies on) · SWR (0/+/0) · `fetch` + `useEffect` (+/−/−) | TanStack Query + `fetch` client |
+| API types | **hand-written `src/api/types.ts` from `docs/contracts/api.md`** (+/+/0) · generated from OpenAPI (postponed, D4) | hand-written |
 | Error texts | **`frontend/src/shared/messages.uk.ts`: `Record<ErrorCode, string>`**, so a new backend code without a Ukrainian text fails the typecheck · texts sent by the backend (moves UI copy into Java) | frontend map |
 | Styles | **CSS Modules + CSS variables for design tokens** (+/+/+) · Tailwind (0/+/+) · Mantine/MUI (0/+/0) | CSS Modules |
 | Swipe gestures | **`motion` drag** (+/+/+) · `@use-gesture` + `react-spring` (0/0/0) · `react-tinder-card` (+/+/0) · pointer events by hand (−/−/0) | `motion` |
@@ -234,13 +235,13 @@ Both stories allow **"upload or URL"** (`https://` image URLs; PNG/JPG/WEBP ≤ 
 
 | Option | Sk | Dl | St | CC | Notes |
 |---|---|---|---|---|---|
-| **TypeScript, `strict`** | 0 | + | + | + | The generated API types and `Record<ErrorCode, string>` only help in TS. `tsc` in CI catches the wrong field names and nulls that Claude Code produces. FE devs mostly read and adjust code, and reading TS is easier than writing it from scratch. |
+| **TypeScript, `strict`** | 0 | + | + | + | Typed API calls and `Record<ErrorCode, string>` only help in TS. `tsc` in CI catches the wrong field names and nulls that Claude Code produces. FE devs mostly read and adjust code, and reading TS is easier than writing it from scratch. |
 | TypeScript, non-strict | + | + | + | 0 | Fewer red squiggles for beginners; misses `null`/`undefined` bugs, which are the most common ones. |
 | JavaScript + JSDoc `// @ts-check` | 0 | 0 | + | 0 | Type checking with JS syntax; JSDoc types are verbose and less familiar than TS. |
-| Plain JavaScript | + | 0 | + | − | Nothing to learn, but contract changes surface only at runtime; generated types are useless. |
+| Plain JavaScript | + | 0 | + | − | Nothing to learn, but contract changes surface only at runtime; API types can't be checked. |
 
 - **Tipping criterion:** Claude Code writes most of the code. A compiler that rejects inconsistent code is cheaper than reviewers finding it.
-- **Would change if:** after week 1 the FE devs can't work with strict TS. Then relax to non-strict, but keep TS so the generated types still work.
+- **Would change if:** after week 1 the FE devs can't work with strict TS. Then relax to non-strict, but keep TS so the API types still work.
 
 ---
 
@@ -274,17 +275,18 @@ The rules are language-independent and unchanged (ADR-0009). Only the "how" colu
 | Docker Compose | 0 | − | + | Not on every laptop. |
 | Separate terminals (`./mvnw spring-boot:run`, `npm run dev` in `frontend/`) | + | 0 | + | Works, but two commands; kept as the documented fallback. |
 
-### Public (nice-to-have)
+### Public URL (optional, not part of the demo plan)
 
 | Option | Sk | Dl | €0 | CC | Notes |
 |---|---|---|---|---|---|
-| **Render free web service, built from a multi-stage Dockerfile on Render (Node stage builds React → Maven stage packages the JAR with the build in `static/` → JRE runtime) + Neon** | 0 | + | + | + | No local Docker needed: Render builds it. One origin. **512 MB RAM:** needs JVM memory flags. Cold start after ~15 min idle: ~1–2 min (instance wake + Spring startup). |
+| Render free web service, built from a multi-stage Dockerfile on Render (Node stage builds React → Maven stage packages the JAR with the build in `static/` → JRE runtime) + Neon (documented optional step) | 0 | 0 | + | + | No local Docker needed: Render builds it. One origin. 512 MB RAM needs JVM memory flags; cold start ~1–2 min; in-memory sessions are lost on every sleep (D5). |
+| **No public deploy: local demo, phone on the same Wi-Fi via Vite `--host`** | + | + | + | + | No accounts, no Dockerfile, no production-only bugs. Reviewers can't open it on their own. |
 | Vercel / Netlify | − | − | + | 0 | No Java runtime for the API; the frontend alone would be cross-origin. |
 | Static frontend host + API on Render | 0 | 0 | + | 0 | Cross-origin cookies and CSRF. |
-| Tunnel from the demo laptop (`cloudflared` quick tunnel, no account) | + | + | + | + | Zero deploy work; public only while the laptop runs. Fallback. |
+| Tunnel from the demo laptop (`cloudflared` quick tunnel, no account) | + | + | + | + | Zero deploy work; a temporary public link while the laptop runs. |
 
-- **Tipping criterion:** same origin for cookie auth, one deployable artifact, and a no-card JVM host. Render is the only no-card free option we know of that runs a Docker-built JVM service.
-- **Would change if:** Render required a card or the JVM didn't fit in 512 MB. Then use the tunnel for demos, or Micronaut/Quarkus for a smaller footprint (D4).
+- **Tipping criterion:** no story needs a public URL, and every hour spent on JVM hosting is taken from the stories.
+- **Would change if:** reviewers must open the app on their own devices. Then follow the optional Render + Neon step (ADR-0010) and add Spring Session JDBC first (D5).
 
 ---
 
@@ -294,12 +296,12 @@ The rules are language-independent and unchanged (ADR-0009). Only the "how" colu
 |---|---|---|
 | Backend tests | **JUnit 5 + Spring Boot Test + MockMvc against embedded Postgres** (zonky `embedded-database-spring-test`, no Docker) · Testcontainers (needs Docker, −) · H2 in tests (dialect gaps, −) | JUnit 5 + MockMvc + embedded Postgres |
 | Frontend tests | **Vitest** (shares Vite config; `withUtm`, reducer, form schemas) · Jest (ESM friction) · Playwright E2E (postpone; 1 smoke test if time allows) | Vitest |
-| Formatting / lint | **Backend: Spotless (google-java-format or palantir) checked in CI. Frontend: ESLint + Prettier** · Checkstyle (more rules to argue about) | Spotless + ESLint/Prettier |
+| Formatting / lint | **Frontend: ESLint + Prettier in CI. Backend: IDE formatter, no CI check** · Spotless check in CI (postponed) · Checkstyle (more rules to argue about) | ESLint/Prettier; Java formatting by review |
 | Types | **`tsc --noEmit` strict** (D7a) | strict |
-| CI | **GitHub Actions: `setup-java` (21, Maven cache) + `setup-node`; `./mvnw verify`; frontend lint/typecheck/test; contract drift check (regenerate `openapi.json` and TS types, `git diff --exit-code`)** · none | GitHub Actions |
-| FE/BE contract | **OpenAPI from springdoc, committed** (D4) · none | OpenAPI |
+| CI | **Minimal GitHub Actions: `setup-java` (21, Maven cache) + `setup-node`; `./mvnw verify`; frontend lint/typecheck/test** · + contract drift and Spotless checks (postponed) · none | minimal GitHub Actions |
+| FE/BE contract | **`docs/contracts/api.md` + PR checklist + MockMvc JSON-field tests** (D4) · generated OpenAPI with drift check (postponed) | `api.md` + review |
 
-- **Tipping criterion:** catch contract drift and inconsistent generated code automatically, on every PR, without Docker.
+- **Tipping criterion:** CI that a basic-level team can set up in half a day and keep green, without Docker; everything else is checked in review.
 
 ---
 
@@ -309,14 +311,14 @@ The rules are language-independent and unchanged (ADR-0009). Only the "how" colu
 |---|---|---|---|---|
 | D0 | Architecture style | React SPA served by Spring Boot (one origin); backend package-by-feature; frontend feature folders | Team shape 2 Java + 2 React; cookie auth | [0001](../adr/0001-architecture-style.md) |
 | D1 | Platform | Responsive mobile-first web, one React app | Buyer arrives via a link; preview = feed renderer | [0002](../adr/0002-platform-responsive-web.md) |
-| D2 | Repository | One repo: `backend/` (Maven Wrapper) + `frontend/` (Vite) + `contract/` + root scripts | Each pair uses its own tool; one start command | [0003](../adr/0003-repository-structure.md) |
+| D2 | Repository | One repo: `backend/` (Maven Wrapper) + `frontend/` (Vite) + `docs/contracts/api.md` + root scripts | Each pair uses its own tool; one start command; nothing generated | [0003](../adr/0003-repository-structure.md) |
 | D3 | Data store + access | Neon + embedded Postgres locally; Flyway; **`JdbcClient` (not JPA)** | No Docker, same dialect; invariants live in SQL | [0004](../adr/0004-postgres-embedded-neon-jdbcclient.md) |
-| D4 | Backend | Spring Boot 3, Java 21, Bean Validation, error envelope, springdoc → openapi-typescript | Familiar framework; generated FE contract | [0005](../adr/0005-backend-spring-boot-rest-openapi.md) |
-| D5 | Auth | Spring Security + BCrypt + Spring Session JDBC, one cookie, CSRF cookie token | Sessions survive host sleep; real logout | [0006](../adr/0006-auth-spring-security-jdbc-sessions.md) |
+| D4 | Backend | Spring Boot 3, Java 21, Bean Validation, error envelope, hand-written contract in `docs/contracts/api.md` (OpenAPI postponed) | Familiar framework; no contract tooling | [0005](../adr/0005-backend-spring-boot-rest.md) |
+| D5 | Auth | Spring Security + BCrypt + in-memory sessions (re-login after restart accepted), one cookie, CSRF cookie token | Simplest setup with a real logout; demo is local | [0006](../adr/0006-auth-spring-security-sessions.md) |
 | D5b | Buyer accounts | Only favourites move to the server; union merge by product ID | Append-only favourites make union correct | [0012](../adr/0012-buyer-accounts-favorites-sync.md) |
 | D6 | Images | Bytes in Postgres (`bytea`) behind `ImageStore`; URLs stored as-is | Same behaviour everywhere, no account | [0007](../adr/0007-image-storage-in-db.md) |
-| D7 | Frontend | Vite, React Router, TanStack Query + openapi-fetch, CSS Modules, `motion`, Zustand + localStorage, react-hook-form + zod, UI texts keyed by error code | Fewest new concepts that cover the hard parts | [0008](../adr/0008-frontend-stack.md) |
-| D7a | Frontend language | TypeScript, strict | Compiler catches generated-code mistakes; typed contract | [0013](../adr/0013-frontend-language-typescript.md) |
+| D7 | Frontend | Vite, React Router, TanStack Query + typed `fetch` client with hand-written types, CSS Modules, `motion`, Zustand + localStorage, react-hook-form + zod, UI texts keyed by error code | Fewest new concepts that cover the hard parts | [0008](../adr/0008-frontend-stack.md) |
+| D7a | Frontend language | TypeScript, strict | Compiler catches Claude Code mistakes; typed API layer | [0013](../adr/0013-frontend-language-typescript.md) |
 | D8 | Consistency | DB unique index; ID-keyed idempotent actions; union merge; refetching ordered feed; conditional publish update; format-only links | Invariants enforced by the DB or pure functions | [0009](../adr/0009-consistency-and-concurrency.md) |
-| D9 | Deployment | Local: JDK 21 + Node, `npm install && npm run dev`; optional Render (Dockerfile built on Render) + Neon; tunnel fallback | Same origin; no-card JVM host | [0010](../adr/0010-deployment-and-hosting.md) |
-| D10 | Quality & tooling | JUnit 5 + MockMvc + embedded Postgres, Vitest, Spotless, ESLint/Prettier, GitHub Actions with contract drift check | Automated checks without Docker | [0011](../adr/0011-quality-and-tooling.md) |
+| D9 | Deployment | Local-only demo: JDK 21 + Node, `npm install && npm run dev`, phone via Vite `--host`; Render + Neon as a documented optional step | No story needs a public URL | [0010](../adr/0010-deployment-and-hosting.md) |
+| D10 | Quality & tooling | Minimal CI: JUnit 5 + MockMvc + embedded Postgres, Vitest, ESLint/Prettier, `tsc` | Easy to set up and keep green, no Docker | [0011](../adr/0011-quality-and-tooling.md) |

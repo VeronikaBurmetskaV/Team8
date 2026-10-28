@@ -28,7 +28,7 @@ Option 1.
 
 ## Consequences
 - **Simpler:** nothing to configure; uploads work the same for all 6 devs and on the deployed URL.
-- **Harder:** DB size grows, so the Neon quota must be watched (R-T04). Image responses go through the JVM: slower than a CDN, fine at demo scale, but they count against the 512 MB heap if the upload limit isn't enforced (R-T11, R-T15).
+- **Harder:** DB size grows, so the Neon quota must be watched (R-T04). Image responses go through the JVM: slower than a CDN, fine at demo scale, but they count against the JVM heap if the upload limit isn't enforced (R-T11).
 - **Postponed:** CDN, server-side resizing (e.g. Thumbnailator), deleting orphaned images.
 
 ## Related stories

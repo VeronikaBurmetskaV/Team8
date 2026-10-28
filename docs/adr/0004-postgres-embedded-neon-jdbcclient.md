@@ -21,8 +21,8 @@ The team's preference was **Spring Data JPA**.
 
 ## Decision
 Option 2. **This disagrees with the team's JPA preference.** Our critical logic is SQL, so JPA would add a layer we bypass exactly where correctness matters, plus pitfalls the team would meet in week 2. If the team strongly prefers JPA for simple CRUD, it may be added later for those tables only. The three critical operations stay `JdbcClient` either way.
-- Local: profile `dev` starts zonky `embedded-postgres` (same Postgres major as the Neon project) with a persistent data directory `backend/.data/pg` (git-ignored) and a fixed port. Deployed: `SPRING_DATASOURCE_URL` points to Neon.
-- Flyway migrations in `backend/src/main/resources/db/migration`, versioned by timestamp (`V20261103_1200__create_products.sql`) to avoid collisions between two devs. Spring Session tables come from a migration too.
+- Local: profile `dev` starts zonky `embedded-postgres` (same Postgres major as the Neon project) with a persistent data directory `backend/.data/pg` (git-ignored) and a fixed port. Deployed (optional step, ADR-0010): `SPRING_DATASOURCE_URL` points to Neon.
+- Flyway migrations in `backend/src/main/resources/db/migration`, versioned by timestamp (`V20261103_1200__create_products.sql`) to avoid collisions between two devs.
 - A seeder that runs only in `dev`, and only when the DB is empty: ≥ 4 brands, ~30 cards (R-P04).
 - Conventions: `snake_case` tables, `uuid` PKs, `created_at`/`updated_at` as `timestamptz` (UTC), price as `integer` UAH (A-13), repository classes return Java records.
 
