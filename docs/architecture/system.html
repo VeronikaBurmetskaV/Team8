@@ -1,0 +1,707 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FULLA System Sketch</title>
+<meta name="description" content="Visual picture of docs/architecture/overview.md, domain-model.md, api.md and data-model.md. Not a source of truth.">
+<style>
+:root {
+  --bg: #f6f4ef; --surface: #ffffff; --surface-2: #efece4; --ink: #1d1c1a; --ink-2: #5c5850; --line: #bdb6a8;
+  --buyer: #0f766e; --buyer-bg: #e1f1ee; --brand: #a8500a; --brand-bg: #fbecdc;
+  --infra: #44546a; --infra-bg: #e6ebf1; --ext: #7c7568; --warn: #b42318; --warn-bg: #fdecea;
+  --hit: #6d28d9; --hit-bg: #efe7fd;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141412; --surface: #1d1c1a; --surface-2: #272622; --ink: #ecebe6; --ink-2: #a9a498; --line: #57534a;
+    --buyer: #4fd1bf; --buyer-bg: #11302b; --brand: #f2a65e; --brand-bg: #392513;
+    --infra: #a9b8cc; --infra-bg: #222a34; --ext: #9b9486; --warn: #f8877b; --warn-bg: #3a1c19;
+    --hit: #b69cff; --hit-bg: #2b2140;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141412; --surface: #1d1c1a; --surface-2: #272622; --ink: #ecebe6; --ink-2: #a9a498; --line: #57534a;
+  --buyer: #4fd1bf; --buyer-bg: #11302b; --brand: #f2a65e; --brand-bg: #392513;
+  --infra: #a9b8cc; --infra-bg: #222a34; --ext: #9b9486; --warn: #f8877b; --warn-bg: #3a1c19;
+  --hit: #b69cff; --hit-bg: #2b2140;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 64px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); }
+a { color: inherit; }
+code, .mono { font-family: var(--mono); font-size: 0.86em; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+/* top bar */
+.bar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.bar .wrap { display: flex; align-items: center; gap: 16px; height: 52px; }
+.bar .logo { font-weight: 700; letter-spacing: .08em; }
+.bar nav { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; flex: 1; }
+.bar nav a { text-decoration: none; color: var(--ink-2); font-size: 13px; white-space: nowrap; }
+.bar nav a:hover { color: var(--ink); }
+.theme { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+
+header.hero { padding: 40px 0 8px; }
+header.hero h1 { font-size: clamp(26px, 4vw, 38px); margin: 0 0 8px; letter-spacing: -0.01em; }
+header.hero p { margin: 0 0 10px; color: var(--ink-2); max-width: 760px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 14px 0 0; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; display: inline-block; }
+.sw.buyer { background: var(--buyer-bg); border-color: var(--buyer); }
+.sw.brand { background: var(--brand-bg); border-color: var(--brand); }
+.sw.infra { background: var(--infra-bg); border-color: var(--infra); }
+.sw.ext { background: transparent; border-color: var(--ext); border-style: dashed; }
+
+.note { border-left: 3px solid var(--warn); background: var(--warn-bg); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 14px; margin: 16px 0 0; }
+
+section { padding: 36px 0 8px; }
+section > h2 { font-size: 22px; margin: 0 0 4px; }
+.src { font-size: 12.5px; color: var(--ink-2); margin: 0 0 14px; }
+.src code { font-size: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+.caption { font-size: 13px; color: var(--ink-2); margin: 10px 2px 0; }
+.scroll { overflow-x: auto; }
+
+/* svg diagrams */
+svg.dia { display: block; width: 100%; height: auto; min-width: 640px; font-family: var(--sans); }
+svg .box { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; }
+svg .box.buyer { fill: var(--buyer-bg); stroke: var(--buyer); }
+svg .box.brand { fill: var(--brand-bg); stroke: var(--brand); }
+svg .box.infra { fill: var(--infra-bg); stroke: var(--infra); }
+svg .box.sys { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+svg .box.ext { fill: transparent; stroke: var(--ext); stroke-dasharray: 6 4; }
+svg .t { fill: var(--ink); font-size: 14px; font-weight: 600; }
+svg .t2 { fill: var(--ink-2); font-size: 11.5px; }
+svg .edge { stroke: var(--ink-2); stroke-width: 1.5; fill: none; }
+svg .edge.dash { stroke-dasharray: 5 4; }
+svg .edge.warn { stroke: var(--warn); }
+svg .lbl { fill: var(--ink-2); font-size: 11.5px; paint-order: stroke; stroke: var(--surface); stroke-width: 5px; stroke-linejoin: round; }
+svg .lbl.strong { fill: var(--ink); font-weight: 600; }
+svg .lbl.warn { fill: var(--warn); }
+svg .head { fill: var(--ink-2); }
+svg .head.warn { fill: var(--warn); }
+svg .start { fill: var(--ink); }
+
+/* containers */
+.cont { display: grid; gap: 10px; }
+.ctr { border: 1.5px solid var(--line); border-radius: 12px; padding: 12px 14px 14px; background: var(--surface); }
+.ctr > .h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-bottom: 10px; }
+.ctr > .h b { font-size: 16px; }
+.ctr > .h span { color: var(--ink-2); font-size: 12.5px; }
+.ctr.browser { border-color: var(--buyer); }
+.ctr.api { border-color: var(--ink); }
+.ctr.db { border-color: var(--infra); background: var(--infra-bg); }
+.inner { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; }
+.sub { border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--surface-2); }
+.sub h4 { margin: 0 0 6px; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 2px 7px; }
+.chip.buyer { border-color: var(--buyer); color: var(--buyer); background: var(--buyer-bg); }
+.chip.brand { border-color: var(--brand); color: var(--brand); background: var(--brand-bg); }
+.chip.infra { border-color: var(--infra); color: var(--infra); background: var(--infra-bg); }
+.link-down { display: flex; align-items: center; gap: 10px; justify-content: center; font-size: 12.5px; color: var(--ink-2); }
+.link-down::before { content: ""; width: 2px; height: 26px; background: var(--ink-2); }
+.link-down i { font-style: normal; }
+
+/* API layers grid */
+.layers { display: grid; grid-template-columns: 96px repeat(6, minmax(120px, 1fr)); gap: 4px; font-size: 12px; min-width: 860px; }
+.layers .rh { display: flex; align-items: center; font-weight: 600; color: var(--ink-2); font-size: 12px; }
+.layers .ph { font-family: var(--mono); font-weight: 700; font-size: 12.5px; padding: 6px 8px; border-radius: 8px 8px 0 0; text-align: center; }
+.layers .ph.buyer { background: var(--buyer-bg); color: var(--buyer); }
+.layers .ph.brand { background: var(--brand-bg); color: var(--brand); }
+.layers .c { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 7px; line-height: 1.35; }
+.layers .c code { font-size: 11px; display: block; }
+.layers .common { grid-column: 2 / -1; background: var(--surface-2); border: 1px dashed var(--ink-2); border-radius: 6px; padding: 6px 8px; }
+.side { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); }
+.side .chip { font-size: 11.5px; }
+
+/* scenario */
+.steps-ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.btn:hover { border-color: var(--ink-2); }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.flow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; margin-left: auto; }
+.flow .n { border: 1.5px solid var(--line); border-radius: 8px; padding: 3px 9px; color: var(--ink-2); transition: all .2s; }
+.flow .n.on { border-color: var(--hit); color: var(--hit); background: var(--hit-bg); font-weight: 600; }
+.flow .arr { color: var(--line); }
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+ol.steps li { display: grid; grid-template-columns: 34px 92px 1fr minmax(0, 1.05fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; transition: border-color .2s, background .2s, opacity .2s; }
+ol.steps li .num { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; background: var(--surface-2); }
+ol.steps li.cur { border-color: var(--hit); background: var(--hit-bg); }
+ol.steps li.cur .num { background: var(--hit); color: var(--bg); }
+ol.steps .who { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; text-align: center; }
+ol.steps .who.brand { color: var(--brand); background: var(--brand-bg); }
+ol.steps .who.buyer { color: var(--buyer); background: var(--buyer-bg); }
+ol.steps .api { font-family: var(--mono); font-size: 11.5px; color: var(--ink-2); }
+.st { display: inline-block; font-family: var(--mono); font-size: 11px; border-radius: 5px; padding: 1px 6px; background: var(--surface-2); border: 1px solid var(--line); margin: 1px 2px 1px 0; white-space: nowrap; }
+
+/* state machines */
+.sm { display: grid; gap: 16px; }
+.sm .card h3 { margin: 0 0 2px; font-size: 16px; }
+.sm .card .src { margin-bottom: 8px; }
+.sm-notes { font-size: 12.5px; color: var(--ink-2); margin: 8px 2px 0; padding-left: 18px; }
+.sm-notes li { margin: 2px 0; }
+
+/* pages */
+.filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; align-items: center; }
+.filter .lab { font-size: 12.5px; color: var(--ink-2); margin-right: 4px; }
+.filter button { font-family: var(--mono); font-size: 11.5px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 3px 7px; cursor: pointer; }
+.filter button.buyer { border-color: color-mix(in srgb, var(--buyer) 50%, var(--line)); }
+.filter button.brand { border-color: color-mix(in srgb, var(--brand) 50%, var(--line)); }
+.filter button[aria-pressed="true"] { background: var(--hit); color: var(--bg); border-color: var(--hit); }
+.pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.page { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); border-top: 4px solid var(--line); transition: opacity .2s, border-color .2s, box-shadow .2s; }
+.page.buyer { border-top-color: var(--buyer); }
+.page.brand { border-top-color: var(--brand); }
+.page .r { font-family: var(--mono); font-size: 13px; font-weight: 700; }
+.page .p { font-size: 13px; color: var(--ink-2); margin: 2px 0 8px; }
+body.filtering [data-stories]:not(.hit) { opacity: .28; }
+body.filtering .page.hit, body.filtering ol.steps li.hit { box-shadow: 0 0 0 2px var(--hit); }
+.cov { font-size: 12.5px; color: var(--ink-2); margin-top: 10px; }
+
+/* decisions */
+.adrs { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.adr { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+.adr .no { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink-2); display: flex; justify-content: space-between; }
+.adr .no em { font-style: normal; font-weight: 500; font-size: 11px; border: 1px solid var(--line); border-radius: 999px; padding: 0 7px; }
+.adr .d { font-weight: 600; font-size: 14px; margin: 4px 0; line-height: 1.35; }
+.adr .c { font-size: 12.5px; color: var(--ink-2); }
+
+/* open questions */
+.qs { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 8px; }
+.q { display: grid; grid-template-columns: 46px 1fr; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--surface); font-size: 13px; }
+.q b { font-family: var(--mono); font-size: 12px; color: var(--warn); }
+
+footer { padding: 36px 0 48px; color: var(--ink-2); font-size: 12.5px; }
+
+@media (max-width: 760px) {
+  .inner { grid-template-columns: 1fr; }
+  ol.steps li { grid-template-columns: 30px 1fr; }
+  ol.steps li > :nth-child(n+3) { grid-column: 2; }
+  .flow { margin-left: 0; }
+  .qs { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } html { scroll-behavior: auto; } }
+@media print { .bar, .steps-ctl, .filter { display: none; } body { background: #fff; } }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="wrap">
+    <span class="logo">FULLA</span>
+    <nav aria-label="Sections">
+      <a href="#context">Context</a>
+      <a href="#containers">Containers</a>
+      <a href="#scenario">Scenario</a>
+      <a href="#states">State machines</a>
+      <a href="#pages">Pages → stories</a>
+      <a href="#decisions">Decisions</a>
+      <a href="#questions">Open questions</a>
+    </nav>
+    <button class="theme" id="theme" type="button" aria-label="Switch colour theme">Theme: auto</button>
+  </div>
+</div>
+
+<main class="wrap">
+
+<header class="hero">
+  <h1>FULLA: the MVP system on one page</h1>
+  <p>A picture of four documents: <a href="overview.md">overview.md</a>, <a href="domain-model.md">domain-model.md</a>, <a href="api.md">api.md</a> and <a href="data-model.md">data-model.md</a>. This page is not a source of truth. If it disagrees with them, the markdown wins.</p>
+  <div class="legend">
+    <span><i class="sw buyer"></i>Buyer side</span>
+    <span><i class="sw brand"></i>Brand side</span>
+    <span><i class="sw infra"></i>Infrastructure</span>
+    <span><i class="sw ext"></i>External, link only</span>
+  </div>
+  <p class="note"><b>Q-01.</b> The task brief named "DevMatch", Project/Role/Application and "nine decisions". This repository is FULLA, with 13 ADRs. The state machines below are Brand Profile, Product Card and Card Impression, and all 13 ADRs are shown.</p>
+</header>
+
+<!-- ============ CONTEXT ============ -->
+<section id="context">
+  <h2>1 · System context</h2>
+  <p class="src">C4 level 1 · <code>overview.md §2</code>, <code>§6</code></p>
+  <div class="card scroll">
+    <svg class="dia" viewBox="0 0 1000 370" role="img" aria-labelledby="ctxT">
+      <title id="ctxT">System context: buyer, brand owner and operator use FULLA; brand shops and image hosts are only links</title>
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="ahw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="head warn" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+
+      <!-- externals (left) -->
+      <rect class="box ext" x="20" y="30" width="200" height="70" rx="10"/>
+      <text class="t" x="120" y="60" text-anchor="middle">Brand image hosting</text>
+      <text class="t2" x="120" y="80" text-anchor="middle">img src only</text>
+
+      <rect class="box ext" x="20" y="150" width="200" height="70" rx="10"/>
+      <text class="t" x="120" y="180" text-anchor="middle">Brand online shop</text>
+      <text class="t2" x="120" y="200" text-anchor="middle">link only</text>
+
+      <!-- actors (middle) -->
+      <rect class="box buyer" x="390" y="30" width="200" height="70" rx="35"/>
+      <text class="t" x="490" y="60" text-anchor="middle">Buyer</text>
+      <text class="t2" x="490" y="80" text-anchor="middle">anonymous or registered</text>
+
+      <rect class="box brand" x="390" y="150" width="200" height="70" rx="35"/>
+      <text class="t" x="490" y="180" text-anchor="middle">Brand owner</text>
+      <text class="t2" x="490" y="200" text-anchor="middle">US-21…US-32</text>
+
+      <rect class="box" x="390" y="270" width="200" height="70" rx="35"/>
+      <text class="t" x="490" y="300" text-anchor="middle">Operator (the team)</text>
+      <text class="t2" x="490" y="320" text-anchor="middle">password reset, consent withdrawal</text>
+
+      <!-- system (right) -->
+      <rect class="box sys" x="760" y="110" width="220" height="150" rx="14"/>
+      <text class="t" x="870" y="165" text-anchor="middle" style="font-size:20px">FULLA</text>
+      <text class="t2" x="870" y="188" text-anchor="middle">swipe catalogue of</text>
+      <text class="t2" x="870" y="204" text-anchor="middle">Ukrainian brands</text>
+      <text class="t2" x="870" y="222" text-anchor="middle">web app, one origin</text>
+
+      <!-- calls into FULLA -->
+      <path class="edge" d="M590,65 L760,140" marker-end="url(#ah)"/>
+      <text class="lbl" x="672" y="88" text-anchor="middle">swipes, likes, «Вподобане»</text>
+      <path class="edge" d="M590,185 L760,185" marker-end="url(#ah)"/>
+      <text class="lbl" x="675" y="176" text-anchor="middle">profile, cards, publish</text>
+      <path class="edge" d="M590,305 L760,235" marker-end="url(#ah)"/>
+      <text class="lbl" x="676" y="290" text-anchor="middle">ops CLI profile / SQL</text>
+
+      <!-- links (browser goes there) -->
+      <path class="edge dash" d="M390,65 L220,65" marker-end="url(#ah)"/>
+      <text class="lbl" x="305" y="57" text-anchor="middle">browser loads photo URL</text>
+      <path class="edge dash" d="M400,95 L220,172" marker-end="url(#ah)"/>
+      <text class="lbl" x="318" y="120" text-anchor="middle">new tab + utm_source=fulla</text>
+      <text class="lbl" x="318" y="135" text-anchor="middle">US-19, US-32</text>
+      <path class="edge dash" d="M390,200 L220,200" marker-end="url(#ah)"/>
+      <text class="lbl" x="305" y="218" text-anchor="middle">«Перевірити посилання» (US-26)</text>
+    </svg>
+  </div>
+  <p class="caption">Solid arrows are calls into FULLA. Dashed arrows are links: the user's browser goes there, and the FULLA server never calls them (A-15). <b>There are no API integrations with third parties.</b></p>
+</section>
+
+<!-- ============ CONTAINERS ============ -->
+<section id="containers">
+  <h2>2 · Containers and API layers</h2>
+  <p class="src">C4 level 2 · <code>overview.md §3–4</code> · endpoints from <code>api.md §2</code> · tables from <code>data-model.md §2</code></p>
+
+  <div class="cont">
+    <div class="ctr browser">
+      <div class="h"><b>User's browser</b><span>React + TypeScript + Vite · ADR-0002, 0008, 0013</span></div>
+      <div class="inner">
+        <div class="sub">
+          <h4>SPA · <code>frontend/src/features/</code></h4>
+          <div class="chips">
+            <span class="chip buyer">start</span><span class="chip buyer">feed</span><span class="chip buyer">favorites</span><span class="chip buyer">buyer-auth</span>
+            <span class="chip brand">cabinet-auth</span><span class="chip brand">cabinet-profile</span><span class="chip brand">cabinet-products</span>
+          </div>
+          <h4 style="margin-top:10px">shared · api</h4>
+          <div class="chips">
+            <span class="chip">ProductCard</span><span class="chip">withUtm()</span><span class="chip">messages.uk.ts</span><span class="chip">validation.ts</span><span class="chip">api/client.ts</span><span class="chip">api/types.ts</span>
+          </div>
+        </div>
+        <div class="sub">
+          <h4>localStorage</h4>
+          <div class="chips"><span class="chip buyer">viewedIds</span><span class="chip buyer">favoriteIds</span></div>
+          <p class="caption" style="margin:8px 0 0">The buyer session on this device (A-09)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="link-down"><i>fetch /api/** · cookie FULLA_SESSION + X-XSRF-TOKEN</i></div>
+
+    <div class="ctr api">
+      <div class="h"><b>API</b><span>Spring Boot 3, Java 21 · package-by-feature, <code>XController → XService → XRepository</code> · ADR-0001, 0005, 0006</span></div>
+      <div class="scroll">
+        <div class="layers">
+          <div></div>
+          <div class="ph brand">brandauth</div><div class="ph brand">brandprofile</div><div class="ph brand">products</div>
+          <div class="ph buyer">feed</div><div class="ph">images</div><div class="ph buyer">buyer</div>
+
+          <div class="rh">Controller</div>
+          <div class="c"><code>POST /brand/register</code><code>POST /brand/login</code><code>POST /brand/logout</code></div>
+          <div class="c"><code>GET /brand/profile</code><code>PUT /brand/profile</code></div>
+          <div class="c"><code>GET|POST /brand/products</code><code>GET|PUT …/{id}</code><code>POST …/publish</code><code>POST …/unpublish</code></div>
+          <div class="c"><code>GET /feed</code><code>GET /products?ids</code></div>
+          <div class="c"><code>POST /images</code><code>GET /images/{id}</code></div>
+          <div class="c"><code>POST /buyer/register</code><code>POST /buyer/login</code><code>POST /buyer/logout</code><code>GET|POST /me/favorites</code></div>
+
+          <div class="rh">Service</div>
+          <div class="c">register, login, logout; empty profile on register</div>
+          <div class="c">name, logo, consent; consent is one-way</div>
+          <div class="c">draft CRUD, publish gate; only place that changes status</div>
+          <div class="c">published feed; cards by IDs with <code style="display:inline">available</code></div>
+          <div class="c">magic-byte check, immutable cache; <code style="display:inline">ImageStore</code></div>
+          <div class="c">buyer accounts; idempotent favourites</div>
+
+          <div class="rh">Repository</div>
+          <div class="c"><code>brand_accounts</code><code>brand_profiles</code></div>
+          <div class="c"><code>brand_profiles</code></div>
+          <div class="c"><code>products</code></div>
+          <div class="c"><code>products</code><code>brand_profiles</code> (read)</div>
+          <div class="c"><code>images</code></div>
+          <div class="c"><code>buyer_accounts</code><code>favorites</code></div>
+
+          <div class="rh">common</div>
+          <div class="common">error envelope · Spring Security (roles, CSRF, session cookie) · <code style="display:inline">GET /api/session</code> (Q-10) · SPA forward</div>
+        </div>
+      </div>
+      <div class="side">Also in the API: <span class="chip">ops</span> profile <code>ops</code>: reset-password, consent withdrawal (R-P10) · <span class="chip">dev seeder</span> ≥ 4 brands, ~30 cards (R-P04)</div>
+    </div>
+
+    <div class="link-down"><i>JdbcClient + Flyway</i></div>
+
+    <div class="ctr db">
+      <div class="h"><b>PostgreSQL</b><span>embedded locally / Neon optional · ADR-0004, 0007</span></div>
+      <div class="chips">
+        <span class="chip brand">brand_accounts</span><span class="chip brand">brand_profiles</span><span class="chip brand">products</span>
+        <span class="chip">images</span><span class="chip buyer">buyer_accounts</span><span class="chip buyer">favorites</span>
+      </div>
+    </div>
+  </div>
+  <p class="caption">For local development, Vite on port 5173 proxies <code>/api</code> to Spring on port 8080, so the browser still sees one origin (ADR-0010). Server sessions are in memory, so a restart logs everyone out (ADR-0006).</p>
+</section>
+
+<!-- ============ SCENARIO ============ -->
+<section id="scenario">
+  <h2>3 · End-to-end scenario</h2>
+  <p class="src">The demo path · <code>overview.md §7</code></p>
+  <div class="card">
+    <div class="steps-ctl">
+      <button class="btn" id="prev" type="button">← Prev</button>
+      <button class="btn" id="next" type="button">Next →</button>
+      <button class="btn" id="play" type="button" aria-pressed="false">▶ Play</button>
+      <div class="flow" aria-live="polite">
+        <span class="n" data-n="spa">SPA</span><span class="arr">→</span>
+        <span class="n" data-n="ls">localStorage</span><span class="arr">·</span>
+        <span class="n" data-n="api">API</span><span class="arr">→</span>
+        <span class="n" data-n="db">PostgreSQL</span><span class="arr">·</span>
+        <span class="n" data-n="shop">Brand shop</span>
+      </div>
+    </div>
+    <ol class="steps" id="steps">
+      <li data-flow="spa api db" data-stories="US-21"><span class="num">1</span><span class="who brand">Brand</span><span>Registers with email + password ≥ 8</span><span class="api">POST /api/brand/register</span><span><span class="st">US-21</span></span></li>
+      <li data-flow="spa api db" data-stories="US-22.1"><span class="num">2</span><span class="who brand">Brand</span><span>Saves the brand name (logo optional), so it may create cards</span><span class="api">PUT /api/brand/profile</span><span><span class="st">US-22.1</span></span></li>
+      <li data-flow="spa api db" data-stories="US-22.2"><span class="num">3</span><span class="who brand">Brand</span><span>Ticks consent, so it may publish</span><span class="api">PUT /api/brand/profile</span><span><span class="st">US-22.2</span></span></li>
+      <li data-flow="spa api db" data-stories="US-25.1 US-26"><span class="num">4</span><span class="who brand">Brand</span><span>Uploads a photo, saves draft "Лляна сукня міді", 2400, URL</span><span class="api">POST /api/images<br>POST /api/brand/products</span><span><span class="st">US-25.1</span><span class="st">US-26</span></span></li>
+      <li data-flow="spa" data-stories="US-25.2"><span class="num">5</span><span class="who brand">Brand</span><span>Opens the preview (no status change)</span><span class="api">— client only</span><span><span class="st">US-25.2</span></span></li>
+      <li data-flow="spa api db" data-stories="US-31"><span class="num">6</span><span class="who brand">Brand</span><span>«Опублікувати у стрічку» → Published</span><span class="api">POST /api/brand/products/{id}/publish</span><span><span class="st">US-31</span></span></li>
+      <li data-flow="spa api db" data-stories="US-01.1 US-01.2"><span class="num">7</span><span class="who buyer">Buyer</span><span>Opens <code>/</code>, presses «Почати шопінг»</span><span class="api">GET /api/feed</span><span><span class="st">US-01.1</span><span class="st">US-01.2</span></span></li>
+      <li data-flow="spa ls" data-stories="US-09"><span class="num">8</span><span class="who buyer">Buyer</span><span>Swipes right: card goes to «Вподобане», counter +1</span><span class="api">— localStorage</span><span><span class="st">US-09</span></span></li>
+      <li data-flow="spa api db" data-stories="US-16"><span class="num">9</span><span class="who buyer">Buyer</span><span>Opens «Вподобане»</span><span class="api">GET /api/products?ids=…</span><span><span class="st">US-16</span></span></li>
+      <li data-flow="spa ls api db" data-stories="US-02"><span class="num">10</span><span class="who buyer">Buyer</span><span>Registers; local likes move to the account</span><span class="api">POST /api/buyer/register<br>POST /api/me/favorites</span><span><span class="st">US-02</span></span></li>
+      <li data-flow="spa shop" data-stories="US-19 US-32"><span class="num">11</span><span class="who buyer">Buyer</span><span>«Перейти на сайт бренду»: the brand page opens in a new tab with <code>utm_source=fulla</code></span><span class="api">— link</span><span><span class="st">US-19</span><span class="st">US-32</span></span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============ STATE MACHINES ============ -->
+<section id="states">
+  <h2>4 · State machines</h2>
+  <p class="src"><code>domain-model.md §4</code> · conditions in [brackets] · error codes from <code>api.md §3.2</code></p>
+  <div class="sm">
+
+    <!-- Brand profile -->
+    <div class="card">
+      <h3>Brand Profile</h3>
+      <p class="src">domain-model.md §4.1 · the state is derived from <code>name</code> and <code>consent_given_at</code> (data-model.md §2.2)</p>
+      <div class="scroll">
+      <svg class="dia" viewBox="0 0 900 310" role="img" aria-labelledby="bpT">
+        <title id="bpT">Brand Profile states: Incomplete, Active, Consented</title>
+        <circle class="start" cx="220" cy="38" r="7"/>
+        <path class="edge" d="M220,46 L220,128" marker-end="url(#ah)"/>
+        <text class="lbl" x="232" y="84">register (US-21)</text>
+        <text class="lbl" x="232" y="99">valid unused email, password ≥ 8</text>
+
+        <rect class="box brand" x="140" y="130" width="160" height="58" rx="12"/>
+        <text class="t" x="220" y="155" text-anchor="middle">Incomplete</text>
+        <text class="t2" x="220" y="174" text-anchor="middle">no drafts, no publish</text>
+
+        <rect class="box brand" x="400" y="130" width="160" height="58" rx="12"/>
+        <text class="t" x="480" y="155" text-anchor="middle">Active</text>
+        <text class="t2" x="480" y="174" text-anchor="middle">drafts, no publish</text>
+
+        <rect class="box brand" x="660" y="130" width="160" height="58" rx="12"/>
+        <text class="t" x="740" y="155" text-anchor="middle">Consented</text>
+        <text class="t2" x="740" y="174" text-anchor="middle">drafts + publish</text>
+
+        <path class="edge" d="M300,159 L398,159" marker-end="url(#ah)"/>
+        <text class="lbl" x="350" y="142" text-anchor="middle">save name</text>
+        <text class="lbl" x="350" y="178" text-anchor="middle">[2–50] US-22.1</text>
+
+        <path class="edge" d="M560,159 L658,159" marker-end="url(#ah)"/>
+        <text class="lbl" x="610" y="142" text-anchor="middle">tick consent</text>
+        <text class="lbl" x="610" y="178" text-anchor="middle">US-22.2</text>
+
+        <path class="edge" d="M220,188 C220,272 740,272 740,190" marker-end="url(#ah)"/>
+        <text class="lbl" x="480" y="280" text-anchor="middle">name + consent in one save [name 2–50]</text>
+        <text class="lbl" x="480" y="296" text-anchor="middle">US-22.1 S1 + US-22.2 S1</text>
+
+        <path class="edge dash warn" d="M740,130 C740,62 480,62 480,128" marker-end="url(#ahw)"/>
+        <text class="lbl warn" x="610" y="62" text-anchor="middle">operator withdraws consent (R-P10)</text>
+        <text class="lbl warn" x="610" y="78" text-anchor="middle">all brand cards → Draft, one transaction</text>
+      </svg>
+      </div>
+      <ul class="sm-notes">
+        <li>Self-transitions: edit name/logo in Active or Consented (US-22.1). A rejected save keeps the state: <code>PROFILE_INVALID</code> (US-22.1 S2).</li>
+        <li>The consent checkbox is locked once saved; <code>consentGiven:false</code> → <code>CONSENT_LOCKED</code> (A-08).</li>
+        <li>After login: Incomplete → <code>/brand/profile</code>, otherwise <code>/brand/products</code> (US-21.1 CL).</li>
+      </ul>
+    </div>
+
+    <!-- Product card -->
+    <div class="card">
+      <h3>Product Card</h3>
+      <p class="src">domain-model.md §4.2 · publish = one conditional <code>UPDATE</code> (data-model.md §4, T-1)</p>
+      <div class="scroll">
+      <svg class="dia" viewBox="0 0 900 300" role="img" aria-labelledby="pcT">
+        <title id="pcT">Product Card states: Draft and Published</title>
+        <circle class="start" cx="70" cy="153" r="7"/>
+        <path class="edge" d="M78,153 L238,153" marker-end="url(#ah)"/>
+        <text class="lbl" x="158" y="128" text-anchor="middle">«Зберегти чернетку»</text>
+        <text class="lbl" x="158" y="143" text-anchor="middle">US-25.1, US-26</text>
+        <text class="lbl" x="158" y="172" text-anchor="middle">[profile Active+, name 1–100,</text>
+        <text class="lbl" x="158" y="187" text-anchor="middle">price &gt; 0, photo, http(s) URL]</text>
+
+        <rect class="box brand" x="240" y="124" width="180" height="58" rx="12"/>
+        <text class="t" x="330" y="149" text-anchor="middle">Draft «Чернетка»</text>
+        <text class="t2" x="330" y="168" text-anchor="middle">complete by construction</text>
+
+        <rect class="box buyer" x="600" y="124" width="180" height="58" rx="12"/>
+        <text class="t" x="690" y="149" text-anchor="middle">Published «Опубліковано»</text>
+        <text class="t2" x="690" y="168" text-anchor="middle">in the feed · read-only (A-06)</text>
+
+        <path class="edge" d="M380,124 C430,58 590,58 640,122" marker-end="url(#ah)"/>
+        <text class="lbl strong" x="510" y="56" text-anchor="middle">«Опублікувати у стрічку» US-31</text>
+        <text class="lbl" x="510" y="72" text-anchor="middle">[all required fields ∧ brand consent]</text>
+
+        <path class="edge" d="M640,182 C590,248 430,248 382,184" marker-end="url(#ah)"/>
+        <text class="lbl" x="510" y="252" text-anchor="middle">unpublish, "at any moment" US-31</text>
+        <text class="lbl warn" x="510" y="268" text-anchor="middle">also: operator withdraws consent (R-P10)</text>
+
+        <path class="edge" d="M270,124 C240,62 310,62 300,122" marker-end="url(#ah)"/>
+        <text class="lbl warn" x="250" y="50" text-anchor="middle">publish refused → CONSENT_REQUIRED</text>
+        <text class="lbl" x="250" y="34" text-anchor="middle">US-31 S2, US-22.2 S2</text>
+
+        <path class="edge" d="M270,182 C240,244 310,244 300,184" marker-end="url(#ah)"/>
+        <text class="lbl" x="270" y="258" text-anchor="middle">edit · preview (no change)</text>
+        <text class="lbl" x="270" y="274" text-anchor="middle">US-26 S1, US-25.2</text>
+      </svg>
+      </div>
+      <ul class="sm-notes">
+        <li>No final state: cards are never deleted (US-31 CL).</li>
+        <li><code>PUT</code> on a Published card → <code>CARD_NOT_EDITABLE</code>. Publishing again sets a new <code>publishedAt</code>, so the card moves to the end of the feed (ADR-0009).</li>
+        <li><code>PUBLISH_FIELDS_MISSING</code> is a defensive check and does not fire in the normal flow (US-31 note, G-02).</li>
+      </ul>
+    </div>
+
+    <!-- Card impression -->
+    <div class="card">
+      <h3>Card Impression (one card × one browser)</h3>
+      <p class="src">domain-model.md §4.3 · lives only in localStorage (<code>viewedIds</code>, <code>favoriteIds</code>)</p>
+      <div class="scroll">
+      <svg class="dia" viewBox="0 0 900 350" role="img" aria-labelledby="ciT">
+        <title id="ciT">Card Impression states: Unviewed, Liked, Skipped</title>
+        <circle class="start" cx="60" cy="175" r="7"/>
+        <path class="edge" d="M68,175 L148,175" marker-end="url(#ah)"/>
+        <text class="lbl" x="108" y="160" text-anchor="middle">Published</text>
+
+        <rect class="box" x="150" y="146" width="170" height="58" rx="12"/>
+        <text class="t" x="235" y="171" text-anchor="middle">Unviewed</text>
+        <text class="t2" x="235" y="190" text-anchor="middle">may be the current card</text>
+
+        <rect class="box buyer" x="570" y="50" width="190" height="58" rx="12"/>
+        <text class="t" x="665" y="75" text-anchor="middle">Liked</text>
+        <text class="t2" x="665" y="94" text-anchor="middle">+favoriteIds, +viewedIds</text>
+
+        <rect class="box" x="570" y="242" width="190" height="58" rx="12"/>
+        <text class="t" x="665" y="267" text-anchor="middle">Skipped</text>
+        <text class="t2" x="665" y="286" text-anchor="middle">+viewedIds only</text>
+
+        <path class="edge" d="M320,160 L568,86" marker-end="url(#ah)"/>
+        <text class="lbl strong" x="450" y="104" text-anchor="middle">swipe right / «Подобається» US-09</text>
+        <text class="lbl" x="450" y="138" text-anchor="middle">also: login merge (US-03 S1)</text>
+
+        <path class="edge" d="M320,190 L568,264" marker-end="url(#ah)"/>
+        <text class="lbl strong" x="450" y="250" text-anchor="middle">swipe left / «Пропустити» US-10</text>
+
+        <path class="edge dash warn" d="M690,242 L690,110" marker-end="url(#ahw)"/>
+        <text class="lbl warn" x="700" y="172">login merge from</text>
+        <text class="lbl warn" x="700" y="187">another device (Q-05)</text>
+
+        <path class="edge dash" d="M610,50 C610,8 235,8 235,144" marker-end="url(#ah)"/>
+        <text class="lbl" x="420" y="22" text-anchor="middle">«Вийти» clears this device (US-03 CL)</text>
+        <path class="edge dash" d="M610,300 C610,342 235,342 235,206" marker-end="url(#ah)"/>
+        <text class="lbl" x="420" y="336" text-anchor="middle">«Вийти» clears this device (US-03 CL)</text>
+      </svg>
+      </div>
+      <ul class="sm-notes">
+        <li>A second press on the same card ID is ignored, because the guard is by ID and not by timer: the double «Пропустити» skips #5 and shows #6 (US-10 S2, ADR-0009).</li>
+        <li>No "back" (US-12) and no "remove from favourites" (US-17) in the MVP, so Liked and Skipped have no other exits.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PAGES ============ -->
+<section id="pages">
+  <h2>5 · Pages → stories</h2>
+  <p class="src">Routes from ADR-0008 · <code>overview.md §5</code> · select a story to highlight its pages and scenario steps</p>
+  <div class="filter" id="filter"><span class="lab">Story:</span></div>
+  <div class="pages" id="pageGrid">
+    <div class="page buyer" data-stories="US-01.1 US-01.2 US-16"><div class="r">/</div><div class="p">Start page</div></div>
+    <div class="page buyer" data-stories="US-01.2 US-08.1 US-08.2 US-09 US-10 US-03"><div class="r">/feed</div><div class="p">Swipe feed</div></div>
+    <div class="page buyer" data-stories="US-16 US-19 US-32 US-02"><div class="r">/favorites</div><div class="p">«Вподобане»</div></div>
+    <div class="page buyer" data-stories="US-02"><div class="r">/register</div><div class="p">Buyer registration</div></div>
+    <div class="page buyer" data-stories="US-03"><div class="r">/login</div><div class="p">Buyer login</div></div>
+    <div class="page brand" data-stories="US-21"><div class="r">/brand/register</div><div class="p">Brand registration</div></div>
+    <div class="page brand" data-stories="US-21.1"><div class="r">/brand/login</div><div class="p">Brand login</div></div>
+    <div class="page brand" data-stories="US-22.1 US-22.2"><div class="r">/brand/profile</div><div class="p">Brand profile and consent</div></div>
+    <div class="page brand" data-stories="US-21.1 US-25.1 US-31"><div class="r">/brand/products</div><div class="p">Product list, publish/unpublish</div></div>
+    <div class="page brand" data-stories="US-25.1 US-25.2 US-26 US-31"><div class="r">/brand/products/:id</div><div class="p">Card form + preview (<code>:id = new</code>, Q-09)</div></div>
+  </div>
+  <p class="cov" id="cov"></p>
+</section>
+
+<!-- ============ DECISIONS ============ -->
+<section id="decisions">
+  <h2>6 · Decisions</h2>
+  <p class="src"><code>overview.md §8</code> · one line per ADR in <code>docs/adr/</code> · all Proposed</p>
+  <div class="adrs" id="adrs"></div>
+</section>
+
+<!-- ============ QUESTIONS ============ -->
+<section id="questions">
+  <h2>7 · Open questions</h2>
+  <p class="src"><code>overview.md §9</code> · each one has a proposal there, and none is decided</p>
+  <div class="qs" id="qs"></div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  FULLA · architecture sketch 28.10.2026 · self-contained, no external resources · the sources are the four markdown files next to this page.
+</footer>
+
+<script>
+(function () {
+  // ---- theme ----
+  var root = document.documentElement, btn = document.getElementById('theme');
+  var modes = ['auto', 'light', 'dark'];
+  function apply(m) {
+    if (m === 'auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', m);
+    btn.textContent = 'Theme: ' + m;
+  }
+  var saved = 'auto';
+  try { saved = localStorage.getItem('fulla-sketch-theme') || 'auto'; } catch (e) {}
+  apply(saved);
+  btn.addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme') || 'auto';
+    var next = modes[(modes.indexOf(cur) + 1) % modes.length];
+    apply(next);
+    try { localStorage.setItem('fulla-sketch-theme', next); } catch (e) {}
+  });
+
+  // ---- decisions (overview.md §8) ----
+  var adrs = [
+    ['0001', 'React SPA built into the Spring Boot app, one origin; package-by-feature', 'One obvious place per story; contract agreed before wiring'],
+    ['0002', 'One responsive, mobile-first web app; one ProductCard', 'Preview = feed card by construction; swipe needs care on iOS'],
+    ['0003', 'One repo: backend/, frontend/, hand-written docs/contracts/api.md', 'Nothing generated; FE types can drift (R-T12)'],
+    ['0004', 'Postgres (embedded locally, Neon optional) + Flyway + JdbcClient', 'Invariants are visible SQL; more mapping code than JPA'],
+    ['0005', 'Spring Boot 3 / Java 21, REST, Bean Validation, one error envelope', 'UI texts keyed by error code; rules written twice'],
+    ['0006', 'Spring Security, BCrypt, in-memory sessions, one cookie, CSRF on', 'A restart logs everyone out; one account type per browser'],
+    ['0007', 'Uploaded images as bytea behind ImageStore; URLs kept as-is', 'Same everywhere, no account; DB quota to watch'],
+    ['0008', 'Vite, React Router, TanStack Query, Zustand + localStorage, motion, zod', 'Each hard part is a library feature'],
+    ['0009', 'DB or pure functions enforce invariants; UI only mirrors them', 'Holds across tabs and direct API calls'],
+    ['0010', 'Local demo; Render + Neon documented as optional', 'No hosting work; demo depends on one laptop'],
+    ['0011', 'Minimal CI: mvnw verify + lint, typecheck, Vitest', 'Contract drift caught by review and MockMvc JSON tests'],
+    ['0012', 'Optional buyer account; only «Вподобане» moves to the server, merged by union', 'Idempotent single endpoint; progress stays per device'],
+    ['0013', 'TypeScript strict', 'A code without a Ukrainian text fails tsc']
+  ];
+  var ah = '';
+  adrs.forEach(function (a) {
+    ah += '<div class="adr"><div class="no">ADR-' + a[0] + '<em>Proposed</em></div><div class="d">' + a[1] + '</div><div class="c">' + a[2] + '</div></div>';
+  });
+  document.getElementById('adrs').innerHTML = ah;
+
+  // ---- open questions (overview.md §9, question column shortened) ----
+  var qs = [
+    ['Q-01', 'The task brief (DevMatch, Project/Role/Application, nine decisions) does not match this repository.'],
+    ['Q-02', 'Where does the API contract live: docs/contracts/api.md or architecture/api.md?'],
+    ['Q-03', 'Is POST /api/images public? Proposal: brand-only, with uploaded_by.'],
+    ['Q-04', '403 or 404 for another brand\'s card? Proposal: 404.'],
+    ['Q-05', 'Skipped on one device, liked on another: INV-05 breaks after a login merge.'],
+    ['Q-06', 'Logout before a failed like is re-synced loses the like.'],
+    ['Q-07', 'US-19 S2 cannot happen as written; the real trigger is an unpublished card.'],
+    ['Q-08', 'Missing UI texts: short password, product name, image upload, card without a brand name.'],
+    ['Q-09', 'No route for a new card. Proposal: /brand/products/new.'],
+    ['Q-10', 'No "who am I" endpoint. Proposal: GET /api/session.'],
+    ['Q-11', 'Price upper bound and BCrypt 72-byte limit are unnumbered.'],
+    ['Q-12', '"Complete profile activation" in US-22.2 S2 contradicts US-22.1 CL.'],
+    ['Q-13', 'Rate-limit response is not in the error format. Proposal: 429.']
+  ];
+  var qh = '';
+  qs.forEach(function (q) { qh += '<div class="q"><b>' + q[0] + '</b><span>' + q[1] + '</span></div>'; });
+  document.getElementById('qs').innerHTML = qh;
+
+  // ---- scenario stepper ----
+  var steps = Array.prototype.slice.call(document.querySelectorAll('#steps li'));
+  var nodes = document.querySelectorAll('.flow .n');
+  var cur = 0, timer = null, playBtn = document.getElementById('play');
+  function show(i) {
+    cur = (i + steps.length) % steps.length;
+    steps.forEach(function (li, k) { li.classList.toggle('cur', k === cur); });
+    var f = steps[cur].getAttribute('data-flow').split(' ');
+    nodes.forEach(function (n) { n.classList.toggle('on', f.indexOf(n.getAttribute('data-n')) >= 0); });
+  }
+  steps.forEach(function (li, k) { li.addEventListener('click', function () { stop(); show(k); }); });
+  document.getElementById('prev').addEventListener('click', function () { stop(); show(cur - 1); });
+  document.getElementById('next').addEventListener('click', function () { stop(); show(cur + 1); });
+  function stop() { if (timer) { clearInterval(timer); timer = null; } playBtn.setAttribute('aria-pressed', 'false'); playBtn.textContent = '▶ Play'; }
+  playBtn.addEventListener('click', function () {
+    if (timer) { stop(); return; }
+    playBtn.setAttribute('aria-pressed', 'true'); playBtn.textContent = '❚❚ Pause';
+    timer = setInterval(function () { show(cur + 1); }, 1800);
+  });
+  show(0);
+
+  // ---- story filter (pages + scenario steps) ----
+  var stories = ['US-01.1','US-01.2','US-02','US-03','US-08.1','US-08.2','US-09','US-10','US-16','US-19',
+                 'US-21','US-21.1','US-22.1','US-22.2','US-25.1','US-25.2','US-26','US-31','US-32'];
+  var brandSide = { 'US-21':1,'US-21.1':1,'US-22.1':1,'US-22.2':1,'US-25.1':1,'US-25.2':1,'US-26':1,'US-31':1,'US-32':1 };
+  var filter = document.getElementById('filter');
+  var tagged = document.querySelectorAll('[data-stories]');
+  var active = null;
+  stories.forEach(function (s) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.textContent = s; b.className = brandSide[s] ? 'brand' : 'buyer';
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', function () {
+      active = (active === s) ? null : s;
+      filter.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-pressed', String(x.textContent === active)); });
+      document.body.classList.toggle('filtering', !!active);
+      tagged.forEach(function (el) {
+        el.classList.toggle('hit', !!active && el.getAttribute('data-stories').split(' ').indexOf(active) >= 0);
+      });
+    });
+    filter.appendChild(b);
+  });
+  // coverage check: every MVP story maps to at least one page
+  var pageStories = {};
+  document.querySelectorAll('#pageGrid .page').forEach(function (p) {
+    p.getAttribute('data-stories').split(' ').forEach(function (s) { pageStories[s] = 1; });
+  });
+  var missing = stories.filter(function (s) { return !pageStories[s]; });
+  document.getElementById('cov').textContent = missing.length
+    ? 'Stories without a page: ' + missing.join(', ')
+    : 'All ' + stories.length + ' MVP stories map to at least one page. Story chips: teal = buyer journey, amber = brand journey.';
+})();
+</script>
+</body>
+</html>
