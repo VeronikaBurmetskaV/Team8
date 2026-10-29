@@ -1,0 +1,18 @@
+# Dependencies and builds
+node_modules/
+frontend/dist/
+backend/target/
+
+# Local embedded Postgres data (delete to reset the DB)
+backend/.data/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
