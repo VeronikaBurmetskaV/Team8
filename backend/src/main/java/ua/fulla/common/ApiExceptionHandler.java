@@ -18,6 +18,14 @@ public class ApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    @ExceptionHandler(ApiException.class)
+    ResponseEntity<ErrorResponse> apiError(ApiException e) {
+        // "fields" is optional in the envelope: left out when no field is to blame
+        var fields = e.fields().isEmpty() ? null : e.fields();
+        return ResponseEntity.status(e.status())
+            .body(new ErrorResponse(new ErrorResponse.Body(e.code(), e.getMessage(), fields)));
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     ResponseEntity<ErrorResponse> notFound(NoResourceFoundException e) {
         return error(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, "No such resource");
