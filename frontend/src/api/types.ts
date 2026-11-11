@@ -78,3 +78,37 @@ export interface BrandProfileResponse {
 export interface HealthResponse {
   status: "UP";
 }
+
+/** Card as buyers see it (api.md §2.2). */
+export interface PublicCard {
+  id: string;
+  name: string;
+  brandName: string;
+  priceUah: number;
+  /** `/api/images/{id}` or the brand's `https://` URL. */
+  photoUrl: string;
+  productUrl: string;
+}
+
+/** Card as its brand sees it in the cabinet (api.md §2.1, §4.1). */
+export type BrandCard = PublicCard & {
+  photoImageId: string | null;
+  status: "DRAFT" | "PUBLISHED";
+  publishedAt: string | null;
+  createdAt: string;
+};
+
+/** POST /api/brand/products — exactly one of photoImageId / photoUrl is set (api.md §4.1). */
+export interface CreateProductRequest {
+  name: string;
+  priceUah: number;
+  photoImageId: string | null;
+  photoUrl: string | null;
+  productUrl: string;
+}
+
+/** POST /api/images (api.md §2.1). */
+export interface ImageUploadResponse {
+  id: string;
+  url: string;
+}

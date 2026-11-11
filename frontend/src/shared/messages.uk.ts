@@ -46,3 +46,10 @@ export const messages: Record<ErrorCode, string> = {
     "Опубліковану картку не можна редагувати. Спочатку зніміть її з публікації",
   INVALID_STATE: "Стан картки вже змінився. Оновіть сторінку",
 };
+
+/** Text for a code that arrives as a plain string (form libraries, unknown codes). */
+export function errorText(code: string): string {
+  return Object.hasOwn(messages, code)
+    ? messages[code as ErrorCode]
+    : messages.VALIDATION_FAILED;
+}
