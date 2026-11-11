@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { messages } from "../../shared/messages.uk";
 import { brandLoginSchema, type BrandLoginForm } from "../../shared/validation";
 import { useLoginBrand } from "./api";
+import styles from "./BrandLoginPage.module.css";
 
 export function BrandLoginPage() {
   const navigate = useNavigate();
@@ -42,9 +43,13 @@ export function BrandLoginPage() {
 
   return (
     <>
-      <h1>Вхід для бренду</h1>
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <div>
+      <h1 className={styles.title}>Вхід для бренду</h1>
+      <form
+        className={styles.card}
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        <div className={styles.field}>
           <label htmlFor="email">Email</label>
           <input
             id="email"
@@ -53,7 +58,7 @@ export function BrandLoginPage() {
             {...register("email")}
           />
         </div>
-        <div>
+        <div className={styles.field}>
           <label htmlFor="password">Пароль</label>
           <input
             id="password"
@@ -62,8 +67,12 @@ export function BrandLoginPage() {
             {...register("password")}
           />
         </div>
-        {errorText && <p role="alert">{errorText}</p>}
-        <button type="submit" disabled={isSubmitting}>
+        {errorText && (
+          <p className={styles.error} role="alert">
+            {errorText}
+          </p>
+        )}
+        <button className={styles.submit} type="submit" disabled={isSubmitting}>
           Увійти
         </button>
       </form>

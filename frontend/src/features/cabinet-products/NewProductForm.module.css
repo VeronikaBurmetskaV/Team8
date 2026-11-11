@@ -1,0 +1,112 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.title {
+  margin-bottom: var(--space-3);
+}
+
+/* White card like the auth pages; the gap separates the form blocks. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* "Фотографія товару" group */
+.photoGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.legend {
+  padding: 0 var(--space-1);
+  color: var(--color-primary);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* File input: muted "no file chosen" text next to a secondary-style button. */
+.fileInput {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.fileInput::file-selector-button {
+  margin-right: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.fileInput:hover::file-selector-button {
+  border-color: var(--color-accent);
+  background-color: var(--color-surface);
+}
+
+/* Secondary button ("Перевірити посилання") */
+.secondaryButton {
+  margin-top: var(--space-2);
+  border-color: var(--color-primary);
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  background-color: var(--color-surface);
+  color: var(--color-accent);
+}
+
+/* Disabled stays visible: outline and muted text on the surface instead of fading out. */
+.secondaryButton:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+}
+
+.submit {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+/* "До списку товарів": a plain text link, set apart from the card's buttons. */
+.backLink {
+  align-self: flex-start;
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.backLink:hover {
+  color: var(--color-primary);
+}

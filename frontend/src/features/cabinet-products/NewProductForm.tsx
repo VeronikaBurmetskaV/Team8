@@ -12,6 +12,7 @@ import {
   type CardFormValues,
 } from "../../shared/validation";
 import { useCreateBrandProduct } from "./queries";
+import styles from "./NewProductForm.module.css";
 
 type FormField = "name" | "priceUah" | "photo" | "productUrl";
 
@@ -98,10 +99,14 @@ export function NewProductForm() {
   });
 
   return (
-    <section>
-      <h1>Новий товар</h1>
+    <section className={styles.page}>
+      <h1 className={styles.title}>Новий товар</h1>
 
-      <form onSubmit={(event) => void onSubmit(event)} noValidate>
+      <form
+        className={styles.form}
+        onSubmit={(event) => void onSubmit(event)}
+        noValidate
+      >
         <div>
           <label htmlFor="card-name">Назва товару</label>
           <input
@@ -128,14 +133,18 @@ export function NewProductForm() {
           <FieldError id="card-price-error" code={errors.priceUah?.message} />
         </div>
 
-        <fieldset aria-describedby="card-photo-error">
-          <legend>Фотографія товару</legend>
+        <fieldset
+          className={styles.photoGroup}
+          aria-describedby="card-photo-error"
+        >
+          <legend className={styles.legend}>Фотографія товару</legend>
           <div>
             <label htmlFor="card-photo-file">
               Файл PNG, JPG або WEBP до 5 МБ
             </label>
             <input
               id="card-photo-file"
+              className={styles.fileInput}
               type="file"
               accept={IMAGE_MIME_TYPES.join(",")}
               onChange={(event) =>
@@ -166,6 +175,7 @@ export function NewProductForm() {
             {...register("productUrl")}
           />
           <button
+            className={styles.secondaryButton}
             type="button"
             disabled={!canCheckLink}
             onClick={() =>
@@ -192,12 +202,14 @@ export function NewProductForm() {
           </p>
         )}
 
-        <button type="submit" disabled={isSubmitting}>
+        <button className={styles.submit} type="submit" disabled={isSubmitting}>
           Зберегти чернетку
         </button>
       </form>
 
-      <Link to="/brand/products">До списку товарів</Link>
+      <Link className={styles.backLink} to="/brand/products">
+        До списку товарів
+      </Link>
     </section>
   );
 }

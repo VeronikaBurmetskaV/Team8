@@ -8,6 +8,7 @@ import {
   type BrandRegisterForm,
 } from "../../shared/validation";
 import { useRegisterBrand } from "./api";
+import styles from "./BrandRegisterPage.module.css";
 
 export function BrandRegisterPage() {
   const navigate = useNavigate();
@@ -52,9 +53,13 @@ export function BrandRegisterPage() {
 
   return (
     <>
-      <h1>Реєстрація бренду</h1>
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
-        <div>
+      <h1 className={styles.title}>Реєстрація бренду</h1>
+      <form
+        className={styles.card}
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+      >
+        <div className={styles.field}>
           <label htmlFor="email">Email</label>
           <input
             id="email"
@@ -65,12 +70,12 @@ export function BrandRegisterPage() {
             {...register("email")}
           />
           {errors.email && (
-            <p id="email-error" role="alert">
+            <p id="email-error" className={styles.fieldError} role="alert">
               {errors.email.message}
             </p>
           )}
         </div>
-        <div>
+        <div className={styles.field}>
           <label htmlFor="password">Пароль</label>
           <input
             id="password"
@@ -81,13 +86,17 @@ export function BrandRegisterPage() {
             {...register("password")}
           />
           {errors.password && (
-            <p id="password-error" role="alert">
+            <p id="password-error" className={styles.fieldError} role="alert">
               {errors.password.message}
             </p>
           )}
         </div>
-        {errors.root && <p role="alert">{errors.root.message}</p>}
-        <button type="submit" disabled={isSubmitting}>
+        {errors.root && (
+          <p className={styles.error} role="alert">
+            {errors.root.message}
+          </p>
+        )}
+        <button className={styles.submit} type="submit" disabled={isSubmitting}>
           Зареєструвати бренд
         </button>
       </form>
