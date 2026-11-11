@@ -1,0 +1,14 @@
+{
+  "name": "fulla",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "npm --workspace frontend run build && node scripts/mvnw.mjs -B package -DskipTests",
+    "typecheck": "npm --workspace frontend run typecheck",
+    "lint": "npm --workspace frontend run lint",
+    "test": "npm --workspace frontend run test && node scripts/mvnw.mjs -B verify"
+  }
+}

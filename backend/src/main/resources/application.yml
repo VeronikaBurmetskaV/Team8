@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: fulla
+  # The datasource comes from SPRING_DATASOURCE_URL / _USERNAME / _PASSWORD
+  # (see .env.example); profile dev uses the embedded Postgres instead (DevDatabaseConfig).
+  mvc:
+    problemdetails:
+      enabled: false
+  autoconfigure:
+    # No default in-memory user (it logs a generated password); accounts come from our own tables.
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 30d
+      cookie:
+        name: FULLA_SESSION
+        http-only: true
+        same-site: lax
+        max-age: 30d

@@ -1,0 +1,29 @@
+/* Minimal skeleton layout only; design tokens come from the designer later (ADR-0008). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+}
+
+.layout {
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.layout-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.layout-footer {
+  margin-top: 32px;
+  font-size: 0.875rem;
+  color: #666;
+}
