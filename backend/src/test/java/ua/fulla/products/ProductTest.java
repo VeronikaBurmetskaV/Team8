@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -31,8 +32,10 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import tools.jackson.databind.json.JsonMapper;
 import ua.fulla.common.SessionAccount;
 import ua.fulla.common.SessionAccount.AccountType;
+import ua.fulla.common.ValidationExamples;
 
 /** POST and GET /api/brand/products: create a draft, list own cards (US-25.1, US-26). */
 @SpringBootTest
@@ -42,6 +45,7 @@ class ProductTest {
 
     static final String PHOTO_URL = "https://cdn.brand-site.ua/linen-dress.webp";
     static final String PRODUCT_URL = "https://brand-site.ua/linen-dress";
+    static final JsonMapper JSON = JsonMapper.builder().build();
     static final byte[] PNG = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A};
     /** ISO-8601 in UTC, e.g. 2026-11-03T10:15:00.123456Z (api.md §1). */
     static final String ISO_UTC = "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z";
@@ -147,9 +151,9 @@ class ProductTest {
     void productUrlsWithHttpOrHttpsAreAcceptedAsEntered() throws Exception {
         Brand brand = brandWithName("Lileya");
 
-        for (String url : List.of("http://brand.ua/x", "https://brand.ua", "HTTPS://Brand.ua/Dress",
-                "https://brand.ua/сукня?колір=зелений", "https://shop.brand.ua:8443/p/1?utm_source=insta")) {
-            createCard(brand, card("\"Сукня\"", "2400", "null", json(PHOTO_URL), json(url)))
+        // the valid examples shared with the frontend (validation.examples.json, final-review №6)
+        for (String url : ValidationExamples.httpUrl(true).toList()) {
+            createCard(brand, card("\"Сукня\"", "2400", "null", json(PHOTO_URL), jsonString(url)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.productUrl").value(url));
         }
@@ -213,10 +217,11 @@ class ProductTest {
     void photoUrlMustBeHttps() throws Exception {
         Brand brand = brandWithName("Lileya");
 
-        for (String photoUrl : List.of("http://cdn.brand.ua/a.jpg", "HTTPS://cdn.brand.ua/a.jpg", "cdn.brand.ua/a.jpg",
-                "data:image/png;base64,AAAA", "javascript:alert(1)", "https://", "",
-                "https://cdn.brand.ua/" + "a".repeat(2048))) {
-            expectError(createCard(brand, card("\"Сукня\"", "2400", "null", json(photoUrl), json(PRODUCT_URL))),
+        // the invalid examples shared with the frontend (validation.examples.json) + the length limit
+        List<String> invalid = new ArrayList<>(ValidationExamples.httpsUrl(false).toList());
+        invalid.add("https://cdn.brand.ua/" + "a".repeat(2048));
+        for (String photoUrl : invalid) {
+            expectError(createCard(brand, card("\"Сукня\"", "2400", "null", jsonString(photoUrl), json(PRODUCT_URL))),
                     400, "CARD_INVALID_PRICE_OR_PHOTO")
                 .andExpect(jsonPath("$.error.fields.photoUrl").value("CARD_INVALID_PRICE_OR_PHOTO"))
                 .andExpect(jsonPath("$.error.fields.length()").value(1));
@@ -228,10 +233,10 @@ class ProductTest {
     void invalidProductUrlIsCardInvalidUrl() throws Exception {
         Brand brand = brandWithName("Lileya");
 
-        List<String> invalid = List.of(json("сукня"), json("brand.ua/x"), json("javascript:alert(1)"), json(""),
-            json("http://"), json("https:///dress"), json("http:brand.ua"), json("ftp://brand.ua/x"),
-            json("https://brand.ua/linen dress"), json(" https://brand.ua/x"), json("https://brand.ua/\\u0000"),
-            json("https://brand.ua/" + "a".repeat(2048)), "null");
+        // the invalid examples shared with the frontend (validation.examples.json) + length and null
+        List<String> invalid = new ArrayList<>(ValidationExamples.httpUrl(false).map(ProductTest::jsonString).toList());
+        invalid.add(json("https://brand.ua/" + "a".repeat(2048)));
+        invalid.add("null");
         for (String productUrl : invalid) {
             expectError(createCard(brand, card("\"Сукня\"", "2400", "null", json(PHOTO_URL), productUrl)),
                     400, "CARD_INVALID_URL")
@@ -392,6 +397,11 @@ class ProductTest {
     /** A JSON string literal; the test values contain no quotes or backslashes except deliberate escapes. */
     private static String json(String value) {
         return "\"" + value + "\"";
+    }
+
+    /** A JSON string literal with escaping, for examples that contain quotes or control characters. */
+    private static String jsonString(String value) {
+        return JSON.writeValueAsString(value);
     }
 
     private ResultActions createCard(Brand brand, String body) throws Exception {
