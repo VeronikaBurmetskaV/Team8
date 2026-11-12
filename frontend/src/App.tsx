@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { Layout } from "./shared/Layout";
 import { NotFoundPage } from "./shared/NotFoundPage";
+import { RequireBrand } from "./shared/RequireBrand";
 import { StartPage } from "./features/start/StartPage";
 import { FeedPage } from "./features/feed/FeedPage";
 import { FavoritesPage } from "./features/favorites/FavoritesPage";
@@ -24,9 +25,15 @@ const router = createBrowserRouter([
       { path: "/login", element: <BuyerLoginPage /> },
       { path: "/brand/register", element: <BrandRegisterPage /> },
       { path: "/brand/login", element: <BrandLoginPage /> },
-      { path: "/brand/profile", element: <BrandProfilePage /> },
-      { path: "/brand/products", element: <BrandProductsPage /> },
-      { path: "/brand/products/:id", element: <BrandProductPage /> },
+      {
+        // Cabinet pages need a brand session (US-21.1 CL).
+        element: <RequireBrand />,
+        children: [
+          { path: "/brand/profile", element: <BrandProfilePage /> },
+          { path: "/brand/products", element: <BrandProductsPage /> },
+          { path: "/brand/products/:id", element: <BrandProductPage /> },
+        ],
+      },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

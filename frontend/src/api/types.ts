@@ -74,11 +74,6 @@ export interface BrandProfileResponse {
   state: ProfileState;
 }
 
-/** GET /api/health — walking skeleton, not in api.md yet. */
-export interface HealthResponse {
-  status: "UP";
-}
-
 /** Card as buyers see it (api.md §2.2). */
 export interface PublicCard {
   id: string;

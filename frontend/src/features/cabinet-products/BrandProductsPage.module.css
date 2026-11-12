@@ -1,0 +1,104 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+}
+
+/* «Додати товар»: the main action of the page, set apart from the list. */
+.addLink {
+  align-self: flex-start;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* Shown instead of «Додати товар» while the brand has no name. */
+.hint {
+  margin: 0;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+.empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.loadError {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.loadError p {
+  margin: 0;
+}
+
+/* White card like the forms of the cabinet. */
+.table {
+  width: 100%;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  border-spacing: 0;
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  font-size: var(--font-size-sm);
+}
+
+.table th,
+.table td {
+  padding: var(--space-1);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.table td {
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+/* A long name wraps instead of widening the table (no horizontal scroll from 320 px). */
+.name {
+  overflow-wrap: anywhere;
+}
+
+.price {
+  white-space: nowrap;
+}
+
+/* Fixed-size preview: a large photo never stretches the row. */
+.thumbnail,
+.placeholder {
+  display: block;
+  width: var(--control-height);
+  height: var(--control-height);
+  border-radius: var(--radius-sm);
+}
+
+.thumbnail {
+  object-fit: cover;
+}
+
+.placeholder {
+  overflow: hidden;
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+}

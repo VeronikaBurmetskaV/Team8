@@ -79,6 +79,8 @@ export type BrandNameForm = z.infer<typeof brandNameSchema>;
 export const IMAGE_MAX_BYTES = 5_242_880;
 export const IMAGE_MIME_TYPES = ["image/png", "image/jpeg", "image/webp"];
 export const PRICE_MAX_UAH = 1_000_000;
+/** Counted in code points, like the brand name. */
+const CARD_NAME_MAX = 100;
 
 const NAME: ErrorCode = "CARD_INVALID_NAME";
 const PRICE_OR_PHOTO: ErrorCode = "CARD_INVALID_PRICE_OR_PHOTO";
@@ -133,7 +135,16 @@ const photoSchema = z
 
 /** The card form (US-25.1, US-26), fields in the order of the form. */
 export const cardFormSchema = z.object({
-  name: z.string().trim().min(1, NAME).max(100, NAME),
+  name: z
+    .string()
+    .trim()
+    .refine(
+      (name) => {
+        const length = codePointLength(name);
+        return length >= 1 && length <= CARD_NAME_MAX;
+      },
+      { message: NAME },
+    ),
   priceUah: z.string().trim().refine(isValidPrice, { message: PRICE_OR_PHOTO }),
   photo: photoSchema,
   productUrl: z.string().trim().refine(isHttpUrl, { message: URL_CODE }),

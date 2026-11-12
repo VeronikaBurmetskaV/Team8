@@ -28,9 +28,8 @@
   font-size: var(--font-size-sm);
 }
 
-/* Form-level error: shown after the button (visually below the form) without moving it in the markup. */
+/* Form-level error under the button. */
 .error {
-  order: 1;
   margin: 0;
   color: var(--color-error);
   font-size: var(--font-size-sm);
@@ -40,4 +39,12 @@
 .submit {
   width: 100%;
   margin-top: var(--space-1);
+}
+
+/* Link to the other auth page, under the card. */
+.switch {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
 }

@@ -20,9 +20,8 @@
   margin-bottom: var(--space-1);
 }
 
-/* Shown after the button (visually below the form) without moving it in the markup. */
+/* One common message under the button. */
 .error {
-  order: 1;
   margin: 0;
   text-align: center;
   color: var(--color-error);
@@ -31,4 +30,12 @@
 
 .submit {
   width: 100%;
+}
+
+/* Link to the other auth page, under the card. */
+.switch {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
 }

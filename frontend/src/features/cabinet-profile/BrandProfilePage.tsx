@@ -1,17 +1,22 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { ApiError } from "../../api/client";
 import type { BrandProfileResponse } from "../../api/types";
+import { useBrandProfile } from "../../shared/brandProfile";
+import { errorCodeOf, toFormErrors } from "../../shared/errors";
 import { brandNameInvalidMessage, messages } from "../../shared/messages.uk";
 import { brandNameSchema, type BrandNameForm } from "../../shared/validation";
-import { useBrandProfile, useSaveBrandProfile } from "./api";
+import { useSaveBrandProfile } from "./api";
+import styles from "./BrandProfilePage.module.css";
+
+/** Request field of PUT /api/brand/profile → the input that shows its error. */
+const profileFields = { name: "name" } as const;
 
 export function BrandProfilePage() {
   const profile = useBrandProfile();
 
   return (
     <>
-      <h1>Профіль бренду</h1>
+      <h1 className={styles.title}>Профіль бренду</h1>
       {profile.isPending && <p>Завантаження…</p>}
       {profile.isError && <LoadError error={profile.error} />}
       {profile.isSuccess && <BrandProfileForm profile={profile.data} />}
@@ -20,11 +25,9 @@ export function BrandProfilePage() {
 }
 
 function LoadError({ error }: { error: unknown }) {
+  const code = errorCodeOf(error);
   // No session: the API client is already redirecting to /brand/login (US-21.1 CL).
-  if (error instanceof ApiError && error.code === "UNAUTHENTICATED") {
-    return null;
-  }
-  const code = error instanceof ApiError ? error.code : "SERVICE_UNAVAILABLE";
+  if (code === "UNAUTHENTICATED") return null;
   return <p role="alert">{messages[code]}</p>;
 }
 
@@ -59,25 +62,20 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
   }
 
   function showError(error: unknown) {
-    if (!(error instanceof ApiError)) {
-      setError("root", { message: messages.SERVICE_UNAVAILABLE });
-      return;
-    }
-    const nameCode = error.fields.name;
-    if (nameCode) {
+    const { fields, form } = toFormErrors(error, profileFields);
+    if (fields.name) {
       // PROFILE_INVALID on the name gets the name-only hint; any other code keeps its own text.
       const message =
-        nameCode === "PROFILE_INVALID"
+        fields.name === "PROFILE_INVALID"
           ? brandNameInvalidMessage
-          : messages[nameCode];
+          : messages[fields.name];
       setError("name", { message });
-    } else {
-      setError("root", { message: messages[error.code] });
     }
+    if (form) setError("root", { message: messages[form] });
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate>
+    <form className={styles.card} onSubmit={handleSubmit(onSubmit)} noValidate>
       <div>
         <label htmlFor="name">Назва бренду</label>
         <input
@@ -94,13 +92,19 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
           </p>
         )}
       </div>
-      {errors.root && <p role="alert">{errors.root.message}</p>}
-      {saveProfile.isSuccess && !isDirty && (
-        <p role="status">Профіль збережено</p>
-      )}
-      <button type="submit" disabled={isSubmitting}>
-        Зберегти профіль
+      <button className={styles.submit} type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Зберігаємо…" : "Зберегти профіль"}
       </button>
+      {errors.root && (
+        <p className={styles.error} role="alert">
+          {errors.root.message}
+        </p>
+      )}
+      {saveProfile.isSuccess && !isDirty && (
+        <p className={styles.success} role="status">
+          Профіль збережено
+        </p>
+      )}
     </form>
   );
 }
