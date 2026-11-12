@@ -1,0 +1,43 @@
+.title {
+  margin-bottom: var(--space-3);
+}
+
+/* Same card as the login page; the gap separates the field blocks and the button. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: var(--auth-card-max-width);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.field label {
+  margin-bottom: var(--space-1);
+}
+
+/* Error under one field. */
+.fieldError {
+  margin: var(--space-1) 0 0;
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+}
+
+/* Form-level error: shown after the button (visually below the form) without moving it in the markup. */
+.error {
+  order: 1;
+  margin: 0;
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.submit {
+  width: 100%;
+  margin-top: var(--space-1);
+}

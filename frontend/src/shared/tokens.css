@@ -1,0 +1,80 @@
+/* FULLA design tokens. The only place for raw colour, font, size and spacing values. */
+
+/* Self-hosted web fonts (no font CDN, CLAUDE.md §2.3). Each file covers Latin and Cyrillic. */
+@import "@fontsource/montserrat/500.css";
+@import "@fontsource/montserrat/600.css";
+@import "@fontsource/montserrat/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+:root {
+  /* Colours */
+  --color-primary: #111111;
+  --color-accent: #c8a97e;
+  --color-background: #faf8f5;
+  --color-surface: #ffffff;
+  --color-text: #1a1a1a;
+  --color-text-muted: #6b6b6b;
+  --color-border: #e4e0da;
+  --color-error: #d93025;
+  --color-success: #1e8e3e;
+  /* Text on dark (primary) surfaces, e.g. the primary button */
+  --color-on-primary: var(--color-surface);
+
+  /* Font families */
+  --font-heading:
+    "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body:
+    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Font weights */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Font sizes */
+  --font-size-xs: 0.75rem; /* 12px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-md: 1rem; /* 16px — inputs stay ≥ 16px so iOS does not zoom */
+  --font-size-lg: 1.25rem; /* 20px */
+  --font-size-xl: 1.5rem; /* 24px */
+  --font-size-2xl: 2rem; /* 32px */
+
+  /* Line heights and letter spacing */
+  --line-height-tight: 1.2;
+  --line-height-base: 1.5;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-logo: 0.2em;
+
+  /* Spacing (8-point scale) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-half: 4px;
+
+  /* Border radii */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Borders */
+  --border-width: 1px;
+  --focus-ring-width: 2px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgb(17 17 17 / 0.06);
+  --shadow-md: 0 4px 16px rgb(17 17 17 / 0.06);
+  --shadow-lg: 0 12px 32px rgb(17 17 17 / 0.1);
+
+  /* Motion */
+  --transition-fast: 150ms ease;
+
+  /* Layout */
+  --layout-max-width: 430px;
+  --auth-card-max-width: 400px;
+  --control-height: 48px;
+}
