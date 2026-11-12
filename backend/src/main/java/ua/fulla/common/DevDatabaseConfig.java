@@ -2,6 +2,7 @@ package ua.fulla.common;
 
 import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
 import java.io.IOException;
+import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.sql.DataSource;
@@ -26,6 +27,7 @@ public class DevDatabaseConfig {
 
     @Bean(destroyMethod = "close")
     EmbeddedPostgres embeddedPostgres() throws IOException {
+        requireFreePort(PORT);
         Files.createDirectories(DATA_DIR);
         return EmbeddedPostgres.builder()
             .setDataDirectory(DATA_DIR)
@@ -37,5 +39,19 @@ public class DevDatabaseConfig {
     @Bean
     DataSource dataSource(EmbeddedPostgres postgres) {
         return postgres.getPostgresDatabase();
+    }
+
+    /**
+     * Fails the start when something already listens on the port (final-review №5). Otherwise
+     * the new Postgres only logs "another postmaster?" and the app silently connects to the
+     * leftover one, usually a postgres.exe from an earlier run on Windows.
+     */
+    static void requireFreePort(int port) {
+        try (ServerSocket probe = new ServerSocket(port)) {
+            // Free: the probe is closed again before Postgres binds the port.
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                "Порт " + port + " зайнятий — зупиніть старий postgres.exe (Диспетчер завдань)", e);
+        }
     }
 }

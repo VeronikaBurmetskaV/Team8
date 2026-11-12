@@ -86,23 +86,93 @@ const NAME: ErrorCode = "CARD_INVALID_NAME";
 const PRICE_OR_PHOTO: ErrorCode = "CARD_INVALID_PRICE_OR_PHOTO";
 const URL_CODE: ErrorCode = "CARD_INVALID_URL";
 
-function isUrlWithScheme(value: string, schemes: RegExp): boolean {
-  if (!schemes.test(value) || /\s/.test(value)) return false;
+// ---- URLs: the backend is the reference (final-review №6) ----
+//
+// HttpUrlValidator / HttpsUrlValidator accept a URL when java.net.URI parses it and getHost()
+// is not null. The browser's `new URL` is much more lenient (IDN hosts, "_", "|", "[" in the
+// path…), so the rules of java.net.URI (RFC 2396) are repeated here instead. Both sides are
+// tested with validation.examples.json.
+//
+// IDN hosts such as `магазин.укр`: MVP: не підтримуємо, Post-MVP: IDN.toASCII. The punycode
+// form (`xn--…`) is accepted on both sides.
+
+/** RFC 2396 "unreserved" characters. */
+const UNRESERVED = "A-Za-z0-9\\-_.!~*'()";
+/** A %XX escape. */
+const ESCAPED = "%[0-9A-Fa-f]{2}";
+/** Non-ASCII characters java.net.URI allows unescaped: neither control (Cc) nor space (Z*). */
+const OTHER = "[^\\x00-\\x7F\\p{Cc}\\p{Z}]";
+
+function uriPart(extra: string): RegExp {
+  return new RegExp(`^(?:[${UNRESERVED}${extra}]|${ESCAPED}|${OTHER})*$`, "u");
+}
+
+const USER_INFO = uriPart(";:&=+$,");
+const PATH = uriPart(":@&=+$,;/");
+const QUERY_OR_FRAGMENT = uriPart(";/?:@&=+$,\\[\\]");
+const LABEL = "[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?";
+const HOSTNAME = new RegExp(`^${LABEL}(?:\\.${LABEL})*\\.?$`);
+const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+const IPV6 = /^\[[0-9A-Fa-f:.]+\]$/;
+/** scheme://authority path ?query #fragment */
+const URI_PARTS =
+  /^([A-Za-z][A-Za-z0-9+.-]*):\/\/([^/?#]*)([^?#]*)(\?[^#]*)?(#.*)?$/su;
+const MAX_PORT = 2_147_483_647; // Java parses the port as an int
+
+function isIpv6(host: string): boolean {
+  if (!IPV6.test(host)) return false;
   try {
-    return new URL(value).hostname !== "";
+    return new URL(`http://${host}/`).hostname !== "";
   } catch {
     return false;
   }
 }
 
-/** Absolute URL with scheme http/https and a non-empty host (US-26). */
-export function isHttpUrl(value: string): boolean {
-  return isUrlWithScheme(value, /^https?:\/\//i);
+function isHost(host: string): boolean {
+  const ipv4 = IPV4.exec(host);
+  if (ipv4) return ipv4.slice(1).every((octet) => Number(octet) <= 255);
+  if (host.startsWith("[")) return isIpv6(host);
+  if (!HOSTNAME.test(host)) return false;
+  // In a dotted name the last label starts with a letter ("brand.123" is not a host name).
+  const labels = host.replace(/\.$/, "").split(".");
+  return (
+    labels.length === 1 || /^[A-Za-z]/.test(labels[labels.length - 1] ?? "")
+  );
 }
 
-/** External image URL: `https://` only (ADR-0007). */
+function isAuthority(authority: string): boolean {
+  const at = authority.indexOf("@");
+  if (at >= 0 && !USER_INFO.test(authority.slice(0, at))) return false;
+  const hostPort = authority.slice(at + 1);
+  const port = /:(\d*)$/.exec(hostPort);
+  if (port && Number(port[1] || "0") > MAX_PORT) return false;
+  return isHost(port ? hostPort.slice(0, port.index) : hostPort);
+}
+
+function isUrlWithHost(
+  value: string,
+  scheme: (scheme: string) => boolean,
+): boolean {
+  const parts = URI_PARTS.exec(value);
+  if (!parts) return false;
+  const [, schemePart = "", authority = "", path = "", query, fragment] = parts;
+  return (
+    scheme(schemePart) &&
+    isAuthority(authority) &&
+    PATH.test(path) &&
+    (query === undefined || QUERY_OR_FRAGMENT.test(query.slice(1))) &&
+    (fragment === undefined || QUERY_OR_FRAGMENT.test(fragment.slice(1)))
+  );
+}
+
+/** Absolute URL with scheme http/https (any case) and a host, like @HttpUrl (US-26). */
+export function isHttpUrl(value: string): boolean {
+  return isUrlWithHost(value, (scheme) => /^https?$/i.test(scheme));
+}
+
+/** External image URL: lowercase `https://` only, like @HttpsUrl (ADR-0007). */
 export function isHttpsUrl(value: string): boolean {
-  return isUrlWithScheme(value, /^https:\/\//i);
+  return value.startsWith("https://") && isUrlWithHost(value, () => true);
 }
 
 /** Whole positive number of UAH typed into the price field. */

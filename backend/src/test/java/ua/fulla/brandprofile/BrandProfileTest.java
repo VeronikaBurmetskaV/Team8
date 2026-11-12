@@ -153,10 +153,56 @@ class BrandProfileTest {
         // nothing was saved, not even the valid name
         mvc.perform(get("/api/brand/profile").session(session))
             .andExpect(jsonPath("$.state").value("INCOMPLETE"));
+    }
+
+    // ---------- final-review №3: the logo is refused until it is stored ----------
+
+    @Test
+    void validLogoUrlIsRefusedUntilTheLogoIsImplemented() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
 
         putProfile(session, "{\"name\":\"Lileya\",\"logoImageId\":null,"
                 + "\"logoUrl\":\"https://cdn.brand-site.ua/logo.png\",\"consentGiven\":false}")
-            .andExpect(status().isOk());
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.message").isString())
+            .andExpect(jsonPath("$.error.fields.logo").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.length()").value(1));
+
+        // the whole request is refused: the name is not saved either
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(jsonPath("$.name").value((Object) null))
+            .andExpect(jsonPath("$.logoUrl").value((Object) null))
+            .andExpect(jsonPath("$.state").value("INCOMPLETE"));
+    }
+
+    @Test
+    void logoImageIdIsRefusedUntilTheLogoIsImplemented() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+        putName(session, "\"Lileya\"").andExpect(status().isOk());
+
+        putProfile(session, "{\"name\":\"Lileya Nova\",\"logoImageId\":\"" + UUID.randomUUID()
+                + "\",\"logoUrl\":null,\"consentGiven\":false}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.logo").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.length()").value(1));
+
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(jsonPath("$.name").value("Lileya"))
+            .andExpect(jsonPath("$.logoImageId").value((Object) null));
+    }
+
+    @Test
+    void nameWithoutLogoIsStillSaved() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        // both logo fields null (what the form sends) and the logo fields left out entirely
+        putName(session, "\"Lileya\"").andExpect(status().isOk());
+        putProfile(session, "{\"name\":\"Lileya Nova\"}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Lileya Nova"))
+            .andExpect(jsonPath("$.logoDisplayUrl").value((Object) null));
     }
 
     @Test

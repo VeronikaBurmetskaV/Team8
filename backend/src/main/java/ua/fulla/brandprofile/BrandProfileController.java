@@ -16,9 +16,10 @@ import ua.fulla.common.SessionAccount;
 class BrandProfileController {
 
     /**
-     * The documented request shape. Only {@code name} is saved so far (US-22.1). The logo fields
-     * are validated but not stored until the images feature exists; {@code consentGiven} is
-     * not processed until US-22.2.
+     * The documented request shape. Only {@code name} is saved so far (US-22.1). Until the logo
+     * is stored, a non-null logo is refused by {@link BrandProfileService#save}
+     * ({@code 400 PROFILE_INVALID}, {@code fields.logo}); {@code consentGiven} is not processed
+     * until US-22.2.
      */
     record ProfileRequest(
             @BrandName String name,

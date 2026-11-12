@@ -6,13 +6,16 @@ import {
   brandRegisterSchema,
   cardFormSchema,
   IMAGE_MAX_BYTES,
+  isHttpsUrl,
+  isHttpUrl,
   type CardFormValues,
 } from "./validation";
 import {
   cardNameExamples,
-  cardPhotoUrlExamples,
   cardPriceExamples,
-  cardProductUrlExamples,
+  httpsUrlExamples,
+  httpUrlExamples,
+  type ValidationExample,
 } from "./validation.examples";
 
 // The same examples as the backend tests BrandAuthTest and BrandProfileTest (R-T17).
@@ -185,6 +188,18 @@ function pngOfSize(bytes: number): File {
   return new File([new Uint8Array(bytes)], "photo.png", { type: "image/png" });
 }
 
+// validation.examples.json is also read by the JUnit tests of @HttpUrl and @HttpsUrl,
+// so both sides accept exactly the same URLs (final-review №6).
+describe("URL validators: the same examples as the backend", () => {
+  it.each(httpUrlExamples)("isHttpUrl %j", ({ value, valid }) => {
+    expect(isHttpUrl(value)).toBe(valid);
+  });
+
+  it.each(httpsUrlExamples)("isHttpsUrl %j", ({ value, valid }) => {
+    expect(isHttpsUrl(value)).toBe(valid);
+  });
+});
+
 describe("cardFormSchema", () => {
   it("accepts the US-25.1 S1 form", () => {
     expect(errorsOf(validForm)).toEqual({});
@@ -202,14 +217,19 @@ describe("cardFormSchema", () => {
     );
   });
 
-  it.each(cardPhotoUrlExamples)("photo URL %j", ({ value, valid }) => {
+  // The form trims text fields first (see "trims the text fields"), so examples with
+  // surrounding spaces are checked only on the validators below.
+  const unpadded = (examples: ValidationExample[]) =>
+    examples.filter(({ value }) => value === value.trim());
+
+  it.each(unpadded(httpsUrlExamples))("photo URL %j", ({ value, valid }) => {
     const photo = { file: null, url: value };
     expect(errorsOf({ ...validForm, photo })).toEqual(
       valid ? {} : { photo: "CARD_INVALID_PRICE_OR_PHOTO" },
     );
   });
 
-  it.each(cardProductUrlExamples)("product URL %j", ({ value, valid }) => {
+  it.each(unpadded(httpUrlExamples))("product URL %j", ({ value, valid }) => {
     expect(errorsOf({ ...validForm, productUrl: value })).toEqual(
       valid ? {} : { productUrl: "CARD_INVALID_URL" },
     );
