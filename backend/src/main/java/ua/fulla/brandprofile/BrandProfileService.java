@@ -29,7 +29,11 @@ public class BrandProfileService {
 
     /**
      * Saves the brand name (US-22.1 CL); its format and the logo URL are already checked by Bean
-     * Validation on the request record. The logo itself and the consent are not stored yet.
+     * Validation on the request record. The consent is not processed yet.
+     *
+     * <p>The logo is not implemented yet (final-review №3): instead of answering 200 and silently
+     * dropping it, any logo is refused with {@code 400 PROFILE_INVALID}, {@code fields.logo}, and
+     * nothing is saved. Remove this check when the logo is stored.
      */
     @Transactional
     public BrandProfile save(UUID brandId, String rawName, UUID logoImageId, String logoUrl) {
@@ -39,6 +43,11 @@ public class BrandProfileService {
             throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.PROFILE_INVALID,
                 "give either logoImageId or logoUrl, not both",
                 Map.of("logoImageId", ErrorCode.PROFILE_INVALID, "logoUrl", ErrorCode.PROFILE_INVALID));
+        }
+        if (logoImageId != null || (logoUrl != null && !logoUrl.isEmpty())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.PROFILE_INVALID,
+                "the logo is not supported yet; send logoImageId and logoUrl as null",
+                Map.of("logo", ErrorCode.PROFILE_INVALID));
         }
         String name = BrandNameValidator.normalize(rawName);
         return repository.updateName(brandId, name).orElseThrow(() -> missingProfile(brandId));
