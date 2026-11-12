@@ -6,6 +6,12 @@ spring:
   mvc:
     problemdetails:
       enabled: false
+  servlet:
+    multipart:
+      # Image uploads (ADR-0007): 5MB = 5 242 880 bytes per file; a bigger file -> 400 IMAGE_INVALID.
+      # The request may be a little larger because of the multipart headers.
+      max-file-size: 5MB
+      max-request-size: 6MB
   autoconfigure:
     # No default in-memory user (it logs a generated password); accounts come from our own tables.
     exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration

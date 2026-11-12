@@ -20,6 +20,9 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /** The one place that turns exceptions into the error envelope (api.md §3, CLAUDE.md §5.2). */
@@ -66,12 +69,22 @@ public class ApiExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, codeOf(first), textOf(first), fields);
     }
 
+    /** An upload above spring.servlet.multipart.max-file-size (5 MB), refused while the request is read (ADR-0007). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ErrorResponse> uploadTooLarge(MaxUploadSizeExceededException e) {
+        return error(HttpStatus.BAD_REQUEST, ErrorCode.IMAGE_INVALID, "image must be at most 5242880 bytes");
+    }
+
     @ExceptionHandler({
         HttpMessageNotReadableException.class,
         HttpRequestMethodNotSupportedException.class,
         // A wrong or missing Content-Type / Accept is the client's mistake, not a server failure.
         HttpMediaTypeNotSupportedException.class,
-        HttpMediaTypeNotAcceptableException.class
+        HttpMediaTypeNotAcceptableException.class,
+        // A path variable of the wrong type, e.g. /api/images/abc instead of a UUID.
+        MethodArgumentTypeMismatchException.class,
+        // A broken multipart body.
+        MultipartException.class
     })
     ResponseEntity<ErrorResponse> badRequest(Exception e) {
         return error(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED, INVALID_REQUEST);
