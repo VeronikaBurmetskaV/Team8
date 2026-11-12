@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router";
-import { ApiError } from "../../api/client";
 import type { ErrorCode } from "../../api/types";
 import { errorText } from "../../shared/messages.uk";
 import {
@@ -11,19 +10,9 @@ import {
   isHttpUrl,
   type CardFormValues,
 } from "../../shared/validation";
+import { cardFormFields, toCardFormErrors } from "./cardForm";
 import { useCreateBrandProduct } from "./queries";
 import styles from "./NewProductForm.module.css";
-
-type FormField = "name" | "priceUah" | "photo" | "productUrl";
-
-/** Request field of POST /api/brand/products → the input that shows its error. */
-const fieldByRequestName: Partial<Record<string, FormField>> = {
-  name: "name",
-  priceUah: "priceUah",
-  photoImageId: "photo",
-  photoUrl: "photo",
-  productUrl: "productUrl",
-};
 
 /** In the card form a rejected upload shows the US-25.1 S2 text (overview Q-08). */
 function fieldText(code: string | undefined): string | null {
@@ -68,21 +57,13 @@ export function NewProductForm() {
   const productUrl = useWatch({ control, name: "productUrl" }).trim();
   const canCheckLink = isHttpUrl(productUrl);
 
-  function showServerError(error: ApiError) {
-    let shownAtField = false;
-    for (const [requestName, code] of Object.entries(error.fields)) {
-      const field = fieldByRequestName[requestName];
-      if (field && code) {
-        setError(field, { type: "server", message: code });
-        shownAtField = true;
-      }
+  function showError(error: unknown) {
+    const { fields, form } = toCardFormErrors(error);
+    for (const field of cardFormFields) {
+      const code = fields[field];
+      if (code) setError(field, { type: "server", message: code });
     }
-    if (shownAtField) return;
-    if (error.code === "IMAGE_INVALID") {
-      setError("photo", { type: "server", message: error.code });
-    } else {
-      setFormError(error.code);
-    }
+    setFormError(form);
   }
 
   const onSubmit = handleSubmit(async (values) => {
@@ -91,8 +72,7 @@ export function NewProductForm() {
       await createProduct.mutateAsync(values);
     } catch (error) {
       // Entered data stays in the form on any failure.
-      if (error instanceof ApiError) showServerError(error);
-      else setFormError("SERVICE_UNAVAILABLE");
+      showError(error);
       return;
     }
     await navigate("/brand/products");
@@ -112,9 +92,8 @@ export function NewProductForm() {
           <input
             id="card-name"
             type="text"
-            maxLength={100}
             aria-invalid={errors.name ? true : undefined}
-            aria-describedby="card-name-error"
+            aria-describedby={errors.name ? "card-name-error" : undefined}
             {...register("name")}
           />
           <FieldError id="card-name-error" code={errors.name?.message} />
@@ -127,7 +106,7 @@ export function NewProductForm() {
             type="text"
             inputMode="numeric"
             aria-invalid={errors.priceUah ? true : undefined}
-            aria-describedby="card-price-error"
+            aria-describedby={errors.priceUah ? "card-price-error" : undefined}
             {...register("priceUah")}
           />
           <FieldError id="card-price-error" code={errors.priceUah?.message} />
@@ -135,7 +114,7 @@ export function NewProductForm() {
 
         <fieldset
           className={styles.photoGroup}
-          aria-describedby="card-photo-error"
+          aria-describedby={errors.photo ? "card-photo-error" : undefined}
         >
           <legend className={styles.legend}>Фотографія товару</legend>
           <div>
@@ -171,7 +150,9 @@ export function NewProductForm() {
             id="card-product-url"
             type="url"
             aria-invalid={errors.productUrl ? true : undefined}
-            aria-describedby="card-product-url-error"
+            aria-describedby={
+              errors.productUrl ? "card-product-url-error" : undefined
+            }
             {...register("productUrl")}
           />
           <button
@@ -203,7 +184,7 @@ export function NewProductForm() {
         )}
 
         <button className={styles.submit} type="submit" disabled={isSubmitting}>
-          Зберегти чернетку
+          {isSubmitting ? "Зберігаємо…" : "Зберегти чернетку"}
         </button>
       </form>
 

@@ -1,0 +1,35 @@
+.title {
+  margin-bottom: var(--space-3);
+}
+
+/* Same card as the login and registration pages; the gap separates the field and the button. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: var(--auth-card-max-width);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* Form-level error. */
+.error {
+  margin: 0;
+  text-align: center;
+}
+
+.success {
+  margin: 0;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.submit {
+  width: 100%;
+}
