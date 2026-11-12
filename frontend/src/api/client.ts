@@ -3,7 +3,6 @@ import type {
   BrandCard,
   CreateProductRequest,
   ErrorCode,
-  HealthResponse,
   ImageUploadResponse,
 } from "./types";
 
@@ -110,10 +109,6 @@ export function apiPut<T>(path: string, body: unknown): Promise<T> {
 /** Multipart POST (image upload). */
 export function apiUpload<T>(path: string, form: FormData): Promise<T> {
   return request<T>("POST", path, form);
-}
-
-export function getHealth(): Promise<HealthResponse> {
-  return apiGet<HealthResponse>("/api/health");
 }
 
 export function getBrandProducts(): Promise<BrandCard[]> {

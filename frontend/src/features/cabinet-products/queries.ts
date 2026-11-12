@@ -6,6 +6,7 @@ import {
   uploadImage,
 } from "../../api/client";
 import type { CardFormValues } from "../../shared/validation";
+import { toCreateProductRequest } from "./cardForm";
 
 const brandProductsKey = ["brand", "products"] as const;
 
@@ -31,13 +32,7 @@ export function useCreateBrandProduct() {
         }
         photoImageId = uploaded.current.id;
       }
-      return createBrandProduct({
-        name: values.name,
-        priceUah: Number(values.priceUah),
-        photoImageId,
-        photoUrl: file ? null : values.photo.url,
-        productUrl: values.productUrl,
-      });
+      return createBrandProduct(toCreateProductRequest(values, photoImageId));
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: brandProductsKey }),

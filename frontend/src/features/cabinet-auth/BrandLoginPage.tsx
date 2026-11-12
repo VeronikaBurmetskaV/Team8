@@ -1,10 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
-import { ApiError } from "../../api/client";
-import { messages } from "../../shared/messages.uk";
+import { Link, useNavigate } from "react-router";
+import { errorMessage } from "../../shared/errors";
 import { brandLoginSchema, type BrandLoginForm } from "../../shared/validation";
 import { useLoginBrand } from "./api";
+import { pathAfterLogin } from "./pathAfterLogin";
 import styles from "./BrandLoginPage.module.css";
 
 export function BrandLoginPage() {
@@ -24,16 +24,10 @@ export function BrandLoginPage() {
     try {
       const brand = await loginBrand.mutateAsync(credentials);
       // The profile first while the brand has no name, otherwise the products (US-21.1 CL).
-      navigate(
-        brand.profileState === "INCOMPLETE"
-          ? "/brand/profile"
-          : "/brand/products",
-      );
+      navigate(pathAfterLogin(brand.profileState));
     } catch (error) {
       // The entered email stays in the form (US-21.1 S2).
-      const code =
-        error instanceof ApiError ? error.code : "SERVICE_UNAVAILABLE";
-      setError("root", { message: messages[code] });
+      setError("root", { message: errorMessage(error) });
     }
   }
 
@@ -67,15 +61,19 @@ export function BrandLoginPage() {
             {...register("password")}
           />
         </div>
+        <button className={styles.submit} type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Входимо…" : "Увійти"}
+        </button>
         {errorText && (
           <p className={styles.error} role="alert">
             {errorText}
           </p>
         )}
-        <button className={styles.submit} type="submit" disabled={isSubmitting}>
-          Увійти
-        </button>
       </form>
+      <p className={styles.switch}>
+        Ще не маєте кабінету?{" "}
+        <Link to="/brand/register">Зареєструвати бренд</Link>
+      </p>
     </>
   );
 }

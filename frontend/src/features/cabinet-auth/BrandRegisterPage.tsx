@@ -1,14 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router";
-import { ApiError } from "../../api/client";
+import { Link, useNavigate } from "react-router";
+import { toFormErrors } from "../../shared/errors";
 import { messages } from "../../shared/messages.uk";
 import {
   brandRegisterSchema,
   type BrandRegisterForm,
 } from "../../shared/validation";
 import { useRegisterBrand } from "./api";
+import { pathAfterLogin } from "./pathAfterLogin";
 import styles from "./BrandRegisterPage.module.css";
+
+/** Request field of POST /api/brand/register → the input that shows its error (US-21 S2). */
+const registerFields = { email: "email", password: "password" } as const;
 
 export function BrandRegisterPage() {
   const navigate = useNavigate();
@@ -27,11 +31,7 @@ export function BrandRegisterPage() {
     try {
       const brand = await registerBrand.mutateAsync(credentials);
       // A new brand has no name yet, so it goes to the profile (US-21 CL).
-      navigate(
-        brand.profileState === "INCOMPLETE"
-          ? "/brand/profile"
-          : "/brand/products",
-      );
+      navigate(pathAfterLogin(brand.profileState));
     } catch (error) {
       // The entered data stays in the form on any error (US-21 S2).
       showError(error);
@@ -39,16 +39,12 @@ export function BrandRegisterPage() {
   }
 
   function showError(error: unknown) {
-    if (!(error instanceof ApiError)) {
-      setError("root", { message: messages.SERVICE_UNAVAILABLE });
-      return;
+    const { fields, form } = toFormErrors(error, registerFields);
+    if (fields.email) setError("email", { message: messages[fields.email] });
+    if (fields.password) {
+      setError("password", { message: messages[fields.password] });
     }
-    const { email, password } = error.fields;
-    if (email) setError("email", { message: messages[email] });
-    if (password) setError("password", { message: messages[password] });
-    if (!email && !password) {
-      setError("root", { message: messages[error.code] });
-    }
+    if (form) setError("root", { message: messages[form] });
   }
 
   return (
@@ -91,15 +87,18 @@ export function BrandRegisterPage() {
             </p>
           )}
         </div>
+        <button className={styles.submit} type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Реєструємо…" : "Зареєструвати бренд"}
+        </button>
         {errors.root && (
           <p className={styles.error} role="alert">
             {errors.root.message}
           </p>
         )}
-        <button className={styles.submit} type="submit" disabled={isSubmitting}>
-          Зареєструвати бренд
-        </button>
       </form>
+      <p className={styles.switch}>
+        Вже маєте кабінет? <Link to="/brand/login">Увійти</Link>
+      </p>
     </>
   );
 }

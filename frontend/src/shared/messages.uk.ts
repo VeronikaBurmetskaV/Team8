@@ -47,9 +47,12 @@ export const messages: Record<ErrorCode, string> = {
   INVALID_STATE: "Стан картки вже змінився. Оновіть сторінку",
 };
 
+/** True for a code of the dictionary; the server or a library may send anything. */
+export function isErrorCode(code: unknown): code is ErrorCode {
+  return typeof code === "string" && Object.hasOwn(messages, code);
+}
+
 /** Text for a code that arrives as a plain string (form libraries, unknown codes). */
 export function errorText(code: string): string {
-  return Object.hasOwn(messages, code)
-    ? messages[code as ErrorCode]
-    : messages.VALIDATION_FAILED;
+  return messages[isErrorCode(code) ? code : "SERVICE_UNAVAILABLE"];
 }

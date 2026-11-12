@@ -5,7 +5,6 @@ import {
   apiPost,
   apiPut,
   createBrandProduct,
-  getHealth,
   uploadImage,
 } from "./client";
 
@@ -41,18 +40,23 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("getHealth", () => {
-  it("returns the health body", async () => {
-    stubFetch(200, { status: "UP" });
-    await expect(getHealth()).resolves.toEqual({ status: "UP" });
-    expect(fetch).toHaveBeenCalledWith("/api/health", expect.anything());
+describe("apiGet", () => {
+  const getSession = () => apiGet("/api/session");
+
+  it("returns the response body", async () => {
+    stubFetch(200, { accountType: null, email: null });
+    await expect(getSession()).resolves.toEqual({
+      accountType: null,
+      email: null,
+    });
+    expect(fetch).toHaveBeenCalledWith("/api/session", expect.anything());
   });
 
   it("turns the error envelope into an ApiError", async () => {
     stubFetch(404, {
       error: { code: "NOT_FOUND", message: "No such resource" },
     });
-    const error = await getHealth().catch((e: unknown) => e);
+    const error = await getSession().catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 404, code: "NOT_FOUND" });
   });
@@ -64,7 +68,7 @@ describe("getHealth", () => {
         Promise.resolve(new Response("Bad Gateway", { status: 502 })),
       ),
     );
-    await expect(getHealth()).rejects.toMatchObject({
+    await expect(getSession()).rejects.toMatchObject({
       status: 502,
       code: "SERVICE_UNAVAILABLE",
     });
