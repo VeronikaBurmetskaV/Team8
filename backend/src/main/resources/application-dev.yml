@@ -1,0 +1,8 @@
+# Local development and the laptop demo (profile `dev`, ADR-0010).
+
+fulla:
+  auth:
+    # Every browser reaches Spring through the Vite proxy (or the cloudflared tunnel), so all
+    # visitors arrive from 127.0.0.1 and would share the limit of 10. Without the dev profile
+    # the value from application.yml (10) applies.
+    max-attempts-per-minute: 1000
