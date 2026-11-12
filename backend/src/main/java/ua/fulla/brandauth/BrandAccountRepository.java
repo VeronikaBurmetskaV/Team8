@@ -1,10 +1,10 @@
 package ua.fulla.brandauth;
 
-import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import ua.fulla.common.Timestamps;
 
 /** SQL for {@code brand_accounts}. The email must already be normalized by the service (T-10). */
 @Repository
@@ -35,8 +35,7 @@ class BrandAccountRepository {
                 rs.getObject("id", UUID.class),
                 rs.getString("email"),
                 rs.getString("password_hash"),
-                // The Postgres driver reads timestamptz as OffsetDateTime, not Instant.
-                rs.getObject("created_at", OffsetDateTime.class).toInstant()))
+                Timestamps.instant(rs, "created_at")))
             .optional();
     }
 }

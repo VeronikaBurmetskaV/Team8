@@ -59,6 +59,9 @@ describe("brandRegisterSchema: email", () => {
     "@brand.ua",
     "",
     "no-at-sign",
+    "a\u0000b@brand.ua", // U+0000: the database cannot store it
+    "in\u00A0fo@brand.ua", // a non-breaking space inside
+    "info@bra\u0007nd.ua", // a control character
     `${"a".repeat(246)}@brand.ua`, // 255 characters
   ])("rejects %j with the story text", (email) => {
     const result = brandRegisterSchema.safeParse({ email, password: PASSWORD });
@@ -139,20 +142,27 @@ describe("brandNameSchema", () => {
   it.each([
     ["Lileya", "Lileya"],
     ["  Ля  ", "Ля"], // trimmed, 2 characters
+    ["\u00A0Ля\u00A0", "Ля"], // non-breaking spaces are trimmed too
     ["я".repeat(50), "я".repeat(50)],
     ["😀".repeat(50), "😀".repeat(50)], // 50 code points, not 100 UTF-16 units
   ])("accepts %j", (name, saved) => {
     expect(brandNameSchema.parse({ name }).name).toBe(saved);
   });
 
-  it.each(["L", "x".repeat(51), "", "   ", " L "])(
-    "rejects %j with the name hint",
-    (name) => {
-      const result = brandNameSchema.safeParse({ name });
-      expect(result.success).toBe(false);
-      expect(fieldErrors(result)).toEqual({ name: [brandNameInvalidMessage] });
-    },
-  );
+  it.each([
+    "L",
+    "x".repeat(51),
+    "",
+    "   ",
+    " L ",
+    "\u00A0\u00A0\u00A0", // only non-breaking spaces
+    "ab\u0000cd", // U+0000
+    "ab\u0007cd", // a control character
+  ])("rejects %j with the name hint", (name) => {
+    const result = brandNameSchema.safeParse({ name });
+    expect(result.success).toBe(false);
+    expect(fieldErrors(result)).toEqual({ name: [brandNameInvalidMessage] });
+  });
 });
 
 const validForm: CardFormValues = {

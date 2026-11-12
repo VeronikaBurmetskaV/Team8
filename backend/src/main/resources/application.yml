@@ -10,6 +10,11 @@ spring:
     # No default in-memory user (it logs a generated password); accounts come from our own tables.
     exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
 
+fulla:
+  auth:
+    # Login + register attempts per minute from one IP address; above it -> 429 (ADR-0006)
+    max-attempts-per-minute: 10
+
 server:
   port: 8080
   servlet:

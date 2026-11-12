@@ -11,9 +11,6 @@ import ua.fulla.common.ErrorCode;
 @Service
 public class BrandProfileService {
 
-    static final int NAME_MIN = 2;
-    static final int NAME_MAX = 50;
-
     private final BrandProfileRepository repository;
 
     BrandProfileService(BrandProfileRepository repository) {
@@ -30,16 +27,20 @@ public class BrandProfileService {
         return repository.findByBrandId(brandId).orElseThrow(() -> missingProfile(brandId));
     }
 
-    /** Saves the brand name: 2–50 characters after trimming (US-22.1 CL). Logo and consent come later. */
+    /**
+     * Saves the brand name (US-22.1 CL); its format and the logo URL are already checked by Bean
+     * Validation on the request record. The logo itself and the consent are not stored yet.
+     */
     @Transactional
-    public BrandProfile saveName(UUID brandId, String rawName) {
-        String name = rawName == null ? "" : rawName.strip();
-        // Code points, like char_length() in the database CHECK
-        int length = name.codePointCount(0, name.length());
-        if (length < NAME_MIN || length > NAME_MAX) {
+    public BrandProfile save(UUID brandId, String rawName, UUID logoImageId, String logoUrl) {
+        // A rule across two fields: a logo is an uploaded image or an external URL, never both.
+        if (logoImageId != null && logoUrl != null) {
+            // Map.of has no order; the two fields carry the same code anyway.
             throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.PROFILE_INVALID,
-                "name must be 2-50 characters", Map.of("name", ErrorCode.PROFILE_INVALID));
+                "give either logoImageId or logoUrl, not both",
+                Map.of("logoImageId", ErrorCode.PROFILE_INVALID, "logoUrl", ErrorCode.PROFILE_INVALID));
         }
+        String name = BrandNameValidator.normalize(rawName);
         return repository.updateName(brandId, name).orElseThrow(() -> missingProfile(brandId));
     }
 

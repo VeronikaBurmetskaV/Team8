@@ -17,7 +17,11 @@ import org.springframework.context.annotation.Profile;
 @Profile("dev")
 public class DevDatabaseConfig {
 
-    static final int PORT = 54329;
+    /**
+     * Fixed non-default port (ADR-0004). Kept below the ephemeral port ranges (Linux from 32768,
+     * macOS and Windows from 49152), where the OS may hand the port to any other process.
+     */
+    static final int PORT = 15432;
     static final Path DATA_DIR = Path.of(".data", "pg");
 
     @Bean(destroyMethod = "close")

@@ -137,13 +137,39 @@ class BrandAuthTest {
 
     @Test
     void invalidEmailIsRejected() throws Exception {
-        for (String email : List.of("info.brand.ua", "info@brand", "info@@brand.ua", "in fo@brand.ua", "@brand.ua", "")) {
+        // The same examples as frontend/src/shared/validation.test.ts (R-T17). The last three are
+        // values the database refuses: U+0000 (written as a JSON escape), a non-breaking space
+        // and a control character. They must be a 400, never a 500.
+        List<String> invalid = List.of("info.brand.ua", "info@brand", "info@@brand.ua", "in fo@brand.ua",
+            "@brand.ua", "", "a\\u0000b@brand.ua", "in\u00A0fo@brand.ua", "info@bra\\u0007nd.ua",
+            "a".repeat(246) + "@brand.ua");
+        for (String email : invalid) {
             expectEnvelope(register(email, PASSWORD))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("EMAIL_TAKEN_OR_INVALID"))
                 .andExpect(jsonPath("$.error.fields.email").value("EMAIL_TAKEN_OR_INVALID"))
                 .andExpect(jsonPath("$.error.fields.password").doesNotExist());
         }
+    }
+
+    @Test
+    void nonBreakingSpacesAroundTheEmailAreTrimmed() throws Exception {
+        String id = UUID.randomUUID().toString().substring(0, 8);
+
+        register("\u00A0brand-" + id + "@mail.com\u00A0", PASSWORD)
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.email").value("brand-" + id + "@mail.com"));
+    }
+
+    @Test
+    void registerWithoutFieldsReportsBothFields() throws Exception {
+        expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{}")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("EMAIL_TAKEN_OR_INVALID"))
+            .andExpect(jsonPath("$.error.fields.email").value("EMAIL_TAKEN_OR_INVALID"))
+            .andExpect(jsonPath("$.error.fields.password").value("PASSWORD_TOO_SHORT"))
+            .andExpect(jsonPath("$.error.fields.length()").value(2));
     }
 
     @Test
@@ -167,6 +193,18 @@ class BrandAuthTest {
     }
 
     @Test
+    void passwordLimitIsCountedInUtf8Bytes() throws Exception {
+        // A Cyrillic letter is 2 bytes: 36 letters = 72 bytes fit, 37 letters = 74 bytes do not.
+        register(uniqueEmail(), "я".repeat(36)).andExpect(status().isCreated());
+
+        expectEnvelope(register(uniqueEmail(), "я".repeat(37)))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("PASSWORD_TOO_SHORT"))
+            .andExpect(jsonPath("$.error.message").value(
+                "password must be at least 8 characters and at most 72 bytes in UTF-8"));
+    }
+
+    @Test
     void invalidEmailAndShortPasswordReportBothFieldsWithEmailFirst() throws Exception {
         expectEnvelope(register("no-at-sign", "short"))
             .andExpect(status().isBadRequest())
@@ -181,6 +219,21 @@ class BrandAuthTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{not json")))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+    }
+
+    @Test
+    void wrongOrMissingContentTypeIsValidationFailedNotServerError() throws Exception {
+        String body = credentials(uniqueEmail(), PASSWORD);
+
+        for (String path : List.of("/api/brand/register", "/api/brand/login")) {
+            expectEnvelope(mvc.perform(post(path).with(csrf())
+                    .contentType(MediaType.TEXT_PLAIN).content(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+            expectEnvelope(mvc.perform(post(path).with(csrf()).content(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
+        }
     }
 
     // ---------- login / logout (US-21.1) ----------
@@ -236,6 +289,30 @@ class BrandAuthTest {
             .isEqualTo(wrongPassword.getResponse().getContentAsString());
         // no login happened
         assertThat(wrongPassword.getRequest().getSession(false)).isNull();
+    }
+
+    @Test
+    void loginWithAnEmailTheDatabaseRefusesIsTheSameInvalidCredentials() throws Exception {
+        String expected = login(uniqueEmail(), PASSWORD)
+            .andExpect(status().isUnauthorized())
+            .andReturn().getResponse().getContentAsString();
+
+        // U+0000 as a JSON escape, a non-breaking space inside, not an email at all
+        for (String email : List.of("a\\u0000b@example.com", "in\u00A0fo@example.com", "no-at-sign", "")) {
+            MvcResult result = login(email, PASSWORD)
+                .andExpect(status().isUnauthorized())
+                .andReturn();
+            assertThat(result.getResponse().getContentAsString()).isEqualTo(expected);
+        }
+    }
+
+    @Test
+    void loginWithoutFieldsIsInvalidCredentials() throws Exception {
+        expectEnvelope(mvc.perform(post("/api/brand/login").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{}")))
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
+            .andExpect(jsonPath("$.error.fields").doesNotExist());
     }
 
     @Test

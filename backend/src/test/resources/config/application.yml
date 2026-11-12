@@ -1,0 +1,7 @@
+# Test-only overrides; loaded on top of src/main/resources/application.yml.
+
+fulla:
+  auth:
+    # Every test comes from the same address (127.0.0.1) and registers many brands a minute.
+    # The real limit is tested in AttemptLimitTest, which sets it back to 10.
+    max-attempts-per-minute: 100000

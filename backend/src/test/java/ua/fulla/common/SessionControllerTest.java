@@ -36,6 +36,15 @@ class SessionControllerTest {
     }
 
     @Test
+    void unsupportedAcceptHeaderIsValidationFailedInTheEnvelope() throws Exception {
+        mvc.perform(get("/api/session").accept(MediaType.TEXT_PLAIN))
+            .andExpect(status().isBadRequest())
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(content().json(
+                "{\"error\":{\"code\":\"VALIDATION_FAILED\",\"message\":\"Malformed or invalid request\"}}", true));
+    }
+
+    @Test
     void brandSessionReportsAccountTypeAndEmail() throws Exception {
         String email = "brand-" + UUID.randomUUID() + "@example.com";
         MockHttpSession session = (MockHttpSession) mvc.perform(post("/api/brand/register").with(csrf())
