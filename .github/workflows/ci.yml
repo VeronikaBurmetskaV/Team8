@@ -1,0 +1,41 @@
+# Minimal CI (ADR-0011): the same checks CLAUDE.md §4.2 asks for before "done".
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Frontend lint (ESLint + Prettier)
+        run: npm run lint
+
+      - name: Frontend typecheck
+        run: npm run typecheck
+
+      - name: Frontend tests
+        run: npm --workspace frontend run test
+
+      - name: Backend build and tests
+        working-directory: backend
+        run: ./mvnw -B verify
