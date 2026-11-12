@@ -8,7 +8,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.stereotype.Component;
 
@@ -19,7 +18,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class SessionLogin {
 
-    private final SecurityContextRepository contextRepository = new HttpSessionSecurityContextRepository();
+    private final SecurityContextRepository contextRepository;
+
+    /** @param contextRepository the same bean the filter chain reads the login from (SecurityConfig) */
+    SessionLogin(SecurityContextRepository contextRepository) {
+        this.contextRepository = contextRepository;
+    }
 
     /** Starts a fresh session for the account; any earlier login in this browser is replaced. */
     public void login(HttpServletRequest request, HttpServletResponse response, SessionAccount account) {

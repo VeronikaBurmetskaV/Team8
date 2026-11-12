@@ -5,8 +5,12 @@ import { brandNameInvalidMessage, messages } from "./messages.uk";
 // Form schemas that repeat the backend rules for instant feedback (ADR-0008, R-T17).
 // The API stays the authority: its error `fields` are shown on the form as well.
 
-/** Same pattern as BrandAuthService.EMAIL: name@domain.tld, one @, no spaces. */
-const EMAIL = /^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$/;
+/**
+ * Same pattern as StrictEmailValidator.EMAIL on the backend: name@domain.tld, one @, and no
+ * whitespace, control characters (\p{Cc}) or Unicode separators (\p{Z}) anywhere.
+ */
+const EMAIL =
+  /^[^@\s\p{Cc}\p{Z}]+@[^@\s\p{Cc}\p{Z}.]+(\.[^@\s\p{Cc}\p{Z}.]+)+$/u;
 const EMAIL_MAX = 254;
 const PASSWORD_MIN = 8;
 /** BCrypt limit, counted in UTF-8 bytes like the backend does (Q-11). */
@@ -54,14 +58,14 @@ export const brandLoginSchema = z.object({
 
 export type BrandLoginForm = z.infer<typeof brandLoginSchema>;
 
-/** Brand name in the profile (US-22.1): 2–50 characters after trimming. */
+/** Brand name in the profile (US-22.1): 2–50 characters after trimming, no control characters. */
 export const brandNameSchema = z.object({
   name: z
     .string()
     .trim()
     .refine((name) => {
       const length = codePointLength(name);
-      return length >= NAME_MIN && length <= NAME_MAX;
+      return length >= NAME_MIN && length <= NAME_MAX && !/\p{Cc}/u.test(name);
     }, brandNameInvalidMessage),
 });
 

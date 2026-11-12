@@ -95,6 +95,10 @@ class BrandProfileTest {
         putName(session, "\"" + "я".repeat(50) + "\"")
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.name").value("я".repeat(50)));
+        // non-breaking spaces (U+00A0) are trimmed like ordinary ones
+        putName(session, "\"\u00A0Ля\u00A0\"")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Ля"));
     }
 
     @Test
@@ -102,7 +106,9 @@ class BrandProfileTest {
         MockHttpSession session = registerBrand(uniqueEmail());
         putName(session, "\"Lileya\"").andExpect(status().isOk());
 
-        List<String> invalid = List.of("\"L\"", "\"" + "x".repeat(51) + "\"", "\"\"", "\"   \"", "\" L \"", "null");
+        // The last three: only non-breaking spaces, U+0000 (as a JSON escape), another control character
+        List<String> invalid = List.of("\"L\"", "\"" + "x".repeat(51) + "\"", "\"\"", "\"   \"", "\" L \"", "null",
+            "\"\u00A0\u00A0\u00A0\"", "\"ab\\u0000cd\"", "\"ab\\u0007cd\"");
         for (String name : invalid) {
             putName(session, name)
                 .andExpect(status().isBadRequest())
@@ -127,6 +133,67 @@ class BrandProfileTest {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
             .andExpect(jsonPath("$.error.fields.name").value("PROFILE_INVALID"));
+    }
+
+    @Test
+    void logoUrlMustBeHttps() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        List<String> invalid = List.of("http://insecure.example/logo.png", "HTTPS://example.com/logo.png",
+            "example.com/logo.png", "data:image/png;base64,AAAA", "https://", "");
+        for (String logoUrl : invalid) {
+            putProfile(session, "{\"name\":\"Lileya\",\"logoImageId\":null,\"logoUrl\":\"" + logoUrl
+                    + "\",\"consentGiven\":false}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+                .andExpect(jsonPath("$.error.fields.logoUrl").value("PROFILE_INVALID"))
+                .andExpect(jsonPath("$.error.fields.length()").value(1));
+        }
+
+        // nothing was saved, not even the valid name
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(jsonPath("$.state").value("INCOMPLETE"));
+
+        putProfile(session, "{\"name\":\"Lileya\",\"logoImageId\":null,"
+                + "\"logoUrl\":\"https://cdn.brand-site.ua/logo.png\",\"consentGiven\":false}")
+            .andExpect(status().isOk());
+    }
+
+    @Test
+    void bothLogoSourcesAtOnceAreRejected() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        putProfile(session, "{\"name\":\"Lileya\",\"logoImageId\":\"" + UUID.randomUUID()
+                + "\",\"logoUrl\":\"https://cdn.brand-site.ua/logo.png\",\"consentGiven\":false}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.logoImageId").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.logoUrl").value("PROFILE_INVALID"));
+
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(jsonPath("$.state").value("INCOMPLETE"));
+    }
+
+    @Test
+    void invalidNameAndLogoUrlReportBothFieldsWithNameFirst() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        putProfile(session, "{\"name\":\"L\",\"logoImageId\":null,\"logoUrl\":\"http://x.ua/l.png\",\"consentGiven\":false}")
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.message").value("name must be 2-50 characters without control characters"))
+            .andExpect(jsonPath("$.error.fields.name").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.logoUrl").value("PROFILE_INVALID"));
+    }
+
+    @Test
+    void wrongContentTypeIsValidationFailedNotServerError() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        mvc.perform(put("/api/brand/profile").with(csrf()).session(session)
+                .contentType(MediaType.TEXT_PLAIN).content("{\"name\":\"Lileya\"}"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"));
     }
 
     @Test
@@ -183,7 +250,11 @@ class BrandProfileTest {
 
     /** Sends the documented request shape; {@code nameJson} is a JSON literal such as {@code "\"Lileya\""}. */
     private ResultActions putName(MockHttpSession session, String nameJson) throws Exception {
-        String body = "{\"name\":" + nameJson + ",\"logoImageId\":null,\"logoUrl\":null,\"consentGiven\":false}";
+        return putProfile(session,
+            "{\"name\":" + nameJson + ",\"logoImageId\":null,\"logoUrl\":null,\"consentGiven\":false}");
+    }
+
+    private ResultActions putProfile(MockHttpSession session, String body) throws Exception {
         return mvc.perform(put("/api/brand/profile").with(csrf()).session(session)
             .contentType(MediaType.APPLICATION_JSON).content(body));
     }

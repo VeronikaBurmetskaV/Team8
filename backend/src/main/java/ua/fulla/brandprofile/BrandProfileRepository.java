@@ -2,12 +2,11 @@ package ua.fulla.brandprofile;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.Instant;
-import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import ua.fulla.common.Timestamps;
 
 /** SQL for {@code brand_profiles}. Every query is filtered by the brand ID from the session (T-7). */
 @Repository
@@ -50,15 +49,9 @@ class BrandProfileRepository {
             rs.getString("name"),
             rs.getObject("logo_image_id", UUID.class),
             rs.getString("logo_url"),
-            instant(rs, "consent_given_at"),
+            Timestamps.instant(rs, "consent_given_at"),
             rs.getString("consent_text"),
-            instant(rs, "created_at"),
-            instant(rs, "updated_at"));
-    }
-
-    // The Postgres driver reads timestamptz as OffsetDateTime, not Instant.
-    private static Instant instant(ResultSet rs, String column) throws SQLException {
-        OffsetDateTime value = rs.getObject(column, OffsetDateTime.class);
-        return value == null ? null : value.toInstant();
+            Timestamps.instant(rs, "created_at"),
+            Timestamps.instant(rs, "updated_at"));
     }
 }

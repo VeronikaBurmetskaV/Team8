@@ -1,5 +1,6 @@
 package ua.fulla.brandprofile;
 
+import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -7,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import ua.fulla.common.HttpsUrl;
 import ua.fulla.common.SessionAccount;
 
 /** {@code /api/brand/profile} (api.md §2.1); ROLE_BRAND is required by SecurityConfig. */
@@ -14,10 +16,15 @@ import ua.fulla.common.SessionAccount;
 class BrandProfileController {
 
     /**
-     * The documented request shape. Only {@code name} is processed so far (US-22.1);
-     * logo and consent fields are accepted and ignored until their stories are implemented.
+     * The documented request shape. Only {@code name} is saved so far (US-22.1). The logo fields
+     * are validated but not stored until the images feature exists; {@code consentGiven} is
+     * not processed until US-22.2.
      */
-    record ProfileRequest(String name, UUID logoImageId, String logoUrl, Boolean consentGiven) {}
+    record ProfileRequest(
+            @BrandName String name,
+            UUID logoImageId,
+            @HttpsUrl(message = "PROFILE_INVALID: logoUrl must be an https:// URL") String logoUrl,
+            Boolean consentGiven) {}
 
     record ProfileResponse(
             String name,
@@ -57,7 +64,8 @@ class BrandProfileController {
     }
 
     @PutMapping("/api/brand/profile")
-    ProfileResponse save(@AuthenticationPrincipal SessionAccount brand, @RequestBody ProfileRequest request) {
-        return ProfileResponse.of(service.saveName(brand.accountId(), request.name()));
+    ProfileResponse save(@AuthenticationPrincipal SessionAccount brand, @Valid @RequestBody ProfileRequest request) {
+        return ProfileResponse.of(
+            service.save(brand.accountId(), request.name(), request.logoImageId(), request.logoUrl()));
     }
 }
