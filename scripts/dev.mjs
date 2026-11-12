@@ -3,12 +3,16 @@
 // Extra arguments go to Vite, e.g. `npm run dev -- --host` for the phone demo.
 import { spawn, spawnSync } from "node:child_process";
 import net from "node:net";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REQUIRED_JAVA = 21;
 const rootDir = fileURLToPath(new URL("../", import.meta.url));
 const backendDir = fileURLToPath(new URL("../backend/", import.meta.url));
 const isWindows = process.platform === "win32";
+// Full path (final-review №7): with NoDefaultCurrentDirectoryInExePath cmd.exe does not find a bare
+// "mvnw.cmd". Quoted because `shell: true` joins the command line as text.
+const mvnw = isWindows ? `"${path.join(backendDir, "mvnw.cmd")}"` : path.join(backendDir, "mvnw");
 /** Spring and the embedded Postgres (DevDatabaseConfig.PORT). */
 const BACKEND_PORTS = [8080, 15432];
 const GRACEFUL_STOP_MS = 20_000;
@@ -116,7 +120,7 @@ console.log("[dev] the first start downloads Maven and embedded Postgres; it can
 children.push(
   start(
     "backend",
-    isWindows ? "mvnw.cmd" : "./mvnw",
+    mvnw,
     ["spring-boot:run", "-Dspring-boot.run.profiles=dev"],
     backendDir,
   ),
