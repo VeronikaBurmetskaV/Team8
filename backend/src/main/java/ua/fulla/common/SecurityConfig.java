@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -28,6 +29,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/brand/register", "/api/brand/login").permitAll()
                 .requestMatchers("/api/brand/**").hasRole("BRAND")
                 .requestMatchers("/api/me/**").hasRole("BUYER")
+                // Only brands upload images (Q-03); GET /api/images/{id} stays public.
+                .requestMatchers(HttpMethod.POST, "/api/images").hasRole("BRAND")
                 .anyRequest().permitAll())
             // XSRF-TOKEN cookie -> X-XSRF-TOKEN header, read by frontend/src/api/client.ts
             .csrf(csrf -> csrf.spa())
