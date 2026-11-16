@@ -80,9 +80,10 @@ export function BrandProductsPage() {
 
   return (
     <section className={styles.page}>
-      <h1 className={styles.title}>Товари бренду</h1>
-
-      <AddProductEntry />
+      <div className={styles.header}>
+        <h1 className={styles.title}>Товари бренду</h1>
+        <AddProductEntry />
+      </div>
 
       {products.isPending && <p>Завантаження…</p>}
 
@@ -110,12 +111,12 @@ export function BrandProductsPage() {
           <tbody>
             {products.data.map((card) => (
               <tr key={card.id}>
-                <td>
+                <td className={styles.photo}>
                   <Thumbnail card={card} />
                 </td>
                 <td className={styles.name}>{card.name}</td>
                 <td className={styles.price}>{card.priceUah} грн</td>
-                <td>{statusText[card.status]}</td>
+                <td className={styles.status}>{statusText[card.status]}</td>
               </tr>
             ))}
           </tbody>

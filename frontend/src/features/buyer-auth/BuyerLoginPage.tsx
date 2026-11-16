@@ -1,3 +1,9 @@
+import styles from "./BuyerAuthPage.module.css";
+
 export function BuyerLoginPage() {
-  return <h1>Вхід</h1>;
+  return (
+    <div className={styles.page}>
+      <h1 className={styles.title}>Вхід</h1>
+    </div>
+  );
 }

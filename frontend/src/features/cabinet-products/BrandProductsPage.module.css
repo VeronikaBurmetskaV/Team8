@@ -9,9 +9,16 @@
   margin: 0;
 }
 
+/* Title and the main action: stacked on a phone, one row from --bp-tablet. */
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
 /* «Додати товар»: the main action of the page, set apart from the list. */
 .addLink {
-  align-self: flex-start;
   font-family: var(--font-heading);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -45,35 +52,22 @@
   margin: 0;
 }
 
-/* White card like the forms of the cabinet. */
+/* The list is one <table>. On a phone every row is drawn as a card, one under another;
+   from --bp-tablet it is a real table across the whole container. */
 .table {
+  /* Fixed-size preview: a large photo never stretches the row. */
+  --thumbnail-size: calc(var(--control-height) * 1.5);
   width: 100%;
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-lg);
   border-spacing: 0;
-  background-color: var(--color-surface);
-  box-shadow: var(--shadow-md);
   font-size: var(--font-size-sm);
 }
 
 .table th,
 .table td {
-  padding: var(--space-1);
   text-align: left;
-  vertical-align: middle;
 }
 
-.table th {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.table td {
-  border-top: var(--border-width) solid var(--color-border);
-}
-
-/* A long name wraps instead of widening the table (no horizontal scroll from 320 px). */
+/* A long name wraps instead of widening the list (no horizontal scroll from 320 px). */
 .name {
   overflow-wrap: anywhere;
 }
@@ -82,12 +76,11 @@
   white-space: nowrap;
 }
 
-/* Fixed-size preview: a large photo never stretches the row. */
 .thumbnail,
 .placeholder {
   display: block;
-  width: var(--control-height);
-  height: var(--control-height);
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
   border-radius: var(--radius-sm);
 }
 
@@ -101,4 +94,107 @@
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-tight);
+}
+
+/* Below --bp-tablet: cards. The only max-width query of the cabinet: the card and the table
+   drawings exclude each other, so neither has to undo the other one. */
+@media (max-width: 767.98px) {
+  .table,
+  .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  /* The card needs no column titles: photo, name, price and status explain themselves. */
+  .table thead {
+    display: none;
+  }
+
+  .table tr {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "photo name"
+      "photo price"
+      "photo status";
+    grid-template-rows: auto auto 1fr;
+    column-gap: var(--space-2);
+    row-gap: var(--space-half);
+    padding: var(--space-2);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .table td {
+    display: block;
+    padding: 0;
+  }
+
+  .photo {
+    grid-area: photo;
+  }
+
+  .name {
+    grid-area: name;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .price {
+    grid-area: price;
+  }
+
+  .status {
+    grid-area: status;
+    color: var(--color-text-muted);
+  }
+}
+
+/* --bp-tablet: a table in a white card like the forms of the cabinet. */
+@media (min-width: 768px) {
+  .header {
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .table {
+    --thumbnail-size: var(--control-height);
+    border: var(--border-width) solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-md);
+  }
+
+  .table th,
+  .table td {
+    padding: var(--space-1) var(--space-2);
+    vertical-align: middle;
+  }
+
+  .table th {
+    padding-block: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .table td {
+    border-top: var(--border-width) solid var(--color-border);
+  }
+
+  /* The photo, price and status columns take only what they need; the name gets the rest. */
+  .table th:not(:nth-child(2)),
+  .photo,
+  .price,
+  .status {
+    width: 1%;
+  }
+
+  .status {
+    white-space: nowrap;
+  }
 }

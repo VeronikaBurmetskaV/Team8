@@ -48,7 +48,7 @@ export function BrandRegisterPage() {
   }
 
   return (
-    <>
+    <div className={styles.page}>
       <h1 className={styles.title}>Реєстрація бренду</h1>
       <form
         className={styles.card}
@@ -99,6 +99,6 @@ export function BrandRegisterPage() {
       <p className={styles.switch}>
         Вже маєте кабінет? <Link to="/brand/login">Увійти</Link>
       </p>
-    </>
+    </div>
   );
 }

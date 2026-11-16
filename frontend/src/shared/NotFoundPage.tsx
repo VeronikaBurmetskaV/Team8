@@ -1,3 +1,13 @@
+import { Link } from "react-router";
+import styles from "./NotFoundPage.module.css";
+
 export function NotFoundPage() {
-  return <h1>Сторінку не знайдено</h1>;
+  return (
+    <section className={styles.page}>
+      <h1 className={styles.title}>Сторінку не знайдено</h1>
+      <Link className={styles.homeLink} to="/">
+        На головну
+      </Link>
+    </section>
+  );
 }
