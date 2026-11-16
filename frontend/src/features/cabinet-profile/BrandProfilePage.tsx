@@ -15,12 +15,12 @@ export function BrandProfilePage() {
   const profile = useBrandProfile();
 
   return (
-    <>
+    <div className={styles.page}>
       <h1 className={styles.title}>Профіль бренду</h1>
       {profile.isPending && <p>Завантаження…</p>}
       {profile.isError && <LoadError error={profile.error} />}
       {profile.isSuccess && <BrandProfileForm profile={profile.data} />}
-    </>
+    </div>
   );
 }
 

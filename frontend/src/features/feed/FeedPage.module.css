@@ -1,0 +1,49 @@
+/* Feed layout (US-08.1, US-09). The card is centred and never wider than a phone.
+   Phone and tablet: the two buttons in a row under the card.
+   --bp-desktop: «Пропустити» left of the card, «Подобається» right of it. */
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+}
+
+.stage {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "card card"
+    "skip like";
+  gap: var(--space-2);
+  width: 100%;
+  max-width: var(--container-phone);
+}
+
+.card {
+  grid-area: card;
+  min-width: 0;
+}
+
+.skip {
+  grid-area: skip;
+}
+
+.like {
+  grid-area: like;
+}
+
+@media (min-width: 1024px) {
+  .stage {
+    grid-template-columns: auto minmax(0, var(--container-phone)) auto;
+    grid-template-areas: "skip card like";
+    /* Buttons keep their own width next to the card instead of stretching to the edges. */
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-4);
+    max-width: none;
+  }
+}

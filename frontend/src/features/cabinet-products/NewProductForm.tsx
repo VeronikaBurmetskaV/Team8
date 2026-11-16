@@ -87,7 +87,7 @@ export function NewProductForm() {
         onSubmit={(event) => void onSubmit(event)}
         noValidate
       >
-        <div>
+        <div className={styles.nameField}>
           <label htmlFor="card-name">Назва товару</label>
           <input
             id="card-name"
@@ -99,7 +99,7 @@ export function NewProductForm() {
           <FieldError id="card-name-error" code={errors.name?.message} />
         </div>
 
-        <div>
+        <div className={styles.priceField}>
           <label htmlFor="card-price">Ціна в грн</label>
           <input
             id="card-price"
@@ -142,29 +142,31 @@ export function NewProductForm() {
           <FieldError id="card-photo-error" code={errors.photo?.message} />
         </fieldset>
 
-        <div>
+        <div className={styles.urlField}>
           <label htmlFor="card-product-url">
             Посилання на товар на сайті бренду (URL)
           </label>
-          <input
-            id="card-product-url"
-            type="url"
-            aria-invalid={errors.productUrl ? true : undefined}
-            aria-describedby={
-              errors.productUrl ? "card-product-url-error" : undefined
-            }
-            {...register("productUrl")}
-          />
-          <button
-            className={styles.secondaryButton}
-            type="button"
-            disabled={!canCheckLink}
-            onClick={() =>
-              window.open(productUrl, "_blank", "noopener,noreferrer")
-            }
-          >
-            Перевірити посилання
-          </button>
+          <div className={styles.urlRow}>
+            <input
+              id="card-product-url"
+              type="url"
+              aria-invalid={errors.productUrl ? true : undefined}
+              aria-describedby={
+                errors.productUrl ? "card-product-url-error" : undefined
+              }
+              {...register("productUrl")}
+            />
+            <button
+              className={styles.secondaryButton}
+              type="button"
+              disabled={!canCheckLink}
+              onClick={() =>
+                window.open(productUrl, "_blank", "noopener,noreferrer")
+              }
+            >
+              Перевірити посилання
+            </button>
+          </div>
           <FieldError
             id="card-product-url-error"
             code={errors.productUrl?.message}
@@ -172,7 +174,7 @@ export function NewProductForm() {
         </div>
 
         {formError && (
-          <p role="alert">
+          <p className={styles.formError} role="alert">
             {errorText(formError)}
             {formError === "PROFILE_INCOMPLETE" && (
               <>

@@ -1,3 +1,9 @@
+import styles from "./FeedPage.module.css";
+
 export function FeedPage() {
-  return <h1>Стрічка</h1>;
+  return (
+    <section className={styles.page}>
+      <h1 className={styles.title}>Стрічка</h1>
+    </section>
+  );
 }

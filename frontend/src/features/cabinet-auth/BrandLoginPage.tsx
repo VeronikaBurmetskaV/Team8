@@ -36,7 +36,7 @@ export function BrandLoginPage() {
     errors.email?.message ?? errors.password?.message ?? errors.root?.message;
 
   return (
-    <>
+    <div className={styles.page}>
       <h1 className={styles.title}>Вхід для бренду</h1>
       <form
         className={styles.card}
@@ -74,6 +74,6 @@ export function BrandLoginPage() {
         Ще не маєте кабінету?{" "}
         <Link to="/brand/register">Зареєструвати бренд</Link>
       </p>
-    </>
+    </div>
   );
 }

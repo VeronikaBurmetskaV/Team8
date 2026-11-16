@@ -12,9 +12,12 @@ export function Layout() {
   // buyer pages stay in the narrow one. Widths are tokens in tokens.css.
   const { pathname } = useLocation();
   const isCabinet = pathname === "/brand" || pathname.startsWith("/brand/");
+  // The feed (buttons beside the card) and the «Вподобане» grid need the room on a laptop;
+  // the pages themselves keep their content narrow where needed.
+  const isWide = isCabinet || pathname === "/feed" || pathname === "/favorites";
 
   return (
-    <div className={isCabinet ? "layout layout--wide" : "layout"}>
+    <div className={isWide ? "layout layout--wide" : "layout"}>
       <header className="layout-header">
         <div className="layout-header-inner">
           <span className="layout-logo">FULLA</span>

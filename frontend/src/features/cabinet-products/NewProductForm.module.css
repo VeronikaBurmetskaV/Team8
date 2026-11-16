@@ -1,18 +1,23 @@
+/* Narrower than the wide cabinet container: a form stretched to 1120 px is hard to read. */
 .page {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  width: 100%;
+  max-width: var(--container-form);
 }
 
 .title {
   margin-bottom: var(--space-3);
 }
 
-/* White card like the auth pages; the gap separates the form blocks. */
+/* White card like the auth pages; the gap separates the form blocks.
+   Phone: one column. --bp-tablet: fields in two columns. --bp-desktop: photo on the right. */
 .form {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
   padding: var(--space-4) var(--space-3);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -72,9 +77,17 @@
   background-color: var(--color-surface);
 }
 
+/* The link field with its "Перевірити посилання" button: stacked on a phone. */
+.urlRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
 /* Secondary button ("Перевірити посилання") */
 .secondaryButton {
-  margin-top: var(--space-2);
+  flex-shrink: 0;
   border-color: var(--color-primary);
   background-color: var(--color-surface);
   color: var(--color-primary);
@@ -93,6 +106,10 @@
   color: var(--color-text-muted);
 }
 
+.formError {
+  margin: 0;
+}
+
 .submit {
   width: 100%;
   margin-top: var(--space-2);
@@ -109,4 +126,60 @@
 
 .backLink:hover {
   color: var(--color-primary);
+}
+
+/* --bp-tablet: name and price side by side; photo and link take the full row. */
+@media (min-width: 768px) {
+  .form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    padding: var(--space-4);
+  }
+
+  .photoGroup,
+  .urlField,
+  .formError,
+  .submit {
+    grid-column: 1 / -1;
+  }
+
+  /* The button stands next to the field it checks. */
+  .urlRow {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .submit {
+    width: auto;
+    justify-self: start;
+  }
+}
+
+/* --bp-desktop: the photo block becomes the right column next to the two field columns. */
+@media (min-width: 1024px) {
+  .form {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(
+        0,
+        var(--form-aside-width)
+      );
+    /* The second row takes the height left by the taller photo block. */
+    grid-template-rows: auto 1fr;
+  }
+
+  .nameField {
+    grid-area: 1 / 1;
+  }
+
+  .priceField {
+    grid-area: 1 / 2;
+  }
+
+  .urlField {
+    grid-area: 2 / 1 / auto / 3;
+  }
+
+  .photoGroup {
+    grid-area: 1 / 3 / span 2 / auto;
+  }
 }

@@ -83,7 +83,13 @@
   /* Layout (ADR-0002): buyer pages are mobile-first and stay a narrow column on any screen;
      the brand cabinet is desktop-first and uses a wide one. Both shrink down to 320 px. */
   --container-narrow: 560px;
+  /* Widest phone of ADR-0002: the feed card never grows beyond it, even on a laptop. */
+  --container-phone: 430px;
   --container-wide: 1120px;
+  /* Cabinet forms with several fields (new product card): narrower than the wide container. */
+  --container-form: 960px;
+  /* Side column of such a form on desktop (the photo block). */
+  --form-aside-width: 320px;
   /* Side padding of the page; grows at the breakpoints in index.css. */
   --layout-gutter: var(--space-2);
   --auth-card-max-width: 400px;

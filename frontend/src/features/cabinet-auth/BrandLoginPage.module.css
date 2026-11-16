@@ -1,3 +1,17 @@
+/* Centred column of moderate width: the title, the card and the link share its left edge. */
+.page {
+  width: 100%;
+  max-width: var(--auth-card-max-width);
+  margin: 0 auto;
+}
+
+/* --bp-tablet: more air above the card on large screens. */
+@media (min-width: 768px) {
+  .page {
+    margin-top: var(--space-4);
+  }
+}
+
 .title {
   margin-bottom: var(--space-3);
 }
@@ -6,9 +20,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  width: 100%;
-  max-width: var(--auth-card-max-width);
-  margin: 0 auto;
   padding: var(--space-4) var(--space-3);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-lg);
