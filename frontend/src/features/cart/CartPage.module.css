@@ -1,0 +1,14 @@
+/* Placeholder text, centred on every screen. */
+.page {
+  padding-block: var(--space-4);
+  text-align: center;
+}
+
+.title {
+  overflow-wrap: anywhere;
+}
+
+.text {
+  margin: 0;
+  color: var(--color-text-muted);
+}

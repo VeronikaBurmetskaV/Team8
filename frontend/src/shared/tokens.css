@@ -94,4 +94,23 @@
   --layout-gutter: var(--space-2);
   --auth-card-max-width: 400px;
   --control-height: 48px;
+
+  /* Buyer header (BuyerHeader.module.css): dark full-width bar with light text. */
+  --color-header-background: var(--color-primary);
+  --color-on-header: var(--color-background);
+  --color-on-header-muted: rgb(250 248 245 / 0.6);
+  --color-header-divider: rgb(250 248 245 / 0.16);
+  --font-size-2xs: 0.625rem; /* 10px — the «SWIPING» line under the logo */
+  --font-size-logo: 1.75rem; /* 28px on a phone */
+  --font-size-logo-desktop: 2.75rem; /* 44px from --bp-desktop */
+  --letter-spacing-logo-wide: 0.35em;
+  --letter-spacing-tagline: 0.6em;
+  --icon-size: 22px;
+  --icon-size-sm: 16px;
+  /* Touch target of an icon link (WCAG 2.5.5 recommends 44 px). */
+  --icon-button-size: 44px;
+  /* Underline of the active header icon. */
+  --indicator-width: 2px;
+  --header-menu-width: 240px;
+  --z-header-menu: 10;
 }

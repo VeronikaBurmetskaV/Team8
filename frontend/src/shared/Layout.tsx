@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useLogoutBrand } from "../features/cabinet-auth/api";
+import { BuyerHeader } from "./BuyerHeader";
 import { errorMessage } from "./errors";
 import { useSession } from "./session";
 
@@ -18,29 +19,33 @@ export function Layout() {
 
   return (
     <div className={isWide ? "layout layout--wide" : "layout"}>
-      <header className="layout-header">
-        <div className="layout-header-inner">
-          <span className="layout-logo">FULLA</span>
-          {session.data?.accountType === "BRAND" && (
-            <nav className="layout-nav" aria-label="Кабінет бренду">
-              <NavLink to="/brand/profile">Профіль</NavLink>
-              <NavLink to="/brand/products">Товари</NavLink>
-              <button
-                type="button"
-                disabled={logout.isPending}
-                onClick={() =>
-                  logout.mutate(undefined, {
-                    onSuccess: () => navigate("/brand/login"),
-                  })
-                }
-              >
-                Вийти
-              </button>
-            </nav>
-          )}
-          {logout.isError && <p role="alert">{errorMessage(logout.error)}</p>}
-        </div>
-      </header>
+      {/* Buyer pages get the new header; the cabinet keeps its own, unchanged. */}
+      {!isCabinet && <BuyerHeader />}
+      {isCabinet && (
+        <header className="layout-header">
+          <div className="layout-header-inner">
+            <span className="layout-logo">FULLA</span>
+            {session.data?.accountType === "BRAND" && (
+              <nav className="layout-nav" aria-label="Кабінет бренду">
+                <NavLink to="/brand/profile">Профіль</NavLink>
+                <NavLink to="/brand/products">Товари</NavLink>
+                <button
+                  type="button"
+                  disabled={logout.isPending}
+                  onClick={() =>
+                    logout.mutate(undefined, {
+                      onSuccess: () => navigate("/brand/login"),
+                    })
+                  }
+                >
+                  Вийти
+                </button>
+              </nav>
+            )}
+            {logout.isError && <p role="alert">{errorMessage(logout.error)}</p>}
+          </div>
+        </header>
+      )}
       <main className="layout-main">
         <Outlet />
       </main>

@@ -47,6 +47,30 @@ export const messages: Record<ErrorCode, string> = {
   INVALID_STATE: "Стан картки вже змінився. Оновіть сторінку",
 };
 
+/** Texts of the buyer header (BuyerHeader.tsx) and the cart placeholder page. */
+export const headerTexts = {
+  logoLabel: "FULLA — на головну",
+  tagline: "SWIPING",
+  navLabel: "Навігація покупця",
+  swipe: "Свайпати",
+  swipeFavorites: "Вподобане зі свайпів",
+  soon: "Скоро",
+  favorites: "Вподобане",
+  cart: "Кошик",
+  profile: "Профіль",
+  city: "Місто",
+  cityKyiv: "Київ",
+  language: "Мова",
+  menuOpen: "Відкрити меню",
+  menuClose: "Закрити меню",
+  menuLabel: "Місто та мова",
+} as const;
+
+export const cartTexts = {
+  title: "Кошик",
+  placeholder: "Тут буде ваш кошик",
+} as const;
+
 /** True for a code of the dictionary; the server or a library may send anything. */
 export function isErrorCode(code: unknown): code is ErrorCode {
   return typeof code === "string" && Object.hasOwn(messages, code);
