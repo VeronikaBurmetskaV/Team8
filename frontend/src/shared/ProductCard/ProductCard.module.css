@@ -1,0 +1,348 @@
+/* The one product card (NFR-17). Colours: only the TEMPORARY --palette-* tokens.
+   The card fills its parent. Narrow (phone): info under the photo.
+   Wide (≥ 520px of card width, i.e. laptop feed): photo left, narrow info column right. */
+.card {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1600px;
+  color: var(--palette-ink);
+}
+
+.inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 550ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.inner[data-flipped="true"] {
+  transform: rotateY(180deg);
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Frame of the card: drawn by the face itself, so it moves and flips with the card. */
+  border: var(--border-width-thick) solid var(--palette-warm-gray);
+  border-radius: var(--radius-lg);
+  background-color: var(--palette-light-gray);
+  box-shadow: 0 12px 32px rgb(21 22 10 / 0.18);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.back {
+  transform: rotateY(180deg);
+  padding: var(--space-3);
+  gap: var(--space-2);
+}
+
+/* ---------- Front ---------- */
+.photoBox {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background-color: var(--palette-warm-gray);
+}
+
+.photo,
+.photoPlaceholder,
+.photoStub {
+  position: absolute;
+  inset: 0;
+}
+
+/* Demo data: a plain grey rectangle with «Картинка N» in the centre. */
+.photoStub {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2);
+  border-bottom: var(--border-width) solid var(--palette-warm-gray);
+  background-color: var(--palette-light-gray);
+  color: var(--palette-ink);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Scaled proportionally, cropped instead of stretched (US-08.1 CL). */
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.photoPlaceholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  height: 100%;
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-logo);
+}
+
+.photoPlaceholderText {
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+}
+
+.info {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: var(--space-half);
+  padding: var(--space-2);
+  min-width: 0;
+}
+
+.name,
+.backName {
+  margin: 0;
+  color: var(--palette-ink);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+/* Long names and brands: two lines, then an ellipsis (US-08.2 CL). */
+.name,
+.brand {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.brand {
+  margin: 0;
+  color: var(--palette-brown);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.price {
+  margin: 0;
+  color: var(--palette-ink);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.group {
+  margin-top: var(--space-half);
+}
+
+.groupTitle {
+  margin: 0 0 var(--space-half);
+  color: var(--palette-ink);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.sizes,
+.colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-half);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.size {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 var(--space-half);
+  border: var(--focus-ring-width) solid var(--palette-brown);
+  border-radius: var(--radius-pill);
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.size[data-available="false"] {
+  border-color: var(--palette-warm-gray);
+  background-color: var(--palette-light-gray);
+  color: var(--palette-brown);
+  text-decoration: line-through;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.color {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: var(--border-width) solid var(--palette-ink);
+  border-radius: var(--radius-sm);
+}
+
+.color[data-unknown="true"] {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--palette-light-gray) 0 4px,
+    var(--palette-warm-gray) 4px 8px
+  );
+}
+
+.flipButton {
+  align-self: stretch;
+  margin-top: var(--space-1);
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border-color: var(--palette-ink);
+  background-color: transparent;
+  color: var(--palette-ink);
+}
+
+.flipButton:hover:not(:disabled) {
+  border-color: var(--palette-brown);
+  background-color: var(--palette-brown);
+  color: var(--palette-light-gray);
+}
+
+.flipButton:focus-visible {
+  outline-color: var(--palette-brown);
+}
+
+.flipIcon {
+  font-size: var(--icon-size);
+}
+
+/* Wide card: photo left, narrow info column right. */
+@container (min-width: 520px) {
+  .front {
+    flex-direction: row;
+  }
+
+  .photoBox {
+    flex: 1 1 auto;
+    height: 100%;
+  }
+
+  .photoStub {
+    border-bottom: none;
+    border-right: var(--border-width) solid var(--palette-warm-gray);
+  }
+
+  .info {
+    flex: 0 0 clamp(180px, 34%, 260px);
+    gap: var(--space-1);
+    padding: var(--space-3) var(--space-2);
+    overflow-y: auto;
+  }
+
+  .flipButton {
+    margin-top: auto;
+  }
+}
+
+/* Very small phones: keep the photo as large as possible. */
+@container (max-width: 359px) {
+  .info {
+    padding: var(--space-1) var(--space-2);
+  }
+
+  .name {
+    font-size: var(--font-size-md);
+  }
+
+  .price {
+    font-size: var(--font-size-md);
+  }
+}
+
+/* ---------- Back ---------- */
+.backScroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.backKicker {
+  margin: 0 0 var(--space-1);
+  text-align: center;
+  color: var(--palette-brown);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.details {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.detail dt {
+  color: var(--palette-brown);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.detail dd {
+  margin: var(--space-half) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.description {
+  white-space: pre-line;
+}
+
+.backPrice {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.sizeTextUnavailable {
+  color: var(--palette-brown);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.noDetails {
+  margin: var(--space-2) 0 0;
+  color: var(--palette-brown);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inner {
+    transition: none;
+  }
+}

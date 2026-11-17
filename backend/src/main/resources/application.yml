@@ -20,6 +20,10 @@ fulla:
   auth:
     # Login + register attempts per minute from one IP address; above it -> 429 (ADR-0006)
     max-attempts-per-minute: 10
+  import:
+    # Demo catalogue import (ADR-0014): off by default, so tests and other profiles never touch
+    # the network. Profile dev turns it on in application-dev.yml.
+    enabled: false
 
 server:
   port: 8080

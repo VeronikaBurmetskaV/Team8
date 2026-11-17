@@ -1,13 +1,15 @@
 # FULLA — External Dependencies and Integrations (MVP)
 
 The MVP has **no API integrations with third parties**. Every external dependency is either a plain link/URL rendered for the buyer, or infrastructure (DB, hosting).
-Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites.**
+Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites** for anything brand-facing: brand-entered product URLs, image URLs and logos are never fetched, checked or proxied.
+**Only exception (ADR-0014, Proposed): the dev-profile demo importer** reads three fixed sources (Всі. Свої XML feed, One By One, Cher'17) to fill the local demo feed. It runs only with `@Profile("dev")` and `fulla.import.enabled=true`, never in `ops`/`prod`/tests, and the demo with imported data is never published. See §7.
 
 ## Overview
 
 | Dependency | Kind | What we take from it | Who calls it | When it is needed |
 |---|---|---|---|---|
 | Brand product pages | Link only | Nothing. We store the URL and add `utm_source=fulla` | Buyer's browser (new tab) | US-19, US-26, US-32 |
+| Demo import sources: vsisvoi.ua, onebyone.ua, cher17.com | Server fetch, **dev profile only** (ADR-0014) | robots.txt, XML feed / sitemap, product pages (JSON-LD + HTML sizes); ≤ 50 items per source; images not copied | `ua.fulla.catalogimport` (`@Scheduled`, ≤ 1 run / 6 h) | Local demo only (§7) |
 | Brand-hosted image URLs | Link only (`<img src>`) | The image bytes, loaded by the browser | Buyer's / brand's browser | US-22.1, US-25.1 (URL variant) |
 | Image storage | Internal (Postgres) | — | Our API | US-22.1, US-25.1 (upload variant) |
 | Database | Infrastructure | Data storage | Our API | Always |
@@ -19,9 +21,9 @@ Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites
 ## 1. Brand websites: product pages (US-19, US-26, US-32)
 
 - **What:** a URL entered by the brand (`http://` or `https://`, format-checked by `@HttpUrl` Bean Validation on the API and the same rule in the frontend form; ADR-0009). FULLA renders it as `<a target="_blank" rel="noopener noreferrer">` with `utm_source=fulla` added by the frontend's `withUtm()` (query merged with `&`, inserted before `#fragment`, left as-is if `utm_source` exists — A-16).
-- **Kind:** link only. No API, no scraping, no status checks. The brand sees FULLA traffic in its own analytics via the UTM tag (US-32 CL).
+- **Kind:** link only. No API, no scraping, no status checks of brand-entered URLs. The brand sees FULLA traffic in its own analytics via the UTM tag (US-32 CL). (The dev-only demo importer, §7, reads its three fixed sources; it never checks brand-entered URLs.)
 - **If the brand site is down or the page returns 404:**
-  - FULLA cannot know (no server fetch). The buyer sees the brand's error page **in a new tab**; the FULLA tab, feed position and «Вподобане» stay intact (BR-20).
+  - FULLA cannot know (no server fetch of brand-entered URLs). The buyer sees the brand's error page **in a new tab**; the FULLA tab, feed position and «Вподобане» stay intact (BR-20).
   - Before publishing, the brand checks the link with «Перевірити посилання» (US-26 S1), which opens it in the brand's own browser.
   - After a product sells out or its URL changes, the brand unpublishes it (US-31) and, if needed, edits and republishes it (A-06).
   - The inactive button «Тимчасово недоступно на сайті бренду» (US-19 S2) appears when the URL is invalid or the card is no longer published (`available=false`, ADR-0009). It does **not** reflect whether the brand site is up.
@@ -65,9 +67,26 @@ Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites
 
 ---
 
+## 7. Demo catalogue import (ADR-0014, Proposed, profile `dev` only)
+
+- **What:** fills the local demo feed with real cards from three fixed sources, configured in `application-dev.yml` (never via API or UI):
+
+  | Source | Read | robots.txt |
+  |---|---|---|
+  | Всі. Свої (`https://vsisvoi.ua`) | `/facebook-feed.xml` (Google Merchant XML: sizes with availability, colour, brand, price, image) | feed explicitly allowed |
+  | One By One (`https://onebyone.ua`) | `sitemap.xml` → product pages: JSON-LD `Product` + sizes from HTML | product pages allowed; `?page=`, filters, search disallowed |
+  | Cher'17 (`https://cher17.com`) | `sitemap.xml` (`/product/…` only) → JSON-LD `Product` + sizes from HTML | `/product/…` allowed |
+
+- **Who calls:** `ua.fulla.catalogimport` in the backend, via the JDK `HttpClient`; HTML parsed with Jsoup. Exists only under `@Profile("dev")` and `fulla.import.enabled=true`.
+- **Limits:** robots.txt first (skip the source if it can't be read); ≥ 2 s between requests, one at a time; honest User-Agent `FULLA-demo-importer/0.1`; ≤ 1 run per source per 6 h (stored in the DB); ≤ 50 products and ≤ 100 requests per source per run; `https` and the source host only; size caps; stop the source on 403/429/challenge.
+- **Images:** never downloaded; cards keep the source's `https://` image URL, so the buyer's browser hot-links it (same side effects as §2).
+- **If unavailable:** the run is marked `partial`/`failed`, existing imported cards stay as they are, and nothing is unpublished. The feed still works from brand and seed cards.
+- **Not published:** while imported data is in the DB, the demo runs on the laptop / same Wi-Fi only; no Render deploy and no `cloudflared` link (brand content without consent).
+- **Data:** `data-model.md` §5 (source brands without accounts, import columns on `products`).
+
 ## Future integration (Out of Scope): automatic import from brand sites
 
-US-23, US-24, US-27–US-30 (connect a site, import products, sync availability and prices, auto-remove sold-out items) are **Post-MVP**. They are listed here only to show what the MVP design must not block.
+US-23, US-24, US-27–US-30 (connect a site, import products, sync availability and prices, auto-remove sold-out items) are **Post-MVP**. They are listed here only to show what the MVP design must not block. The dev-only demo importer (§7, ADR-0014) does **not** implement them: it has no brand settings, no consent and no production use, but its adapters and SSRF limits are a starting point.
 
 | Possible source | Notes |
 |---|---|

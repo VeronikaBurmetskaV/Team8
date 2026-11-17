@@ -20,7 +20,8 @@
 - A resource that does not exist **or belongs to another brand** → `404 NOT_FOUND` (Q-04).
 - The backend is the authority on validation; the frontend repeats the rules only for instant feedback (ADR-0005).
 - Price is an integer of UAH; the client formats it as `2400 грн` (US-08.2).
-- Product URLs are returned exactly as the brand entered them. **The client** adds `utm_source=fulla` with `withUtm()` (ADR-0008).
+- Product URLs are returned exactly as the brand entered them (or, for imported cards, exactly as the source gave them). **The client** adds `utm_source=fulla` with `withUtm()` (ADR-0008).
+- **Demo import (ADR-0014, Proposed, profile `dev` only):** the server fetches three configured sources and creates cards owned by account-less *source brands* (`data-model.md` §5). This adds **no endpoint**: there is no API to start, configure or view an import. Imported cards reach the client as `PublicCard`s; in `GET /api/feed` they also carry the optional details `sizes`, `colors`, `material`, `description` (`FeedCard`, §2.2). No other endpoint returns the details. Brand endpoints never return imported cards (they have no `brand_id`).
 
 ## 2. Endpoints
 
@@ -52,12 +53,50 @@ Shapes:
 
 | Method & path | Story | Access | Success | Errors |
 |---|---|---|---|---|
-| `GET /api/feed` | US-01.2, US-08.1, US-08.2, US-09, US-10 | Public | `200` `{ items: PublicCard[] }`, only Published, ordered by `publishedAt, id`; empty list is valid (US-08.1 CL) | 503 |
+| `GET /api/feed` | US-01.2, US-08.1, US-08.2, US-09, US-10 | Public | `200` `{ items: FeedCard[] }`, only Published, brands and import sources mixed (see «Feed order» below); empty list is valid (US-08.1 CL) | 503 |
 | `GET /api/products?ids=a,b,…` | US-16, US-19, US-32 | Public | `200` `{ items: PublicCard & { available } [] }`; unknown IDs omitted; unpublished cards included with `available: false` | 400 `VALIDATION_FAILED` (> 500 IDs or a non-UUID) |
 | `GET /api/images/{id}` | US-08.2, US-16, US-22.1, US-25.2 | Public | `200` bytes, stored `Content-Type`, `nosniff`, `Cache-Control: immutable` | 404 (client shows the placeholder) |
 | ✚ `GET /api/session` | US-16 CL, US-21.1 CL | Public | `200` `{ accountType: "BRAND" \| "BUYER" \| null, email \| null }`; sets `XSRF-TOKEN` | — |
 
-`PublicCard` = `{ id, name, brandName, priceUah, photoUrl, productUrl }`. `photoUrl` is either `/api/images/{id}` or the brand's `https://` URL. The brand logo is **never** included (US-08.2 CL).
+**Feed order** (team lead decision for the demo, 17.11.2026; ADR-0014): imported cards are shown mixed across import sources and brands, not in blocks of one source. The server orders the Published cards round by round: each brand (account brand or source brand) gives its next card per round, its own cards in `publishedAt, id` order; inside a round the brands are ordered by a hash of the brand ID. The order is deterministic, so the client keeps showing the first card that is in neither `viewedIds` nor `favoriteIds`. The client does not reorder the list.
+
+`PublicCard` = `{ id, name, brandName, priceUah, photoUrl, productUrl }`. `photoUrl` is either `/api/images/{id}` or the brand's `https://` URL (imported cards always use the source's `https://` URL; images are never copied, ADR-0014). `brandName` comes from the brand profile or, for imported cards, from the source brand. The brand logo is **never** included (US-08.2 CL).
+
+`FeedCard` = `PublicCard` + optional `{ sizes, colors, material, description }`. Only imported cards (ADR-0014) have them; a key is **left out** when the card has no value (brand-made cards never have them), never sent as `null` or `[]`.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `sizes` | `[{ "label": string, "available": boolean }]` | Sizes in the source's order; `available: false` = out of stock |
+| `colors` | `[{ "name": string, "hex": string \| null }]` | Colour name as the source gives it; `hex` is `#RRGGBB` from the importer's fixed table, `null` for an unknown name |
+| `material` | string | Plain text, ≤ 500 chars, e.g. «Матеріал верху: Поліестер 95%, Еластан 5%» |
+| `description` | string | Plain text (HTML removed on import), ≤ 5000 chars, lines separated by `\n` |
+
+```json
+{
+  "items": [
+    {
+      "id": "6f1c…",
+      "name": "Футболка сіра з принтом",
+      "brandName": "Barricade",
+      "priceUah": 750,
+      "photoUrl": "https://media2.vsisvoi.ua/uploads/…/a.jpg",
+      "productUrl": "https://vsisvoi.ua/store/futbolka-sira-p-211-316-0001",
+      "sizes": [{ "label": "M", "available": true }, { "label": "L", "available": false }],
+      "colors": [{ "name": "сірий", "hex": "#9E9E9E" }],
+      "material": "100% Бавовна",
+      "description": "Фасон: оверсайз\nКолір: сірий"
+    },
+    {
+      "id": "0b7e…",
+      "name": "Лляна сукня",
+      "brandName": "Lileya",
+      "priceUah": 2400,
+      "photoUrl": "/api/images/1d2e…",
+      "productUrl": "https://brand-site.ua/dress"
+    }
+  ]
+}
+```
 
 ### 2.3. Buyer account
 

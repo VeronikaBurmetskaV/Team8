@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Trimmed sample of https://vsisvoi.ua/facebook-feed.xml (Google Merchant format, 17.11.2026).
+     Markup as on the site; product texts and IDs are made up for the tests. -->
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+<channel>
+<title>Vsisvoi</title>
+<link>https://vsisvoi.ua</link>
+	<item>
+		<g:id>1001</g:id>
+		<g:title>Футболка сіра з принтом  Barricade Розмір M P-211-316-0001</g:title>
+		<g:item_group_id>P-211-316-0001</g:item_group_id>
+		<g:product_type>Чоловічі футболки</g:product_type>
+		<g:description><![CDATA[
+<ul>
+    <li><span>Фасон</span>: оверсайз</li><li><span>Колір</span>: сірий</li><li><span>Material composition</span>: 100% Бавовна</li></ul>
+]]></g:description>
+		<g:link>https://vsisvoi.ua/store/futbolka-sira-p-211-316-0001</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0001/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>900 UAH</g:price>
+		<g:sale_price>749.50 UAH</g:sale_price>
+		<g:brand>Barricade</g:brand>
+		<g:color>сірий</g:color>
+		<g:size>M</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>1002</g:id>
+		<g:title>Футболка сіра з принтом  Barricade Розмір L P-211-316-0001</g:title>
+		<g:item_group_id>P-211-316-0001</g:item_group_id>
+		<g:product_type>Чоловічі футболки</g:product_type>
+		<g:description><![CDATA[<ul><li>Колір: сірий</li></ul>]]></g:description>
+		<g:link>https://vsisvoi.ua/store/futbolka-sira-p-211-316-0001</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0001/gallery/a.jpg</g:image_link>
+		<g:availability>out_of_stock</g:availability>
+		<g:price>900 UAH</g:price>
+		<g:sale_price>749.50 UAH</g:sale_price>
+		<g:brand>Barricade</g:brand>
+		<g:color>сірий</g:color>
+		<g:size>L</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>1003</g:id>
+		<g:title>Футболка сіра з принтом  Barricade Розмір XL P-211-316-0001</g:title>
+		<g:item_group_id>P-211-316-0001</g:item_group_id>
+		<g:product_type>Чоловічі футболки</g:product_type>
+		<g:description><![CDATA[<ul><li>Колір: сірий</li></ul>]]></g:description>
+		<g:link>https://vsisvoi.ua/store/futbolka-sira-p-211-316-0001</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0001/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>900 UAH</g:price>
+		<g:sale_price>749.50 UAH</g:sale_price>
+		<g:brand>Barricade</g:brand>
+		<g:color>сірий</g:color>
+		<g:size>XL</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>1101</g:id>
+		<g:title>Футболка чорна з принтом  Barricade Розмір M P-211-316-0002</g:title>
+		<g:item_group_id>P-211-316-0002</g:item_group_id>
+		<g:product_type>Чоловічі футболки</g:product_type>
+		<g:google_product_category>Товари для чоловіків &gt; Одяг &gt; Футболки та поло &gt; Футболки</g:google_product_category>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/futbolka-chorna-p-211-316-0002</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0002/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>800 UAH</g:price>
+		<g:brand>Barricade</g:brand>
+		<g:color>чорний</g:color>
+		<g:size>M</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>2001</g:id>
+		<g:title>Жіночий бежевий жакет Жакет Розмір 55 P-309-237-0012</g:title>
+		<g:item_group_id>P-309-237-0012</g:item_group_id>
+		<g:product_type>Жіночі жакети</g:product_type>
+		<g:description><![CDATA[<ul><li><span>Фасон</span>: прямий</li><li><span>Колір</span>: бежевий</li></ul>]]></g:description>
+		<g:link>https://vsisvoi.ua/store/zhinochyy-bezhevyy-zhaket-p-309-237-0012</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0012/gallery/beige.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>1500 UAH</g:price>
+		<g:brand>Жакет</g:brand>
+		<g:color>бежевий</g:color>
+		<g:size>55</g:size>
+		<g:material>Склад: 100% Вовна</g:material>
+	</item>
+	<item>
+		<g:id>2002</g:id>
+		<g:title>Жіночий чорний жакет Жакет Розмір 57 P-309-237-0012</g:title>
+		<g:item_group_id>P-309-237-0012</g:item_group_id>
+		<g:product_type>Жіночі жакети</g:product_type>
+		<g:description><![CDATA[<ul><li>Колір: чорний</li></ul>]]></g:description>
+		<g:link>https://vsisvoi.ua/store/zinocij-cornij-zhaket-p-309-237-0012</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0012/gallery/black.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>1500 UAH</g:price>
+		<g:brand>Жакет</g:brand>
+		<g:color>чорний, One color</g:color>
+		<g:size>57</g:size>
+		<g:material>Склад: 100% Вовна</g:material>
+	</item>
+	<item>
+		<g:id>3001</g:id>
+		<g:title>Сукня лляна TWICE Розмір S P-100-200-0003</g:title>
+		<g:item_group_id>P-100-200-0003</g:item_group_id>
+		<g:product_type>Жіночі сукні</g:product_type>
+		<g:description><![CDATA[<p>Лляна сукня &amp; пояс</p>]]></g:description>
+		<g:link>https://vsisvoi.ua/store/suknia-p-100-200-0003</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0003/gallery/a.jpg</g:image_link>
+		<g:availability>out_of_stock</g:availability>
+		<g:price>2400 UAH</g:price>
+		<g:brand>TWICE</g:brand>
+		<g:color>Пісочний</g:color>
+		<g:size>S</g:size>
+		<g:material>Льон 100%</g:material>
+	</item>
+	<item>
+		<g:id>7001</g:id>
+		<g:title>Жіночі білі труси SMPL underwear Розмір S 235-182-0001</g:title>
+		<g:item_group_id>235-182-0001</g:item_group_id>
+		<g:product_type>Жіночі труси</g:product_type>
+		<g:google_product_category>Товари для жінок &gt; Білизна та домашній одяг &gt; Білизна &gt; Трусики</g:google_product_category>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/trusy-235-182-0001</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/7001/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>450 UAH</g:price>
+		<g:brand>SMPL underwear</g:brand>
+		<g:color>білий</g:color>
+		<g:size>S</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>7002</g:id>
+		<g:title>Чорний топ KRALYA lingerie Розмір S 233-095-0012</g:title>
+		<g:item_group_id>233-095-0012</g:item_group_id>
+		<g:product_type>Жіночі топи</g:product_type>
+		<g:google_product_category>Товари для жінок &gt; Білизна та домашній одяг &gt; Білизна &gt; Топи</g:google_product_category>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/top-233-095-0012</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/7002/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>900 UAH</g:price>
+		<g:brand>KRALYA lingerie</g:brand>
+		<g:color>чорний</g:color>
+		<g:size>S</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>7003</g:id>
+		<g:title>Жіноче тату Arley Sign Розмір One size P-433-540-0037</g:title>
+		<g:item_group_id>P-433-540-0037</g:item_group_id>
+		<g:product_type>Унісекс тату</g:product_type>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/tatu-p-433-540-0037</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/7003/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>150 UAH</g:price>
+		<g:brand>Arley Sign</g:brand>
+		<g:color></g:color>
+		<g:size>One size</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>7004</g:id>
+		<g:title>Керамічна чашка Brunch Розмір One size 231-369-0001</g:title>
+		<g:item_group_id>231-369-0001</g:item_group_id>
+		<g:product_type>Чашка</g:product_type>
+		<g:google_product_category>Дім та декор &gt; Посуд &gt; Столовий посуд &gt; Чашка</g:google_product_category>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/chashka-231-369-0001</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/7004/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>600 UAH</g:price>
+		<g:brand>Brunch</g:brand>
+		<g:color>блакитний</g:color>
+		<g:size>One size</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>4001</g:id>
+		<g:title>Подарунковий сертифікат ctrl Розмір One size P-100-200-0004</g:title>
+		<g:item_group_id>P-100-200-0004</g:item_group_id>
+		<g:product_type>Сертифікати</g:product_type>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/certificate-p-100-200-0004</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0004/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>0 UAH</g:price>
+		<g:brand>ctrl</g:brand>
+		<g:color></g:color>
+		<g:size>One size</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>5001</g:id>
+		<g:title>Сорочка біла FROMUS Розмір M P-100-200-0005</g:title>
+		<g:item_group_id>P-100-200-0005</g:item_group_id>
+		<g:product_type>Жіночі сорочки</g:product_type>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/sorochka-p-100-200-0005</g:link>
+		<g:image_link>http://media2.vsisvoi.ua/uploads/catalog/products/0005/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>1200 UAH</g:price>
+		<g:brand>FROMUS</g:brand>
+		<g:color>білий</g:color>
+		<g:size>M</g:size>
+		<g:material></g:material>
+	</item>
+	<item>
+		<g:id>6001</g:id>
+		<g:title>Худі чорне ctrl Розмір L P-100-200-0006</g:title>
+		<g:item_group_id>P-100-200-0006</g:item_group_id>
+		<g:product_type>Худі</g:product_type>
+		<g:description></g:description>
+		<g:link>https://vsisvoi.ua/store/hudi-p-100-200-0006</g:link>
+		<g:image_link>https://media2.vsisvoi.ua/uploads/catalog/products/0006/gallery/a.jpg</g:image_link>
+		<g:availability>in_stock</g:availability>
+		<g:price>2100 UAH</g:price>
+		<g:brand>ctrl</g:brand>
+		<g:color>чорний</g:color>
+		<g:size>L</g:size>
+		<g:material></g:material>
+	</item>
+</channel>
+</rss>

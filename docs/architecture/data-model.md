@@ -179,3 +179,83 @@ These are enforced in the service/repository code, **inside one transaction** wh
 | T-12 | **Exact formats** (US-21, US-02, US-26) | Regex CHECKs are coarse | Bean Validation is the authority: email `name@domain.tld`, `@HttpUrl` = `java.net.URI` parses, scheme `http`/`https`, non-empty host. The DB CHECKs are a safety net only. |
 | T-13 | **Image type by magic bytes, size ≤ 5 MB** (ADR-0007) | The DB sees only the declared `content_type` | `images` service sniffs the first bytes (PNG `89 50 4E 47`, JPEG `FF D8 FF`, WEBP `RIFF….WEBP`) and sets `content_type` itself; multipart limit 5 MB. |
 | T-14 | **Like/skip once per card on a device** (INV-05, US-10 S2) | Not server data at all | Frontend reducer in `features/feed/session.ts`, keyed by card ID. |
+
+---
+
+## 5. Planned: demo catalogue import (ADR-0014, Proposed, profile `dev` only)
+
+> **Plan, not schema yet.** Nothing below exists until the migration is written and ADR-0014 is accepted. Until then, §1–§4 are the authority. Sections §1–§4 still describe the brand-facing model; the import adds a second, account-less way to own a card.
+
+The server fetches three configured sources (Всі. Свої XML feed, One By One, Cher'17) **only in the `dev` profile**. This is an exception to A-15 ("the server never fetches brand URLs") for the local demo. Photos are never copied: imported cards use `photo_url` (brand `https://` URL).
+
+### 5.1. New table `catalog_sources`
+
+| Column | Type | Null | Constraint / default | Why |
+|---|---|---|---|---|
+| `id` | `uuid` | no | PK, `gen_random_uuid()` | ADR-0004 |
+| `code` | `varchar(30)` | no | `UNIQUE`; `CHECK (code ~ '^[a-z0-9-]+$')` — `vsisvoi`, `onebyone`, `cher17` | Key used by the config in `application-dev.yml` |
+| `base_url` | `varchar(2048)` | no | `CHECK (base_url LIKE 'https://%')` | Host allow-list for SSRF checks |
+| `last_run_at` | `timestamptz` | yes | `NULL` = never ran | 6-hour gate survives restarts (T-18) |
+| `last_run_status` | `varchar(10)` | yes | `CHECK (last_run_status IN ('ok','partial','skipped','failed'))` | Unpublish of missing items only after `ok` (T-16) |
+| `created_at` | `timestamptz` | no | `now()` | |
+
+Rows are inserted by the importer on first start (`INSERT … ON CONFLICT (code) DO NOTHING`), not by the migration, so the migration contains no site URLs.
+
+### 5.2. New table `source_brands` — brands without accounts
+
+| Column | Type | Null | Constraint / default | Why |
+|---|---|---|---|---|
+| `id` | `uuid` | no | PK | |
+| `source_id` | `uuid` | no | FK → `catalog_sources(id)` | A brand name is unique only within its source |
+| `name` | `varchar(50)` | no | `CHECK (char_length(btrim(name)) BETWEEN 2 AND 50)` — same rule as `brand_profiles.name` | `brandName` on the card (INV-03: still joined, never stored on the card) |
+| `created_at` | `timestamptz` | no | `now()` | |
+| — | | | `UNIQUE (source_id, name)`; `UNIQUE (id, source_id)` (target for the composite FK below) | |
+
+One row for One By One ("One By One") and one for Cher'17 ("CHER'17"). Всі. Свої is a marketplace, so it has one row per `g:brand` value (SMPL underwear, Barricade, Garrt…). A missing or implausible `g:brand` (equal to the product type, e.g. «Капелюх») maps to the fallback name «Всі. Свої». Source brands have no email, password, profile, logo or consent row; they can't log in.
+
+### 5.3. Changes to `products`
+
+| Column | Type | Null | Constraint | Filled by |
+|---|---|---|---|---|
+| `brand_id` | `uuid` | **yes** (was `no`) | — | Brand cabinet only |
+| `source_id` | `uuid` | yes | FK → `catalog_sources(id)` | Importer |
+| `source_brand_id` | `uuid` | yes | FK `(source_brand_id, source_id)` → `source_brands(id, source_id)` (the brand must belong to the same source) | Importer |
+| `external_id` | `varchar(100)` | yes | `UNIQUE (source_id, external_id)` | Importer: Всі. Свої `g:item_group_id`; One By One / Cher'17 canonical product URL path |
+| `last_synced_at` | `timestamptz` | yes | — | Importer, every successful upsert |
+| `sizes` | `jsonb` | yes | `CHECK (sizes IS NULL OR jsonb_typeof(sizes) = 'array')`; shape `[{"label":"M","available":true}]`, in site order | Importer (Всі. Свої: one feed item per size; others: HTML via Jsoup) |
+| `colors` | `jsonb` | yes | `CHECK (colors IS NULL OR jsonb_typeof(colors) = 'array')`; shape `[{"name":"бежевий","hex":"#D9C4A5"}]`; `hex` is `null` when the name isn't in the importer's fixed name → hex table | Importer |
+| `material` | `varchar(500)` | yes | plain text, e.g. «Віскоза 95%, Еластан 5%» | Importer |
+| `description` | `text` | yes | `CHECK (description IS NULL OR char_length(description) <= 5000)`; **plain text only** (HTML stripped by Jsoup) | Importer |
+
+New table-level checks:
+- `CHECK ((brand_id IS NULL) <> (source_brand_id IS NULL))` — a card has exactly one owner: an account brand or a source brand.
+- `CHECK ((source_id IS NULL) = (source_brand_id IS NULL) AND (source_id IS NULL) = (external_id IS NULL) AND (source_id IS NULL) = (last_synced_at IS NULL))` — import columns are all set or all empty.
+- `CHECK (source_id IS NULL OR photo_url IS NOT NULL)` — imported cards never use `images` (no copies, ADR-0007).
+
+Unchanged: `name` 1–100 chars (the importer trims longer names at a word boundary), `price_uah` 1…1 000 000 (rounded to whole UAH; an item outside the range is skipped), `product_url` as given by the source (no UTM; the client adds it), `status`/`published_at` checks, the feed index. Sizes, colours, material and description are **not** returned by any endpoint (US-13…US-15 are Out of Scope, `api.md`).
+
+`brandName` for every read = `COALESCE(bp.name, sb.name)` via `LEFT JOIN brand_profiles bp ON bp.brand_id = p.brand_id LEFT JOIN source_brands sb ON sb.id = p.source_brand_id` (INV-03 still holds).
+
+### 5.4. New invariants (code-enforced)
+
+| # | Invariant | Where and how |
+|---|---|---|
+| T-15 | **Imported card upsert** goes through `ProductService` (only `ua.fulla.products` changes status). | One statement per item: `INSERT … ON CONFLICT (source_id, external_id) DO UPDATE SET name, price_uah, photo_url, product_url, sizes, colors, material, description, last_synced_at, updated_at`. Available item → `status='published'`, `published_at = COALESCE(products.published_at, now())` (an existing card keeps its feed position). Not available (no size in stock / `OutOfStock`) → `status='draft'`, `published_at=NULL`. The conflict target only matches rows with `source_id`, so brand cards are never touched. |
+| T-16 | **Items gone from the source are unpublished, never deleted.** | Only after a run with status `ok`: `UPDATE products SET status='draft', published_at=NULL, updated_at=now() WHERE source_id=:src AND status='published' AND NOT (external_id = ANY(:seenIds))`. Skipped after `partial`/`failed`, so a network error doesn't empty the feed. |
+| T-17 | **Brand cabinet can't see or change imported cards.** | Already true: every brand query filters `brand_id = :sessionBrandId` (T-7), and imported rows have `brand_id IS NULL`. Cover with a repository test. |
+| T-18 | **At most one run per source per 6 hours**, even across restarts. | The run is claimed by a conditional update: `UPDATE catalog_sources SET last_run_at=now() WHERE code=:code AND (last_run_at IS NULL OR last_run_at < now() - interval '6 hours')`; 0 rows → skip (ADR-0009 style, no check-then-act). |
+
+Exceptions, valid **only** for rows with `source_id`: T-1 (publish needs consent) and T-2 (create needs a brand name in `brand_profiles`) don't apply; T-3 (published = read-only) binds brand edits, not the sync in T-15.
+
+### 5.5. Migration plan (not written yet)
+
+One file, e.g. `V20261118_1000__add_catalog_import.sql` (timestamp chosen when it is written), together with the repository code and tests (§4.3 of `CLAUDE.md`):
+
+1. `CREATE TABLE catalog_sources` (§5.1).
+2. `CREATE TABLE source_brands` (§5.2) with `UNIQUE (source_id, name)` and `UNIQUE (id, source_id)`.
+3. `ALTER TABLE products ALTER COLUMN brand_id DROP NOT NULL`.
+4. `ALTER TABLE products ADD COLUMN` `source_id`, `source_brand_id`, `external_id`, `last_synced_at`, `sizes`, `colors`, `material`, `description`.
+5. Add the FKs (`source_id`, composite `(source_brand_id, source_id)`), `UNIQUE (source_id, external_id)` and the three checks from §5.3. Existing rows pass all of them (brand cards: `brand_id` set, import columns `NULL`).
+6. No index changes: `products_feed_idx` serves both kinds of cards; the unique constraint indexes `(source_id, external_id)`.
+
+Tests on embedded Postgres: upsert is idempotent (same item twice → one row); price change updates the row and keeps `published_at`; out-of-stock → draft; missing after an `ok` run → draft, after `partial` → unchanged; brand `GET /api/brand/products` never lists imported cards; the 6-hour claim lets only one of two parallel claims through; each new check rejects a bad row.

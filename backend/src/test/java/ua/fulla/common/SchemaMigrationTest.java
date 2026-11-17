@@ -27,6 +27,8 @@ class SchemaMigrationTest {
             .list();
 
         assertThat(tables).containsExactlyInAnyOrder(
-            "brand_accounts", "brand_profiles", "products", "images", "buyer_accounts", "favorites");
+            "brand_accounts", "brand_profiles", "products", "images", "buyer_accounts", "favorites",
+            // demo catalogue import, ADR-0014 (data-model.md §5)
+            "catalog_sources", "source_brands");
     }
 }

@@ -6,3 +6,17 @@ fulla:
     # visitors arrive from 127.0.0.1 and would share the limit of 10. Without the dev profile
     # the value from application.yml (10) applies.
     max-attempts-per-minute: 1000
+  import:
+    # Demo catalogue import (ADR-0014, dev only). Runs ~10 s after start, then checks every
+    # 30 min; each source really runs at most once per 6 h (stored in catalog_sources).
+    # Set to false to start offline. The demo with imported cards is never published.
+    enabled: true
+    initial-delay: 10s
+    check-interval: 30m
+    delay-between-requests: 2s   # never below 2 s
+    max-products-per-source: 50  # never above 50
+    max-requests-per-source: 100 # never above 100
+    sources:
+      vsisvoi: https://vsisvoi.ua
+      onebyone: https://onebyone.ua
+      cher17: https://cher17.com

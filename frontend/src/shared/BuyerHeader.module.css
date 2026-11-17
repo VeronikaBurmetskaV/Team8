@@ -1,0 +1,366 @@
+/* Buyer header: dark full-width bar, light text. Mobile-first.
+   Phone: logo + burger, one row of five icons under it; city and language in the burger menu.
+   --bp-tablet (768px): one row — swipe icons | logo | shop icons + burger.
+   --bp-desktop (1024px): two rows — logo in the centre spans both, city and language top right.
+   Selectors are prefixed with .header so they win over the global element styles in index.css. */
+
+.header {
+  position: relative;
+  margin-bottom: var(--space-3);
+  background-color: var(--color-header-background);
+  color: var(--color-on-header);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: var(--icon-button-size) minmax(0, 1fr) var(
+      --icon-button-size
+    );
+  grid-template-areas:
+    ". logo menu"
+    "nav nav nav";
+  align-items: center;
+  row-gap: var(--space-1);
+  width: 100%;
+  max-width: calc(var(--container-wide) + 2 * var(--layout-gutter));
+  margin: 0 auto;
+  padding: var(--space-2) var(--layout-gutter) var(--space-1);
+}
+
+/* Logo: FULLA, a thin line, SWIPING. */
+.header .logo {
+  grid-area: logo;
+  justify-self: center;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  color: var(--color-on-header);
+  text-decoration: none;
+}
+
+/* Hover and keyboard focus: the name turns accent, «SWIPING» keeps its own colour. */
+.header .logo:hover,
+.header .logo:focus-visible {
+  color: var(--color-header-hover);
+}
+
+.logoName,
+.logoTagline {
+  /* Letter spacing also adds space after the last letter; the same padding before it
+     keeps the word optically centred. */
+  white-space: nowrap;
+  line-height: var(--line-height-tight);
+}
+
+.logoName {
+  padding-left: var(--letter-spacing-logo-wide);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-logo);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-logo-wide);
+}
+
+.logoLine {
+  align-self: stretch;
+  height: var(--border-width);
+  margin-block: var(--space-half);
+  background-color: var(--color-on-header);
+}
+
+.logoTagline {
+  padding-left: var(--letter-spacing-tagline);
+  color: var(--color-header-tagline);
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-tagline);
+}
+
+.icon {
+  font-size: var(--icon-size);
+}
+
+/* Icon links and buttons: square touch target, no global button look. */
+.header .iconLink,
+.header .burger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-button-size);
+  height: var(--icon-button-size);
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-on-header);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.header .iconLink:hover,
+.header .iconLink:focus-visible,
+.header .burger:hover,
+.header .burger:focus-visible {
+  border: none;
+  background-color: transparent;
+  color: var(--color-header-hover);
+}
+
+/* Active page: underline under the icon. */
+.header .iconLink[aria-current="page"] {
+  color: var(--color-header-highlight);
+}
+
+.header .iconLink[aria-current="page"]:hover,
+.header .iconLink[aria-current="page"]:focus-visible {
+  color: var(--color-header-hover);
+}
+
+.header .iconLink[aria-current="page"]::after {
+  position: absolute;
+  right: var(--space-1);
+  bottom: var(--space-half);
+  left: var(--space-1);
+  height: var(--indicator-width);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-header-highlight);
+  content: "";
+}
+
+/* Counter of «Вподобане зі свайпів» and «Вподобане»: a small pill at the icon's top right. */
+.badge {
+  position: absolute;
+  top: var(--space-half);
+  right: var(--space-half);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  padding: 0 var(--space-half);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-header-highlight);
+  color: var(--color-header-background);
+  font-family: var(--font-body);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+  letter-spacing: normal;
+  pointer-events: none;
+}
+
+.header .iconLink:focus-visible,
+.header .burger:focus-visible,
+.header .logo:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-header-hover);
+  outline-offset: var(--focus-ring-width);
+}
+
+.burger {
+  grid-area: menu;
+  justify-self: end;
+}
+
+/* Icon navigation */
+.nav {
+  grid-area: nav;
+  display: flex;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.group {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* City and language. Hidden on phone and tablet until the burger opens them. */
+.prefs {
+  display: none;
+}
+
+.prefsOpen {
+  position: absolute;
+  top: 100%;
+  right: var(--layout-gutter);
+  z-index: var(--z-header-menu);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: min(var(--header-menu-width), calc(100% - 2 * var(--layout-gutter)));
+  padding: var(--space-2);
+  border-top: var(--border-width) solid var(--color-header-divider);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background-color: var(--color-header-background);
+  box-shadow: var(--shadow-lg);
+}
+
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fieldIcon,
+.chevron {
+  position: absolute;
+  top: 50%;
+  font-size: var(--icon-size-sm);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.fieldIcon {
+  left: 0;
+}
+
+.chevron {
+  right: 0;
+  color: var(--color-on-header);
+}
+
+.header .select {
+  width: 100%;
+  min-height: var(--icon-button-size);
+  padding: 0 calc(var(--icon-size-sm) + var(--space-half)) 0 0;
+  border: none;
+  border-bottom: var(--border-width) solid var(--color-header-divider);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--color-on-header);
+  font-family: var(--font-body);
+  /* ≥ 16px on a phone so iOS does not zoom into the select. */
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  cursor: pointer;
+  appearance: none;
+}
+
+.fieldIcon ~ .select {
+  padding-left: calc(var(--icon-size-sm) + var(--space-1));
+}
+
+.header .select:hover,
+.header .select:focus {
+  border-color: var(--color-header-hover);
+  color: var(--color-header-hover);
+  box-shadow: none;
+}
+
+.header .select:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-header-hover);
+  outline-offset: var(--focus-ring-width);
+}
+
+/* The open list is drawn by the OS: keep it readable on a light background. */
+.select option {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --bp-tablet: swipe icons | logo | shop icons + burger, in one row. */
+@media (min-width: 768px) {
+  .header {
+    margin-bottom: var(--space-4);
+  }
+
+  .inner {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: "swipe logo shop";
+    column-gap: var(--space-2);
+    padding-block: var(--space-2);
+  }
+
+  .logoName {
+    font-size: var(--font-size-2xl);
+  }
+
+  .nav {
+    display: contents;
+  }
+
+  .groupSwipe {
+    grid-area: swipe;
+    justify-self: start;
+  }
+
+  .groupShop {
+    grid-area: shop;
+    justify-self: end;
+    /* Room for the burger, which shares the cell. */
+    margin-right: calc(var(--icon-button-size) + var(--space-1));
+  }
+
+  .burger {
+    grid-area: shop;
+  }
+}
+
+/* --bp-desktop: two rows; city and language always visible top right, no burger. */
+@media (min-width: 1024px) {
+  .inner {
+    grid-template-areas:
+      ". logo prefs"
+      "swipe logo shop";
+    row-gap: var(--space-1);
+    padding-block: var(--space-2);
+  }
+
+  .logoName {
+    font-size: var(--font-size-logo-desktop);
+  }
+
+  .logoTagline {
+    font-size: var(--font-size-xs);
+  }
+
+  .header .burger {
+    display: none;
+  }
+
+  .groupShop {
+    margin-right: 0;
+  }
+
+  .prefs,
+  .prefsOpen {
+    position: static;
+    grid-area: prefs;
+    justify-self: end;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    width: auto;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .header .select {
+    width: auto;
+    border-bottom-color: transparent;
+    font-size: var(--font-size-sm);
+  }
+}
