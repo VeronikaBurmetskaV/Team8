@@ -9,7 +9,7 @@
 
 ## 1. What FULLA is, in one paragraph
 
-A buyer opens a link on a phone, swipes through clothing cards from Ukrainian brands (right = «Подобається», left = «Пропустити»), collects likes in «Вподобане», and goes to the brand's own shop with `utm_source=fulla` to buy. No account is needed; an optional account moves «Вподобане» to the server. A brand owner registers, fills in a name, gives consent, creates product cards by hand, previews them, and publishes them to the feed. FULLA has no cart, no payment and no integration with brand sites (US-32).
+A buyer opens a link on a phone, swipes through clothing cards from Ukrainian brands (right = «Подобається», left = «Пропустити»), collects likes in «Вподобане», and goes to the brand's own shop with `utm_source=fulla` to buy. No account is needed; an optional account moves «Вподобане» to the server. A brand owner registers, fills in a name, gives consent, creates product cards by hand, previews them, and publishes them to the feed. FULLA has no cart, no payment and no integration with brand sites (US-32); the only server-side fetch is the dev-profile demo importer (ADR-0014), which never runs outside the local demo.
 
 ## 2. C4 level 1 — system context
 
@@ -32,7 +32,7 @@ flowchart LR
     brand -. "«Перевірити посилання» opens URL (US-26)" .-> shop
 ```
 
-Solid arrows are calls into FULLA. Dashed arrows are **links**: the user's browser goes there; the FULLA server never calls them (A-15, `integrations.md`).
+Solid arrows are calls into FULLA. Dashed arrows are **links**: the user's browser goes there; the FULLA server never calls them (A-15, `integrations.md`). Exception, not drawn: the dev-profile demo importer reads three fixed sources (ADR-0014, `integrations.md` §7).
 
 ## 3. C4 level 2 — containers
 
@@ -141,7 +141,7 @@ Buyer logout is a button in the buyer navigation, which is on `/`, `/feed` and `
 
 ## 6. External systems: integrations vs links
 
-**The MVP has no API integration with any third party.** The FULLA server never sends a request to a brand site (A-15).
+**The MVP has no API integration with any third party.** The FULLA server never sends a request to a brand site (A-15), with one exception: in the `dev` profile only, the demo importer reads three fixed sources (Всі. Свої, One By One, Cher'17) under the limits of ADR-0014 (`integrations.md` §7).
 
 | External system | Kind | Who talks to it | Stories |
 |---|---|---|---|

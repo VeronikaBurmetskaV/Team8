@@ -1,49 +1,501 @@
-/* Feed layout (US-08.1, US-09). The card is centred and never wider than a phone.
-   Phone and tablet: the two buttons in a row under the card.
-   --bp-desktop: «Пропустити» left of the card, «Подобається» right of it. */
+/* Swipe feed (US-08.1, US-09, US-10). Colours: only the TEMPORARY --palette-* tokens.
+   Phone and tablet: the card, «Не сьогодні» / «Сподобалось» under it, then the brand line.
+   Laptop (--bp-desktop): «Не сьогодні» left of the card, «Сподобалось» right of it, both
+   centred on the card's height; the card is as tall as the window allows, so no page scroll.
+   --feed-chrome = everything above and below the card (header, «?», gaps, buttons, link). */
 .page {
+  --feed-chrome: 330px;
+  --feed-action-size: 56px;
+  /* The card sits this much lower, so the «?» row above it is never covered. */
+  --feed-card-offset: 20px;
+  /* Column for a side button with its caption. */
+  --feed-side-width: 104px;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--palette-ink);
 }
 
-.title {
-  margin: 0;
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
+/* ---------- «?» ---------- */
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 0;
+}
+
+/* «?»: a small tooltip on hover and keyboard focus, the instruction on click. */
+.hintWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.hintButton {
+  width: 40px;
+  min-height: 40px;
+  height: 40px;
+  padding: 0;
+  border-color: var(--palette-warm-gray);
+  border-radius: var(--radius-pill);
+  background-color: var(--palette-light-gray);
+  color: var(--palette-ink);
+  font-size: var(--icon-size);
+  text-transform: none;
+}
+
+.hintButton:hover:not(:disabled) {
+  border-color: var(--palette-brown);
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+}
+
+.hintTooltip {
+  position: absolute;
+  top: calc(100% + var(--space-half));
+  right: 0;
+  z-index: 5;
+  display: none;
+  padding: var(--space-half) var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--palette-ink);
+  color: var(--palette-light-gray);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.hintButton:hover + .hintTooltip,
+.hintButton:focus-visible + .hintTooltip {
+  display: block;
+}
+
+/* Visible focus on every control of the page, in palette colours. */
+.page :focus-visible,
+.hintDialog :focus-visible {
+  outline: 3px solid var(--palette-brown);
+  outline-offset: 2px;
+}
+
+/* ---------- Stage: card, side buttons, brand line ---------- */
 .stage {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
-    "card card"
-    "skip like";
-  gap: var(--space-2);
+    "deck deck"
+    "skip like"
+    "brand brand";
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   width: 100%;
-  max-width: var(--container-phone);
+  margin-top: var(--feed-card-offset);
 }
 
-.card {
-  grid-area: card;
+.deck {
+  grid-area: deck;
+  display: grid;
+  width: 100%;
+  height: max(380px, calc(100svh - var(--feed-chrome)));
+}
+
+/* Both cards share one grid cell: the next one waits under the top one. */
+.deck > * {
+  grid-area: 1 / 1;
   min-width: 0;
+  min-height: 0;
 }
 
-.skip {
-  grid-area: skip;
+.underCard {
+  transform: scale(0.96) translateY(8px);
+  opacity: 0.85;
+  pointer-events: none;
 }
 
-.like {
+.swipeCard {
+  position: relative;
+  z-index: 1;
+  /* Vertical scrolling of the page keeps working on touch screens. */
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+}
+
+.swipeCard:active {
+  cursor: grabbing;
+}
+
+/* «Подобається» / «Не сьогодні» stamps while dragging. */
+.stamp {
+  position: absolute;
+  top: var(--space-3);
+  z-index: 2;
+  padding: var(--space-half) var(--space-2);
+  border: 3px solid currentColor;
+  border-radius: var(--radius-md);
+  background-color: var(--palette-light-gray);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.stampLike {
+  left: var(--space-3);
+  color: var(--palette-brown);
+  transform: rotate(-12deg);
+}
+
+.stampSkip {
+  right: var(--space-3);
+  color: var(--palette-ink);
+  transform: rotate(12deg);
+}
+
+/* ---------- Brand link (placeholder) ---------- */
+.brandLink {
+  grid-area: brand;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  margin: 0;
+  color: var(--palette-brown);
+  font-size: var(--font-size-sm);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.brandLink > span:first-child {
+  text-decoration: underline dotted;
+  text-underline-offset: var(--underline-offset);
+  cursor: not-allowed;
+}
+
+.soonBadge {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background-color: var(--palette-warm-gray);
+  color: var(--palette-ink);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* ---------- «Сподобалось» / «Не сьогодні» ---------- */
+/* A round icon with a caption under it; the whole column is one button. */
+.actionButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-self: center;
+  gap: var(--space-half);
+  min-height: 0;
+  padding: var(--space-half);
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--palette-ink);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.likeButton {
   grid-area: like;
 }
 
-@media (min-width: 1024px) {
+.skipButton {
+  grid-area: skip;
+}
+
+.actionCircle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--feed-action-size);
+  height: var(--feed-action-size);
+  border: var(--focus-ring-width) solid var(--palette-ink);
+  border-radius: var(--radius-pill);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.likeButton .actionCircle {
+  background-color: var(--palette-ink);
+  color: var(--palette-light-gray);
+}
+
+.skipButton .actionCircle {
+  background-color: var(--palette-light-gray);
+  color: var(--palette-ink);
+}
+
+.actionButton:hover:not(:disabled) {
+  border: none;
+  background-color: transparent;
+  color: var(--palette-brown);
+}
+
+.actionButton:hover:not(:disabled) .actionCircle {
+  border-color: var(--palette-brown);
+  background-color: var(--palette-brown);
+  color: var(--palette-light-gray);
+}
+
+.actionButton:disabled {
+  border: none;
+  background-color: transparent;
+  color: var(--palette-brown);
+  opacity: 0.6;
+}
+
+.actionIcon {
+  font-size: var(--icon-size);
+}
+
+.actionText {
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+}
+
+/* «Одразу в кошик» on the back side of the card. */
+.cartButton {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border-color: var(--palette-brown);
+  border-radius: var(--radius-pill);
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+  font-size: var(--font-size-sm);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.cartButton:hover:not(:disabled) {
+  border-color: var(--palette-brown);
+  background-color: var(--palette-brown);
+  color: var(--palette-light-gray);
+}
+
+.cartButton:disabled {
+  border-color: var(--palette-warm-gray);
+  background-color: var(--palette-light-gray);
+  color: var(--palette-brown);
+  opacity: 0.6;
+}
+
+.cartIcon {
+  flex: 0 0 auto;
+  font-size: var(--icon-size);
+}
+
+/* ---------- States ---------- */
+.status,
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-4);
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  color: var(--palette-ink);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.primaryLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--palette-ink);
+  color: var(--palette-light-gray);
+  font-family: var(--font-heading);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+}
+
+.primaryLink:hover {
+  background-color: var(--palette-brown);
+  color: var(--palette-light-gray);
+}
+
+.secondaryButton {
+  border-color: var(--palette-ink);
+  background-color: var(--palette-light-gray);
+  color: var(--palette-ink);
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-3);
+  z-index: 20;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background-color: var(--palette-ink);
+  color: var(--palette-light-gray);
+  font-weight: var(--font-weight-semibold);
+  transform: translate(-50%, 0);
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.toast[data-visible="false"] {
+  opacity: 0;
+}
+
+/* ---------- Hint dialog ---------- */
+/* Centred on the screen both ways, over a dimmed page. */
+.hintDialog {
+  position: fixed;
+  inset: 0;
+  width: min(420px, calc(100vw - 2 * var(--space-2)));
+  height: fit-content;
+  max-height: calc(100dvh - 2 * var(--space-2));
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: var(--border-width) solid var(--palette-warm-gray);
+  border-radius: var(--radius-lg);
+  background-color: var(--palette-light-gray);
+  color: var(--palette-ink);
+}
+
+.hintDialog::backdrop {
+  background-color: rgb(21 22 10 / 0.55);
+}
+
+.hintContent {
+  position: relative;
+  padding: var(--space-3);
+}
+
+.hintClose {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-color: transparent;
+  background-color: transparent;
+  color: var(--palette-ink);
+  font-size: var(--icon-size);
+}
+
+.hintClose:hover:not(:disabled) {
+  border-color: var(--palette-brown);
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+}
+
+.hintTitle {
+  margin: 0 var(--space-4) var(--space-2) 0;
+  color: var(--palette-ink);
+  font-size: var(--font-size-lg);
+}
+
+.hintList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-3);
+}
+
+.hintKeyboard {
+  margin: var(--space-2) 0 0;
+  color: var(--palette-brown);
+  font-size: var(--font-size-sm);
+}
+
+/* --bp-tablet: a wider card (+18 % against the old 80 %); buttons stay under it,
+   because a card this wide leaves no room beside it on a tablet. */
+@media (min-width: 768px) {
+  .page {
+    --feed-chrome: 346px;
+  }
+
   .stage {
-    grid-template-columns: auto minmax(0, var(--container-phone)) auto;
-    grid-template-areas: "skip card like";
-    /* Buttons keep their own width next to the card instead of stretching to the edges. */
-    justify-content: center;
-    align-items: center;
-    gap: var(--space-4);
-    max-width: none;
+    width: min(100%, 680px);
+  }
+}
+
+/* --bp-desktop: «Не сьогодні» | card | «Сподобалось». The card is ~18 % wider than the old
+   half of the window; card + both side columns stay inside the page container. */
+@media (min-width: 1024px) {
+  .page {
+    --feed-chrome: 286px;
+    --feed-card-width: min(59vw, 880px);
+  }
+
+  .topBar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 3;
+    width: auto;
+  }
+
+  .stage {
+    grid-template-columns:
+      var(--feed-side-width) minmax(0, var(--feed-card-width))
+      var(--feed-side-width);
+    grid-template-areas:
+      "skip deck like"
+      ". brand .";
+    column-gap: var(--space-3);
+    width: auto;
+    max-width: 100%;
+  }
+
+  .deck {
+    width: var(--feed-card-width);
+    max-width: 100%;
+    height: max(440px, calc(100dvh - var(--feed-chrome)));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: none;
+  }
+
+  .underCard {
+    transform: none;
   }
 }

@@ -1,5 +1,6 @@
 package ua.fulla.products;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -11,7 +12,7 @@ import ua.fulla.common.ErrorCode;
 import ua.fulla.images.ImageService;
 
 @Service
-class ProductService {
+public class ProductService {
 
     private final ProductRepository repository;
     private final ImageService images;
@@ -42,5 +43,22 @@ class ProductService {
                 "Save the brand name before creating cards"));
         return repository.findOwn(id, brandId)
             .orElseThrow(() -> new IllegalStateException("Card " + id + " vanished right after its insert"));
+    }
+
+    /**
+     * Dev-only demo import (ADR-0014, T-15): creates or updates the card of one source item.
+     * Only rows with a {@code source_id} are touched; T-1 (consent) and T-2 (brand name) don't
+     * apply to them (data-model.md §5.4). Returns the card ID.
+     */
+    public UUID upsertImported(ImportedCard card) {
+        return repository.upsertImported(card);
+    }
+
+    /**
+     * T-16: after a complete run, hides (Draft) the source's published cards that the run did not
+     * see. Never deletes. Returns how many cards were hidden.
+     */
+    public int unpublishMissingImported(UUID sourceId, Collection<String> seenExternalIds) {
+        return repository.unpublishMissingImported(sourceId, seenExternalIds);
     }
 }

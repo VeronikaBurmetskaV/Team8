@@ -15,7 +15,11 @@ export function Layout() {
   const isCabinet = pathname === "/brand" || pathname.startsWith("/brand/");
   // The feed (buttons beside the card) and the «Вподобане» grid need the room on a laptop;
   // the pages themselves keep their content narrow where needed.
-  const isWide = isCabinet || pathname === "/feed" || pathname === "/favorites";
+  const isWide =
+    isCabinet ||
+    pathname === "/feed" ||
+    pathname === "/favorites" ||
+    pathname === "/swipe-favorites";
 
   return (
     <div className={isWide ? "layout layout--wide" : "layout"}>

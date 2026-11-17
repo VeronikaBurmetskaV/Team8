@@ -5,6 +5,7 @@ import { RequireBrand } from "./shared/RequireBrand";
 import { StartPage } from "./features/start/StartPage";
 import { FeedPage } from "./features/feed/FeedPage";
 import { FavoritesPage } from "./features/favorites/FavoritesPage";
+import { SwipeFavoritesPage } from "./features/swipe-favorites/SwipeFavoritesPage";
 import { BuyerRegisterPage } from "./features/buyer-auth/BuyerRegisterPage";
 import { BuyerLoginPage } from "./features/buyer-auth/BuyerLoginPage";
 import { CartPage } from "./features/cart/CartPage";
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <StartPage /> },
       { path: "/feed", element: <FeedPage /> },
+      { path: "/swipe-favorites", element: <SwipeFavoritesPage /> },
       { path: "/favorites", element: <FavoritesPage /> },
       { path: "/register", element: <BuyerRegisterPage /> },
       { path: "/login", element: <BuyerLoginPage /> },

@@ -9,7 +9,7 @@ Read this file fully before writing code. When this file and a source document d
 |---|---|
 | Scope, journeys, story map | [`docs/requirements.md`](docs/requirements.md), [`user stories/`](user%20stories/UserStoriesREADME.md) |
 | Business rules, NFRs, assumptions (BR-, NFR-, INV-, A-, G- IDs) | [`docs/analysis/requirements-digest.md`](docs/analysis/requirements-digest.md) |
-| Binding technology and architecture decisions | [`docs/adr/`](docs/adr/README.md) — ADR-0001…0013 |
+| Binding technology and architecture decisions | [`docs/adr/`](docs/adr/README.md) — ADR-0001…0014 |
 | System overview, components, routes, open questions (Q-01…Q-13) | [`docs/architecture/overview.md`](docs/architecture/overview.md) |
 | Entities, invariants, state machines | [`docs/architecture/domain-model.md`](docs/architecture/domain-model.md) |
 | HTTP contract, error envelope, error codes | [`docs/architecture/api.md`](docs/architecture/api.md) (→ `docs/contracts/api.md`, see §5.2) |
@@ -17,7 +17,18 @@ Read this file fully before writing code. When this file and a source document d
 | External links/infra, what the server must never call | [`docs/architecture/integrations.md`](docs/architecture/integrations.md) |
 | Risks and their mitigations (R-T, R-P, R-M) | [`docs/architecture/risks.md`](docs/architecture/risks.md) |
 
-> **Current state (28.10.2026):** documentation only. No `backend/`, `frontend/`, `scripts/` or `package.json` exist yet. Everything in §3–§4 is the **target** defined by the ADRs; the walking skeleton creates it. Do not describe target names as if they already exist, and do not scaffold them unless the task asks for it.
+> **Current state (17.11.2026, branch `main`):** the walking skeleton and the first brand slices exist. Check the code before assuming a §3 name exists; anything not listed here is still a **target**.
+> - **Tooling:** root `package.json` (scripts `dev`, `build`, `lint`, `typecheck`, `test`), `scripts/dev.mjs` + `scripts/mvnw.mjs`, `.nvmrc`, `.env.example`, CI in `.github/workflows/ci.yml`, PR template.
+> - **Backend:** one Flyway migration `V20261029_1200__create_initial_schema.sql` (all six tables). Implemented packages:
+>   - `common`: error envelope, `ErrorCode`, `SecurityConfig`, `GET /api/session`, embedded Postgres for `dev`; also `GET /api/health`, which is **not** in the contract;
+>   - `brandauth`: register, login, logout;
+>   - `brandprofile`: `GET`/`PUT /api/brand/profile`;
+>   - `images`: `ImageStore` + `POST`/`GET`;
+>   - `products`: only `GET`/`POST /api/brand/products`; edit, `GET /{id}`, publish and unpublish are not built yet.
+>
+>   `feed`, `buyer` and `ops` contain only `package-info.java`. There is no dev seeder yet.
+> - **Frontend:** `api/client.ts`, `api/types.ts`, `shared/messages.uk.ts`, `shared/validation.ts` (+ shared examples). Cabinet features `cabinet-auth`, `cabinet-profile` and `cabinet-products` (list + create form) work. `start`, `feed`, `favorites` and `buyer-auth` are placeholder pages. Buyer-side UI is in progress on feature branches.
+> - **Docs:** `docs/contracts/api.md` does not exist yet (Q-02), so `docs/architecture/api.md` is the contract. ADR-0014 (dev-only demo import) is Proposed and documentation only: no `catalogimport` code and no import migration.
 
 ---
 
@@ -52,7 +63,7 @@ Only **In Scope** stories are requirements. Each has a file in `user stories/` w
 | US-17 | Remove from «Вподобане» | Favourites are **append-only** (the merge-by-union design depends on it) |
 | US-18 | Compare favourites | — |
 | US-20 | Brand page / brand link | Brand name is text on the card; logo is never shown to buyers |
-| US-23, US-24, US-27…US-30 | Site connection, import, sync of stock/prices, auto-unpublish | Cards are created manually; the server **never** fetches brand URLs (A-15) |
+| US-23, US-24, US-27…US-30 | Site connection, import, sync of stock/prices, auto-unpublish | Brands create cards manually; for brand-facing code the server **never** fetches brand URLs (A-15). **Only exception:** the dev-profile demo importer of ADR-0014 (three fixed sources, see §3 `catalogimport/`). It does not implement these stories for brands |
 
 Also out of the MVP (ADRs, "Postponed"): password reset by email, email verification, social login, 2FA, PWA/offline, i18n beyond Ukrainian, real-time feed push, moderation, click tracking, OpenAPI generation, Spring Session JDBC, public hosting, Playwright E2E, Spotless.
 
@@ -64,7 +75,7 @@ Also out of the MVP (ADRs, "Postponed"): password reset by email, email verifica
 
 **One React SPA served by one Spring Boot API on one origin; package-by-feature on both sides.**
 
-- No separate deployments, no CORS, no microservices, no hexagonal/clean layering. The single deliberate abstraction is the `ImageStore` interface (ADR-0007). **Do not add other interfaces "for the future".**
+- No separate deployments, no CORS, no microservices, no hexagonal/clean layering. The deliberate abstractions are the `ImageStore` interface (ADR-0007) and, for the dev-only demo import, `CatalogImporter` (ADR-0014). **Do not add other interfaces "for the future".**
 - In development, Vite (`:5173`) proxies `/api` to Spring (`:8080`) so the browser still sees one origin (ADR-0010).
 - A story maps to one backend feature package and one frontend feature folder.
 
@@ -92,9 +103,9 @@ All ADRs are currently **Proposed**. Never edit an ADR to fit code; if a decisio
 
 Adding anything not on this list requires a human decision (and an ADR if it meets the criteria in `docs/adr/README.md`). Say so in the PR instead of adding it.
 
-- **Backend:** `spring-boot-starter-web`, `spring-boot-starter-validation`, `spring-boot-starter-security`, `spring-boot-starter-jdbc` (`JdbcClient`), `flyway-core` (+ `flyway-database-postgresql` if the Flyway version requires it), PostgreSQL JDBC driver, `io.zonky.test:embedded-postgres` (dev profile), `spring-boot-starter-test`, `spring-security-test`, `io.zonky.test:embedded-database-spring-test`.
+- **Backend:** `spring-boot-starter-web`, `spring-boot-starter-validation`, `spring-boot-starter-security`, `spring-boot-starter-jdbc` (`JdbcClient`), `flyway-core` (+ `flyway-database-postgresql` if the Flyway version requires it), PostgreSQL JDBC driver, `io.zonky.test:embedded-postgres` (dev profile), `spring-boot-starter-test`, `spring-security-test`, `io.zonky.test:embedded-database-spring-test`; `org.jsoup:jsoup` — **only** in `ua.fulla.catalogimport` for HTML parsing (ADR-0014, Proposed). HTTP for the importer uses the JDK `java.net.http.HttpClient`, JSON uses Jackson, XML uses JDK StAX; no other libraries for it.
 - **Frontend:** `react`, `react-dom`, `react-router` / `react-router-dom`, `@tanstack/react-query`, `zustand`, `motion`, `react-hook-form`, `zod` (+ `@hookform/resolvers`), `vite`, `@vitejs/plugin-react`, `typescript`, `vitest`, `eslint` (+ TS/React plugins), `prettier`; `@fontsource/*` only if the design uses web fonts (no font CDN).
-- **Explicitly not approved:** JPA/Hibernate/Spring Data JPA, Lombok, MapStruct, springdoc/OpenAPI generators, axios, Redux, Tailwind, Mantine or any component library, Spring Session, JWT libraries, Docker/Testcontainers, H2, Cloudinary SDK, Thumbnailator, any HTTP client used to call brand sites.
+- **Explicitly not approved:** JPA/Hibernate/Spring Data JPA, Lombok, MapStruct, springdoc/OpenAPI generators, axios, Redux, Tailwind, Mantine or any component library, Spring Session, JWT libraries, Docker/Testcontainers, H2, Cloudinary SDK, Thumbnailator, any HTTP client library used to call brand sites (the dev-only importer of ADR-0014 uses the JDK `HttpClient`, nothing else may call brand sites).
 
 ---
 
@@ -124,6 +135,8 @@ Adding anything not on this list requires a human decision (and an ADR if it mee
 │       │   ├── feed/             public reads: GET /api/feed, GET /api/products?ids= (US-08.1, US-16, US-19)
 │       │   ├── images/           ImageStore + upload (magic bytes) + immutable serving (ADR-0007)
 │       │   ├── buyer/            buyer accounts + idempotent favourites (US-02, US-03, ADR-0012)
+│       │   ├── catalogimport/    profile `dev` only (ADR-0014, Proposed): CatalogImporter + 2 importers, robots.txt,
+│       │   │                     polite fetcher, @Scheduled sync ≤ 1×/6 h, ≤ 50 items/source; writes via ProductService
 │       │   └── ops/              profile `ops` only: reset-password, consent withdrawal (ADR-0006, R-P10)
 │       │                         (+ a dev-profile seeder: ≥ 4 brands, ~30 cards, only when the DB is empty)
 │       ├── main/resources/
@@ -273,7 +286,7 @@ Items marked **(proposal)** or Q-xx in the architecture docs are not agreed deci
 
 ### 5.4. Database schema conformance (`docs/architecture/data-model.md`)
 
-- Tables: `brand_accounts`, `brand_profiles`, `products`, `images`, `buyer_accounts`, `favorites` — with exactly the columns, types, nullability, `CHECK`s, PKs, FKs and indexes listed there. No other tables (sessions are in memory; anonymous buyer state is in localStorage).
+- Tables: `brand_accounts`, `brand_profiles`, `products`, `images`, `buyer_accounts`, `favorites` — with exactly the columns, types, nullability, `CHECK`s, PKs, FKs and indexes listed there. No other tables (sessions are in memory; anonymous buyer state is in localStorage). Planned for the dev demo import, once ADR-0014 is accepted: `catalog_sources`, `source_brands` and import columns on `products` (data-model §5).
 - Conventions: `snake_case`; `uuid` PKs with `gen_random_uuid()`; `created_at`/`updated_at` as `timestamptz` (UTC); price `integer` UAH; images `bytea` (never JPA `@Lob`/`oid`); `status` is `varchar` with `CHECK (status IN ('draft','published'))` (lowercase in DB, UPPER_CASE in JSON).
 - No `DELETE` statements on business tables; no `ON DELETE` rules.
 - Java mapping: repository methods return records whose fields correspond 1:1 to the documented columns (camelCase in Java, snake_case in SQL).
@@ -284,7 +297,7 @@ Items marked **(proposal)** or Q-xx in the architecture docs are not agreed deci
 
 1. **MUST NOT invent or alter entity fields, columns, enum values, status names or error codes** without first checking `docs/architecture/data-model.md`, `domain-model.md` and `api.md`. If something is genuinely missing, stop and ask; do not improvise a column or code.
 2. **MUST NOT create undocumented API routes** or ad-hoc response/error shapes. Every non-2xx body is the single envelope from the one `@RestControllerAdvice`. No `ResponseEntity.badRequest().body("text")`, no Spring default error JSON, no Ukrainian text in API responses.
-3. **MUST NOT implement Out-of-Scope stories** (§1.2) or add "hooks" for them (filters, sizes, composition, delete-favourite, import jobs, server-side fetching of brand URLs).
+3. **MUST NOT implement Out-of-Scope stories** (§1.2) or add "hooks" for them (filters, sizes, composition, delete-favourite, import jobs, server-side fetching of brand URLs). The only exception is the dev-profile demo importer defined by ADR-0014, within its limits: three fixed sources, robots.txt, ≥ 2 s between requests, ≤ 1 run/6 h, ≤ 50 items per source, no image copies, never published. Its stored sizes, colours, material and description are **not** exposed by the API or UI.
 4. **MUST NOT hardcode secrets**, API keys, DB URLs, usernames or passwords. Use Spring properties with environment variables (`SPRING_DATASOURCE_URL/USERNAME/PASSWORD`, `SPRING_PROFILES_ACTIVE`) and commit only templates (e.g. `.env.example`) with placeholders. Never commit `.env`, `backend/.data/`, or real credentials. Dev seed accounts are clearly fake and exist only in the `dev` profile.
 5. **MUST NOT add dependencies outside §2.3** (Maven, npm, CDN scripts, fonts from a CDN) without a human decision.
 6. **MUST NOT edit `docs/**`, `user stories/**`, `README.md` or existing `prompts/*`** unless a human explicitly asks. The exception is the contract workflow in §4.4, which updates `docs/contracts/api.md` together with the controller.
@@ -292,7 +305,7 @@ Items marked **(proposal)** or Q-xx in the architecture docs are not agreed deci
 8. **MUST NOT bypass security:** no disabling CSRF, no `permitAll` on `/api/brand/**` (except register/login) or `/api/me/**`, no owner ID taken from the request, no plaintext or reversible passwords, no logging of passwords or session IDs.
 9. **MUST NOT render brand content unsafely:** no `dangerouslySetInnerHTML`, no outbound link built outside `withUtm()`, no `javascript:`/`data:` URLs (only `http`/`https` product URLs; only `https://` image URLs).
 10. **MUST NOT replace DB-level guarantees with UI guards or timers** (ADR-0009). Debounce/disabled buttons are UX only.
-11. **MUST NOT use JPA, Docker, H2, Testcontainers** or any technology the ADRs rejected; MUST NOT add abstractions beyond `ImageStore`.
+11. **MUST NOT use JPA, Docker, H2, Testcontainers** or any technology the ADRs rejected; MUST NOT add abstractions beyond `ImageStore` and `CatalogImporter` (ADR-0014).
 12. **MUST NOT use `any` in `src/shared` or `src/api`**; elsewhere only with a `// TODO(types)` comment and an explicit cast (ADR-0013).
 13. **MUST NOT store anything about anonymous buyers on the server**, and nothing about registered buyers beyond email, password hash and liked product IDs (NFR-19).
 14. **MUST NOT skip, disable or weaken tests** to make CI green.

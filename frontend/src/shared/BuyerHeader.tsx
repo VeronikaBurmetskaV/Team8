@@ -20,25 +20,34 @@ import {
   type Language,
 } from "./language";
 import { headerTexts as t } from "./messages.uk";
+import { favoriteLists, useProductList } from "./productLists";
 
 type IconLinkProps = {
   to: string;
   label: string;
   active: boolean;
+  /** Small counter on the icon; hidden at 0. */
+  count?: number;
   children: ReactNode;
 };
 
-function IconLink({ to, label, active, children }: IconLinkProps) {
+function IconLink({ to, label, active, count, children }: IconLinkProps) {
+  const fullLabel = count === undefined ? label : t.withCount(label, count);
   return (
     <li>
       <Link
         to={to}
         className={styles.iconLink}
-        aria-label={label}
-        title={label}
+        aria-label={fullLabel}
+        title={fullLabel}
         aria-current={active ? "page" : undefined}
       >
         {children}
+        {count !== undefined && count > 0 && (
+          <span className={styles.badge} aria-hidden="true">
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
       </Link>
     </li>
   );
@@ -60,6 +69,8 @@ export function BuyerHeader() {
   const languageId = useId();
   const menuRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
+  const swipeFavorites = useProductList(favoriteLists.swipeFavorites);
+  const favorites = useProductList(favoriteLists.favorites);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -175,27 +186,21 @@ export function BuyerHeader() {
             <IconLink to="/feed" label={t.swipe} active={pathname === "/feed"}>
               <SwipeIcon className={styles.icon} />
             </IconLink>
-            <li>
-              {/* Placeholder: no page yet. aria-disabled keeps it focusable for the hint. */}
-              <button
-                type="button"
-                className={`${styles.iconLink} ${styles.soon}`}
-                aria-disabled="true"
-                aria-label={`${t.swipeFavorites} — ${t.soon}`}
-                title={`${t.swipeFavorites} — ${t.soon}`}
-              >
-                <SwipeHeartIcon className={styles.icon} />
-                <span className={styles.tooltip} aria-hidden="true">
-                  {t.soon}
-                </span>
-              </button>
-            </li>
+            <IconLink
+              to="/swipe-favorites"
+              label={t.swipeFavorites}
+              active={pathname === "/swipe-favorites"}
+              count={swipeFavorites.length}
+            >
+              <SwipeHeartIcon className={styles.icon} />
+            </IconLink>
           </ul>
           <ul className={`${styles.group} ${styles.groupShop}`}>
             <IconLink
               to="/favorites"
               label={t.favorites}
               active={pathname === "/favorites"}
+              count={favorites.length}
             >
               <HeartIcon className={styles.icon} />
             </IconLink>

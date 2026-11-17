@@ -39,8 +39,10 @@
   text-decoration: none;
 }
 
-.header .logo:hover {
-  color: var(--color-on-header);
+/* Hover and keyboard focus: the name turns accent, «SWIPING» keeps its own colour. */
+.header .logo:hover,
+.header .logo:focus-visible {
+  color: var(--color-header-hover);
 }
 
 .logoName,
@@ -63,12 +65,12 @@
   align-self: stretch;
   height: var(--border-width);
   margin-block: var(--space-half);
-  background-color: var(--color-on-header-muted);
+  background-color: var(--color-on-header);
 }
 
 .logoTagline {
   padding-left: var(--letter-spacing-tagline);
-  color: var(--color-on-header-muted);
+  color: var(--color-header-tagline);
   font-family: var(--font-body);
   font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-medium);
@@ -99,15 +101,22 @@
 }
 
 .header .iconLink:hover,
-.header .burger:hover {
+.header .iconLink:focus-visible,
+.header .burger:hover,
+.header .burger:focus-visible {
   border: none;
   background-color: transparent;
-  color: var(--color-accent);
+  color: var(--color-header-hover);
 }
 
 /* Active page: underline under the icon. */
 .header .iconLink[aria-current="page"] {
-  color: var(--color-accent);
+  color: var(--color-header-highlight);
+}
+
+.header .iconLink[aria-current="page"]:hover,
+.header .iconLink[aria-current="page"]:focus-visible {
+  color: var(--color-header-hover);
 }
 
 .header .iconLink[aria-current="page"]::after {
@@ -117,45 +126,36 @@
   left: var(--space-1);
   height: var(--indicator-width);
   border-radius: var(--radius-pill);
-  background-color: var(--color-accent);
+  background-color: var(--color-header-highlight);
   content: "";
 }
 
-/* «Вподобане зі свайпів»: not available yet. */
-.header .soon,
-.header .soon:hover {
-  color: var(--color-on-header-muted);
-  cursor: default;
-}
-
-.tooltip {
+/* Counter of «Вподобане зі свайпів» and «Вподобане»: a small pill at the icon's top right. */
+.badge {
   position: absolute;
-  top: 100%;
-  left: 50%;
-  z-index: var(--z-header-menu);
-  display: none;
-  padding: var(--space-half) var(--space-1);
-  border-radius: var(--radius-sm);
-  background-color: var(--color-on-header);
+  top: var(--space-half);
+  right: var(--space-half);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--icon-size-sm);
+  height: var(--icon-size-sm);
+  padding: 0 var(--space-half);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-header-highlight);
   color: var(--color-header-background);
   font-family: var(--font-body);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
   letter-spacing: normal;
-  text-transform: none;
-  white-space: nowrap;
-  transform: translateX(-50%);
-}
-
-/* The title attribute covers the mouse; keyboard users see this hint on focus. */
-.soon:focus-visible .tooltip {
-  display: block;
+  pointer-events: none;
 }
 
 .header .iconLink:focus-visible,
 .header .burger:focus-visible,
 .header .logo:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-accent);
+  outline: var(--focus-ring-width) solid var(--color-header-hover);
   outline-offset: var(--focus-ring-width);
 }
 
@@ -223,7 +223,7 @@
 
 .chevron {
   right: 0;
-  color: var(--color-on-header-muted);
+  color: var(--color-on-header);
 }
 
 .header .select {
@@ -251,12 +251,13 @@
 
 .header .select:hover,
 .header .select:focus {
-  border-color: var(--color-on-header-muted);
+  border-color: var(--color-header-hover);
+  color: var(--color-header-hover);
   box-shadow: none;
 }
 
 .header .select:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-accent);
+  outline: var(--focus-ring-width) solid var(--color-header-hover);
   outline-offset: var(--focus-ring-width);
 }
 

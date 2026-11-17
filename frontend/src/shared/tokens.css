@@ -63,6 +63,7 @@
 
   /* Borders */
   --border-width: 1px;
+  --border-width-thick: 2px;
   --focus-ring-width: 2px;
   --underline-offset: 3px;
 
@@ -95,10 +96,14 @@
   --auth-card-max-width: 400px;
   --control-height: 48px;
 
-  /* Buyer header (BuyerHeader.module.css): dark full-width bar with light text. */
-  --color-header-background: var(--color-primary);
-  --color-on-header: var(--color-background);
-  --color-on-header-muted: rgb(250 248 245 / 0.6);
+  /* Buyer header (BuyerHeader.module.css): dark full-width bar with light text.
+     Only the --palette-* colours: ink bar, warm-gray text and icons, beige highlight. */
+  --color-header-background: var(--palette-ink);
+  --color-on-header: var(--palette-warm-gray);
+  --color-header-highlight: var(--palette-beige);
+  /* Hover and keyboard focus on the header's icons, logo and selects. */
+  --color-header-hover: var(--palette-accent);
+  --color-header-tagline: var(--palette-light-gray);
   --color-header-divider: rgb(250 248 245 / 0.16);
   --font-size-2xs: 0.625rem; /* 10px — the «SWIPING» line under the logo */
   --font-size-logo: 1.75rem; /* 28px on a phone */
@@ -113,4 +118,14 @@
   --indicator-width: 2px;
   --header-menu-width: 240px;
   --z-header-menu: 10;
+
+  /* TEMPORARY palette of the swipe feed and ProductCard (will change with the final design).
+     The feed page and the card use only these five colours. */
+  --palette-brown: #6f5b42;
+  --palette-beige: #b5a892;
+  --palette-light-gray: #d2d2d1;
+  --palette-warm-gray: #bebbb4;
+  --palette-ink: #15160a;
+  /* Accent: hover and focus highlight in the buyer header. */
+  --palette-accent: #cb8f00;
 }

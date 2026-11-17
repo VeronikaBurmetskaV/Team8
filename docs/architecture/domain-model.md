@@ -92,10 +92,10 @@ Server-side entities: everything except `BuyerSession` and `CardImpression`, whi
 | `name` | Required, **1–100 characters**. Displayed truncated with an ellipsis after 2 lines. | US-25.1 CL; US-08.2 CL |
 | `priceUah` | Required. **Positive whole number** of hryvnias; `-500`, `0` and text are rejected. Upper bound 1 000 000 **(proposal, Q-11)**. Displayed as `2400 грн` (no thousands separator) in the feed, «Вподобане» and preview. | US-25.1 CL, S2; US-08.2 CL; A-13 |
 | `photo` | Required. Upload PNG/JPG/WEBP ≤ 5 MB **or** an image URL starting with `https://`, exactly one of the two. | US-25.1 CL; ADR-0007 |
-| `productUrl` | Required. Must start with `http://` or `https://` and parse as a URI with a non-empty host. Format only; FULLA never fetches it. Stored exactly as entered (no UTM). | US-26 CL, S2; A-15; ADR-0009 |
+| `productUrl` | Required. Must start with `http://` or `https://` and parse as a URI with a non-empty host. Format only; FULLA never fetches it. Stored exactly as entered (no UTM). Imported demo cards keep the source's URL as given (ADR-0014, dev only); it isn't checked either. | US-26 CL, S2; A-15; ADR-0009; ADR-0014 |
 | `brandName` | **Not stored on the card.** Always the current `BrandProfile.name`. | US-22.1 CL; US-25.1 CL; INV-03 |
 | `status` | `Draft` («Чернетка») or `Published` («Опубліковано»). | US-25.1 CL; US-31 CL |
-| `publishedAt` | Set on each Draft → Published; empty while Draft. Defines the feed order. | ADR-0009 |
+| `publishedAt` | Set on each Draft → Published; empty while Draft. Orders a brand's own cards in the feed (see **Feed**, §2.8). | ADR-0009; ADR-0014 |
 | — | No deletion. Unpublishing is the only way to remove a card from the feed. | US-31 CL |
 
 ### 2.4. Image
@@ -137,7 +137,7 @@ Server-side entities: everything except `BuyerSession` and `CardImpression`, whi
 |---|---|---|
 | **Outbound link** | `withUtm(productUrl)`: add `utm_source=fulla`; with `&` if a query exists (`…?id=42&utm_source=fulla`); before any `#fragment`; unchanged if `utm_source` is already present. Opened in a new tab, `rel="noopener noreferrer"`. | US-19 CL; US-32 CL, S1, S2; A-16; NFR-11 |
 | **Price display** | `<priceUah> грн`, digits without separators. | US-08.2 CL |
-| **Feed** | All Published cards ordered by `publishedAt, id`; the buyer sees the first card whose ID is in neither `viewedIds` nor `favoriteIds`. | INV-01; A-10; ADR-0009 |
+| **Feed** | All Published cards, imported cards mixed across import sources and brands (team lead decision for the demo, 17.11.2026): round by round, each brand gives its next card (its own cards in `publishedAt, id` order); inside a round, brands are ordered by a hash of the brand ID, so the order is stable between requests. The buyer sees the first card whose ID is in neither `viewedIds` nor `favoriteIds`. | INV-01; A-10; ADR-0009; ADR-0014 |
 
 ---
 
@@ -201,7 +201,7 @@ stateDiagram-v2
 
 - There is **no final state**: cards are never deleted (US-31 CL).
 - **Published is read-only.** To change a price: unpublish → edit → publish (A-06). `PUT` on a Published card → `409 CARD_NOT_EDITABLE`.
-- Republishing sets a new `publishedAt`, so the card moves to the end of the feed. A buyer who already viewed it does not see it again (ADR-0009).
+- Republishing sets a new `publishedAt`, so the card moves behind the brand's other Published cards in the feed. A buyer who already viewed it does not see it again (ADR-0009).
 - `PUBLISH_FIELDS_MISSING` is a defensive check: drafts are complete by construction, so in the normal flow it never fires (US-31 note, G-02).
 
 ### 4.3. Card Impression (one card × one browser)

@@ -19,6 +19,7 @@ Short records of decisions that are expensive to reverse. Options and ratings ar
 | [0011](0011-quality-and-tooling.md) | Quality and tooling: minimal CI | Proposed |
 | [0012](0012-buyer-accounts-favorites-sync.md) | Buyer accounts and moving «Вподобане» to the server | Proposed |
 | [0013](0013-frontend-language-typescript.md) | Frontend language: TypeScript (strict) | Proposed |
+| [0014](0014-demo-catalog-import.md) | Demo catalogue import from three sites (dev profile only) | Proposed |
 
 Status flow: **Proposed** → **Accepted** (the team lead marks it after team review) → **Superseded by ADR-NNNN** (never edit an accepted decision; write a new ADR). While an ADR is Proposed, it is revised in place, with a note in its Status line.
 

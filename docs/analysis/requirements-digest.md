@@ -369,7 +369,7 @@ Risk = impact on the design if the assumption turns out to be wrong.
 | A-12 | Empty catalog shows the "all viewed" state. | G-10 | Low | Only UI text. |
 | A-13 | Price is a positive whole number of UAH with an upper bound; displayed as "2400 грн". | G-14 | Low | Kopecks or thousands separators are formatting changes. |
 | A-14 | Product name 1–100 chars; photos PNG/JPG/WEBP up to ~5 MB, any aspect ratio, shown without cropping distortion. | G-13, G-15 | Low | Limits are easy to tune. |
-| A-15 | URL validation is format-only (`http://`/`https://` + well-formed); FULLA never fetches brand URLs server-side. | G-18 | Low | Automated reachability checks would be additive (and belong to Post-MVP integration, US-23). |
+| A-15 | URL validation is format-only (`http://`/`https://` + well-formed); FULLA never fetches brand URLs server-side. Exception: the dev-profile demo importer reads three fixed sources for the local demo only (ADR-0014, Proposed); brand-entered URLs are still never fetched. | G-18 | Low | Automated reachability checks would be additive (and belong to Post-MVP integration, US-23). |
 | A-16 | UTM is inserted before any `#fragment`; a URL that already has `utm_source` is left unchanged. | G-17 | Low | Pure string-handling rule. |
 | A-17 | Consent is recorded with timestamp and the exact consent text shown. | NFR-14 | Low | Cheap to record now; impossible to reconstruct later. |
 | A-18 | Buyer navigation to «Вподобане» exists on start page, feed and Favorites; brand logo is cabinet-only. | G-19, G-20 | Low | UI-only. |

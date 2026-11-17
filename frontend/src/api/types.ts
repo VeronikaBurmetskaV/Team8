@@ -85,6 +85,38 @@ export interface PublicCard {
   productUrl: string;
 }
 
+/** One size of a product and whether it is in stock (api.md §2.2, imported cards only). */
+export interface ProductSize {
+  label: string;
+  available: boolean;
+}
+
+/**
+ * One colour of a product: a name for the tooltip and a `#rrggbb` swatch (api.md §2.2,
+ * imported cards only). `hex` is null when the importer doesn't know the colour name.
+ */
+export interface ProductColor {
+  name: string;
+  hex: string | null;
+}
+
+/**
+ * Card of the swipe feed (api.md §2.2): `PublicCard` plus optional details. Only cards from
+ * the dev-only demo import (ADR-0014) have them; brand-made cards never do. The UI shows each
+ * block only when it is present. The demo data (`features/feed/demoFeed.ts`) fills them too.
+ */
+export type FeedCard = PublicCard & {
+  sizes?: ProductSize[];
+  colors?: ProductColor[];
+  material?: string;
+  description?: string;
+};
+
+/** GET /api/feed (api.md §2.2). */
+export interface FeedResponse {
+  items: FeedCard[];
+}
+
 /** Card as its brand sees it in the cabinet (api.md §2.1, §4.1). */
 export type BrandCard = PublicCard & {
   photoImageId: string | null;

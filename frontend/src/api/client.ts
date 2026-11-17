@@ -3,6 +3,7 @@ import type {
   BrandCard,
   CreateProductRequest,
   ErrorCode,
+  FeedResponse,
   ImageUploadResponse,
 } from "./types";
 
@@ -109,6 +110,11 @@ export function apiPut<T>(path: string, body: unknown): Promise<T> {
 /** Multipart POST (image upload). */
 export function apiUpload<T>(path: string, form: FormData): Promise<T> {
   return request<T>("POST", path, form);
+}
+
+/** Published cards, oldest first; an empty list is valid (api.md §2.2). */
+export function getFeed(): Promise<FeedResponse> {
+  return apiGet<FeedResponse>("/api/feed");
 }
 
 export function getBrandProducts(): Promise<BrandCard[]> {
