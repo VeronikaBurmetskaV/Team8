@@ -4,12 +4,16 @@ import type { BrandProfileResponse } from "../../api/types";
 import { useBrandProfile } from "../../shared/brandProfile";
 import { errorCodeOf, toFormErrors } from "../../shared/errors";
 import { brandNameInvalidMessage, messages } from "../../shared/messages.uk";
-import { brandNameSchema, type BrandNameForm } from "../../shared/validation";
 import { useSaveBrandProfile } from "./api";
 import styles from "./BrandProfilePage.module.css";
-
-/** Request field of PUT /api/brand/profile → the input that shows its error. */
-const profileFields = { name: "name" } as const;
+import {
+  brandProfileFormSchema,
+  CONSENT_TEXT,
+  profileFields,
+  toBrandProfileFormValues,
+  toBrandProfileRequest,
+  type BrandProfileForm,
+} from "./profileForm";
 
 export function BrandProfilePage() {
   const profile = useBrandProfile();
@@ -39,24 +43,22 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
     setError,
     reset,
     formState: { errors, isSubmitting, isDirty },
-  } = useForm<BrandNameForm>({
-    resolver: zodResolver(brandNameSchema),
-    defaultValues: { name: profile.name ?? "" },
+  } = useForm<BrandProfileForm>({
+    resolver: zodResolver(brandProfileFormSchema),
+    defaultValues: toBrandProfileFormValues(profile),
   });
+  // Locked only by the server's answer (the query cache), never by the ticked box (INV-09).
+  const consentLocked = profile.consentGiven;
 
-  async function onSubmit({ name }: BrandNameForm) {
+  async function onSubmit(values: BrandProfileForm) {
     try {
-      const saved = await saveProfile.mutateAsync({
-        name,
-        // Only the name is edited here: the logo and the consent are sent back as loaded.
-        logoImageId: profile.logoImageId,
-        logoUrl: profile.logoUrl,
-        consentGiven: profile.consentGiven,
-      });
-      // Show the name exactly as the server saved it (trimmed).
-      reset({ name: saved.name ?? "" });
+      const saved = await saveProfile.mutateAsync(
+        toBrandProfileRequest(values, profile),
+      );
+      // Show the profile exactly as the server saved it: the trimmed name and the real consent.
+      reset(toBrandProfileFormValues(saved));
     } catch (error) {
-      // The entered name stays in the field.
+      // The entered name and the checkbox stay as they are.
       showError(error);
     }
   }
@@ -70,6 +72,9 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
           ? brandNameInvalidMessage
           : messages[fields.name];
       setError("name", { message });
+    }
+    if (fields.consentGiven) {
+      setError("consentGiven", { message: messages[fields.consentGiven] });
     }
     if (form) setError("root", { message: messages[form] });
   }
@@ -89,6 +94,31 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
         {errors.name && (
           <p id="name-error" role="alert">
             {errors.name.message}
+          </p>
+        )}
+      </div>
+      <div>
+        {/* The box sits inside its label, so the global styles put them on one line. */}
+        <label>
+          {consentLocked ? (
+            // Saved consent cannot be withdrawn by the brand: shown, not part of the form.
+            <input type="checkbox" checked disabled readOnly />
+          ) : (
+            <input
+              type="checkbox"
+              disabled={isSubmitting}
+              aria-invalid={errors.consentGiven ? true : undefined}
+              aria-describedby={
+                errors.consentGiven ? "consentGiven-error" : undefined
+              }
+              {...register("consentGiven")}
+            />
+          )}{" "}
+          {CONSENT_TEXT}
+        </label>
+        {errors.consentGiven && (
+          <p id="consentGiven-error" role="alert">
+            {errors.consentGiven.message}
           </p>
         )}
       </div>
