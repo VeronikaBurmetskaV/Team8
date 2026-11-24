@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -102,5 +103,17 @@ class ProductController {
             request.photoUrl(),
             request.productUrl());
         return BrandCardResponse.of(service.createDraft(brand.accountId(), draft));
+    }
+
+    /** US-31, api.md §4.2: no request body; 200 with the card, now {@code PUBLISHED}. */
+    @PostMapping("/api/brand/products/{id}/publish")
+    BrandCardResponse publish(@AuthenticationPrincipal SessionAccount brand, @PathVariable UUID id) {
+        return BrandCardResponse.of(service.publish(brand.accountId(), id));
+    }
+
+    /** US-31 CL: no request body; 200 with the card, back to {@code DRAFT}. */
+    @PostMapping("/api/brand/products/{id}/unpublish")
+    BrandCardResponse unpublish(@AuthenticationPrincipal SessionAccount brand, @PathVariable UUID id) {
+        return BrandCardResponse.of(service.unpublish(brand.accountId(), id));
     }
 }

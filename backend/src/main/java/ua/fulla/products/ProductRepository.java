@@ -67,6 +67,35 @@ class ProductRepository {
             .optional();
     }
 
+    /**
+     * T-1: Draft → Published in one statement, only if the card is the brand's own Draft and the
+     * brand has given consent (ADR-0009, no check-then-update). A republish gets a new
+     * {@code published_at}, so the card moves to the end of the brand's cards in the feed.
+     * Returns the number of changed rows: 1 or 0.
+     */
+    int publish(UUID id, UUID brandId) {
+        return jdbc.sql("""
+                UPDATE products SET status = 'published', published_at = now(), updated_at = now()
+                WHERE id = :id AND brand_id = :brandId AND status = 'draft'
+                  AND EXISTS (SELECT 1 FROM brand_profiles
+                              WHERE brand_id = :brandId AND consent_given_at IS NOT NULL)
+                """)
+            .param("id", id)
+            .param("brandId", brandId)
+            .update();
+    }
+
+    /** T-4: Published → Draft in one statement, only for the brand's own Published card. Returns 1 or 0. */
+    int unpublish(UUID id, UUID brandId) {
+        return jdbc.sql("""
+                UPDATE products SET status = 'draft', published_at = NULL, updated_at = now()
+                WHERE id = :id AND brand_id = :brandId AND status = 'published'
+                """)
+            .param("id", id)
+            .param("brandId", brandId)
+            .update();
+    }
+
     /** The cabinet list (US-25.1 S1, US-21.1 S1): newest first. */
     List<ProductCard> listOwn(UUID brandId) {
         return jdbc.sql(SELECT_CARD + "WHERE p.brand_id = :brandId ORDER BY p.created_at DESC, p.id DESC")
