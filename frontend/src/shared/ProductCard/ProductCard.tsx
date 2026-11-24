@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { motion, useReducedMotion } from "motion/react";
 import type { FeedCard, ProductColor } from "../../api/types";
 import { RotateIcon } from "../icons";
 import { productCardTexts as t } from "../messages.uk";
@@ -7,6 +8,10 @@ import styles from "./ProductCard.module.css";
 
 /** Only a plain `#rrggbb` from the data becomes a swatch colour. */
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+/** How strongly `photoBlurred` blurs the photo. */
+const PHOTO_BLUR = "blur(10px)";
+const PHOTO_SHARP = "blur(0px)";
 
 interface ProductCardProps {
   card: FeedCard;
@@ -17,6 +22,20 @@ interface ProductCardProps {
   photoStub?: string;
   /** Extra control on the back side under the details (the feed puts «Одразу в кошик» here). */
   backAction?: ReactNode;
+  /**
+   * false: the compact card of the «Вподобане» list — only the front, no «Перевернути» and no
+   * back side. Default true (the feed, the full card over «Вподобане»).
+   */
+  flippable?: boolean;
+  /** Blurs the photo smoothly (the «Вподобане» list while removing asks to confirm). */
+  photoBlurred?: boolean;
+  /** `id` of the product name, for a dialog that is labelled by it. */
+  titleId?: string;
+  /**
+   * Shown over the centre of the photo, outside its blur («Вподобане» puts the «Видалити?»
+   * question here). Omitted in the feed, which keeps the plain photo box.
+   */
+  photoOverlay?: ReactNode;
 }
 
 /**
@@ -31,9 +50,14 @@ export function ProductCard({
   onFlippedChange,
   photoStub,
   backAction,
+  flippable = true,
+  photoBlurred,
+  titleId,
+  photoOverlay,
 }: ProductCardProps) {
   const [ownFlipped, setOwnFlipped] = useState(false);
-  const flipped = flippedProp ?? ownFlipped;
+  const reduceMotion = useReducedMotion() ?? false;
+  const flipped = flippable && (flippedProp ?? ownFlipped);
   const setFlipped = (value: boolean) => {
     if (flippedProp === undefined) setOwnFlipped(value);
     onFlippedChange?.(value);
@@ -43,6 +67,28 @@ export function ProductCard({
   const colors = card.colors ?? [];
   const hasDetails =
     Boolean(card.material) || Boolean(card.description) || sizes.length > 0;
+
+  const photoBox = (
+    <motion.div
+      className={styles.photoBox}
+      // Only a card that is asked to blur gets a filter: the feed keeps a plain box.
+      initial={false}
+      animate={
+        photoBlurred === undefined
+          ? undefined
+          : { filter: photoBlurred ? PHOTO_BLUR : PHOTO_SHARP }
+      }
+      transition={{ duration: reduceMotion ? 0 : 0.25, ease: "easeOut" }}
+    >
+      {photoStub !== undefined ? (
+        <div className={styles.photoStub} role="img" aria-label={photoStub}>
+          <span aria-hidden="true">{photoStub}</span>
+        </div>
+      ) : (
+        <ProductPhoto key={card.photoUrl} url={card.photoUrl} alt={card.name} />
+      )}
+    </motion.div>
+  );
 
   return (
     <article
@@ -55,26 +101,17 @@ export function ProductCard({
           inert={flipped}
           aria-hidden={flipped}
         >
-          <div className={styles.photoBox}>
-            {photoStub !== undefined ? (
-              <div
-                className={styles.photoStub}
-                role="img"
-                aria-label={photoStub}
-              >
-                <span aria-hidden="true">{photoStub}</span>
-              </div>
-            ) : (
-              <ProductPhoto
-                key={card.photoUrl}
-                url={card.photoUrl}
-                alt={card.name}
-              />
-            )}
-          </div>
+          {photoOverlay === undefined ? (
+            photoBox
+          ) : (
+            <div className={styles.photoArea}>
+              {photoBox}
+              <div className={styles.photoOverlay}>{photoOverlay}</div>
+            </div>
+          )}
 
           <div className={styles.info}>
-            <h2 className={styles.name} title={card.name}>
+            <h2 id={titleId} className={styles.name} title={card.name}>
               {card.name}
             </h2>
             <p className={styles.brand} title={card.brandName}>
@@ -120,89 +157,93 @@ export function ProductCard({
               </div>
             )}
 
+            {flippable && (
+              <button
+                type="button"
+                className={styles.flipButton}
+                aria-label={t.flipLabel}
+                onClick={() => setFlipped(true)}
+              >
+                <RotateIcon className={styles.flipIcon} />
+                {t.flip}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {flippable && (
+          <div
+            className={`${styles.face} ${styles.back}`}
+            inert={!flipped}
+            aria-hidden={!flipped}
+          >
+            <div className={styles.backScroll}>
+              <p className={styles.backKicker}>{t.detailsTitle}</p>
+              <h2 className={styles.backName}>{card.name}</h2>
+              <p className={styles.brand}>{card.brandName}</p>
+
+              <dl className={styles.details}>
+                {card.material && (
+                  <div className={styles.detail}>
+                    <dt>{t.material}</dt>
+                    <dd>{card.material}</dd>
+                  </div>
+                )}
+                {sizes.length > 0 && (
+                  <div className={styles.detail}>
+                    <dt>{t.sizes}</dt>
+                    <dd>
+                      {sizes.map((size, index) => (
+                        <span key={size.label}>
+                          {index > 0 && ", "}
+                          <span
+                            className={
+                              size.available
+                                ? undefined
+                                : styles.sizeTextUnavailable
+                            }
+                            aria-label={
+                              size.available
+                                ? t.sizeAvailable(size.label)
+                                : t.sizeUnavailable(size.label)
+                            }
+                          >
+                            {size.label}
+                          </span>
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                )}
+                {card.description && (
+                  <div className={styles.detail}>
+                    <dt>{t.description}</dt>
+                    <dd className={styles.description}>{card.description}</dd>
+                  </div>
+                )}
+                <div className={styles.detail}>
+                  <dt>{t.price}</dt>
+                  <dd className={styles.backPrice}>
+                    {formatPrice(card.priceUah)}
+                  </dd>
+                </div>
+              </dl>
+              {!hasDetails && <p className={styles.noDetails}>{t.noDetails}</p>}
+            </div>
+
+            {backAction}
+
             <button
               type="button"
               className={styles.flipButton}
-              aria-label={t.flipLabel}
-              onClick={() => setFlipped(true)}
+              aria-label={t.backLabel}
+              onClick={() => setFlipped(false)}
             >
               <RotateIcon className={styles.flipIcon} />
-              {t.flip}
+              {t.back}
             </button>
           </div>
-        </div>
-
-        <div
-          className={`${styles.face} ${styles.back}`}
-          inert={!flipped}
-          aria-hidden={!flipped}
-        >
-          <div className={styles.backScroll}>
-            <p className={styles.backKicker}>{t.detailsTitle}</p>
-            <h2 className={styles.backName}>{card.name}</h2>
-            <p className={styles.brand}>{card.brandName}</p>
-
-            <dl className={styles.details}>
-              {card.material && (
-                <div className={styles.detail}>
-                  <dt>{t.material}</dt>
-                  <dd>{card.material}</dd>
-                </div>
-              )}
-              {sizes.length > 0 && (
-                <div className={styles.detail}>
-                  <dt>{t.sizes}</dt>
-                  <dd>
-                    {sizes.map((size, index) => (
-                      <span key={size.label}>
-                        {index > 0 && ", "}
-                        <span
-                          className={
-                            size.available
-                              ? undefined
-                              : styles.sizeTextUnavailable
-                          }
-                          aria-label={
-                            size.available
-                              ? t.sizeAvailable(size.label)
-                              : t.sizeUnavailable(size.label)
-                          }
-                        >
-                          {size.label}
-                        </span>
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              )}
-              {card.description && (
-                <div className={styles.detail}>
-                  <dt>{t.description}</dt>
-                  <dd className={styles.description}>{card.description}</dd>
-                </div>
-              )}
-              <div className={styles.detail}>
-                <dt>{t.price}</dt>
-                <dd className={styles.backPrice}>
-                  {formatPrice(card.priceUah)}
-                </dd>
-              </div>
-            </dl>
-            {!hasDetails && <p className={styles.noDetails}>{t.noDetails}</p>}
-          </div>
-
-          {backAction}
-
-          <button
-            type="button"
-            className={styles.flipButton}
-            aria-label={t.backLabel}
-            onClick={() => setFlipped(false)}
-          >
-            <RotateIcon className={styles.flipIcon} />
-            {t.back}
-          </button>
-        </div>
+        )}
       </div>
     </article>
   );

@@ -1,5 +1,5 @@
 /**
- * Simple line icons of the buyer header. Decorative: the link or button around an icon
+ * Simple line icons of the buyer header, the feed and «Вподобане». Decorative: the link or button around an icon
  * carries the aria-label and title, so every SVG is aria-hidden.
  */
 import type { SVGProps } from "react";

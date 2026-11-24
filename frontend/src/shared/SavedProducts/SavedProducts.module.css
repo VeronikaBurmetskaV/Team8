@@ -1,4 +1,6 @@
-/* Grid of «Вподобане». Same TEMPORARY palette
+/* Grid of «Вподобане»: compact cards (the whole card opens the full one), «×» on the photo,
+   the «Видалити?» question over the blurred photo.
+   Same TEMPORARY palette
    as the feed and the card. Phone: one column. --bp-tablet: 3 in a row. --bp-desktop: 4. */
 .page {
   display: flex;
@@ -62,16 +64,109 @@
   min-width: 0;
 }
 
-/* The card fills its parent (ProductCard), so the parent sets the height. */
+/* The card fills its parent (ProductCard), so the parent sets the height.
+   The «×» is placed over the top right corner of the photo. */
 .cardBox {
+  position: relative;
   width: 100%;
   height: calc(var(--container-phone) + var(--space-4));
 }
 
-.actions {
+/* The whole compact card opens the full card. */
+.cardButton {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+}
+
+/* Round, ≥ 44×44 px, a dark see-through disc so it reads on any photo. */
+.removeButton {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  z-index: 1;
+  width: var(--icon-button-size);
+  height: var(--icon-button-size);
+  min-height: var(--icon-button-size);
+  padding: 0;
+  border-color: transparent;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-photo-button);
+  color: var(--color-on-photo-button);
+  font-size: var(--icon-size);
+}
+
+.removeButton:hover:not(:disabled) {
+  border-color: transparent;
+  background-color: var(--color-photo-button-hover);
+  color: var(--color-on-photo-button);
+}
+
+/* The question over the blurred photo of its own card: small, centred, dark see-through
+   so the light text reads on any photo. Fits a 320 px phone and a narrow laptop column. */
+.question {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
+  width: min(100%, 260px);
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-photo-overlay);
+  color: var(--color-on-photo-overlay);
+  text-align: center;
+  cursor: default;
+}
+
+.questionText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.questionActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.questionConfirm,
+.questionCancel {
+  width: 100%;
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-2);
+  border: var(--border-width-thick) solid var(--color-on-photo-overlay);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* «Видалити»: filled light; «Скасувати»: outlined. */
+.questionConfirm {
+  background-color: var(--color-on-photo-overlay);
+  color: var(--palette-ink);
+}
+
+.questionCancel {
+  background-color: transparent;
+  color: var(--color-on-photo-overlay);
+}
+
+.questionConfirm:hover:not(:disabled),
+.questionCancel:hover:not(:disabled) {
+  border-color: var(--palette-beige);
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+}
+
+/* On the dark block the ring is light, not the page's brown. */
+.page .question :focus-visible {
+  outline-color: var(--color-on-photo-overlay);
 }
 
 .primaryLink,

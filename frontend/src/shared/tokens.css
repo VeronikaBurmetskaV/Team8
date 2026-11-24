@@ -152,4 +152,22 @@
   /* --palette-ink at half opacity: the dimmed page behind the drawer. */
   --color-backdrop: rgb(21 22 10 / 0.5);
   --heart-button-size: 40px;
+
+  /* «Вподобане» (shared/SavedProducts): the round «×» over a product photo, readable on any
+     photo — --palette-ink at 60 % under a light icon. */
+  --color-photo-button: rgb(21 22 10 / 0.6);
+  --color-photo-button-hover: rgb(21 22 10 / 0.8);
+  --color-on-photo-button: var(--palette-light-gray);
+  /* The «Видалити?» question over a blurred photo: --palette-ink at 80 % under light text
+     (≥ 6.4:1 even over a white photo). */
+  --color-photo-overlay: rgb(21 22 10 / 0.8);
+  --color-on-photo-overlay: var(--palette-light-gray);
+  /* «Перейти на сайт бренду» in the full card: accent fill, ink text (6.5:1, WCAG AA);
+     the focus ring is light, because the page behind the card is dimmed dark. */
+  --color-brand-link: var(--palette-accent);
+  --color-on-brand-link: var(--palette-ink);
+  --color-brand-link-focus: var(--palette-light-gray);
+  /* The full product card over the page: the page behind is dimmed and blurred. */
+  --modal-backdrop-blur: 6px;
+  --z-product-modal: 30;
 }
