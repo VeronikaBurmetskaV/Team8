@@ -95,8 +95,70 @@
   color: var(--color-black);
 }
 
+/* ---------- Brand page header (instead of the banner): back link, «Бренд», h1 ---------- */
+.brandHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-half);
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-half);
+  min-height: var(--icon-button-size);
+  margin-bottom: var(--space-1);
+  color: var(--color-olive-dark);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+}
+
+.backLink:hover,
+.backLink:focus-visible {
+  color: var(--color-black);
+  text-decoration: underline;
+  text-underline-offset: var(--underline-offset);
+}
+
+.backLink:focus-visible {
+  outline-color: var(--color-olive-dark);
+}
+
+.brandKicker {
+  margin: 0;
+  color: var(--color-gray-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.brandTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  max-width: 100%;
+}
+
+/* The heading font (Unbounded) at the fluid h1 size: never overflows 320 px. */
+.brandTitle {
+  margin: 0;
+  max-width: 100%;
+  color: var(--color-black);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-heading);
+  line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-heading);
+  overflow-wrap: anywhere;
+}
+
 /* ---------- Toolbar: «Фільтри» left, «Усі товари» + count right ---------- */
 .toolbar {
+  scroll-margin-top: var(--space-2);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -143,10 +205,30 @@
   color: var(--color-offwhite);
 }
 
+/* Active filters on «Фільтри»: a white circle with the olive count. */
+.filtersBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--filters-badge-size);
+  height: var(--filters-badge-size);
+  padding: 0 var(--space-half);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-white);
+  color: var(--color-olive-dark);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
 .filtersButton:focus-visible,
 .secondaryButton:focus-visible,
 .iconButton:focus-visible,
-.groupSummary:focus-visible {
+.groupToggle:focus-visible,
+.chip:focus-visible,
+.textButton:focus-visible,
+.applyButton:focus-visible,
+.priceInput:focus-visible {
   outline-color: var(--color-olive-dark);
 }
 
@@ -173,6 +255,8 @@
 
 /* ---------- Catalogue: [filters] + results ---------- */
 .catalog {
+  /* Scrolled to the top after a filter change with the laptop column open (sticky top). */
+  scroll-margin-top: var(--space-2);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
@@ -192,6 +276,43 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* ---------- Active filter chips above the grid ---------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: calc(-1 * var(--space-2));
+}
+
+/* «Ціна: до 2500 грн ✕»: dark olive with white text (10:1); the whole chip resets. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--color-olive-dark);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-olive-dark);
+  color: var(--color-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+  transition: background-color var(--transition-fast);
+}
+
+.chip svg {
+  font-size: var(--icon-size-sm);
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--color-black);
+  background-color: var(--color-black);
+  color: var(--color-white);
 }
 
 .more {
@@ -236,15 +357,30 @@
 }
 
 .panel {
+  /* Size container: the «Ціна» fields follow the panel's width, not the window's. */
+  container: filters / inline-size;
   position: fixed;
   inset: 0 auto 0 0;
   z-index: calc(var(--z-drawer) + 1);
+  display: flex;
+  flex-direction: column;
   width: min(var(--drawer-width), 85vw);
-  padding: var(--space-2) var(--space-3);
+  /* No vertical padding: the sticky header and «Показати N товарів» bar take the edges, and
+     the groups scroll between them. */
+  padding: 0 var(--space-3);
   overflow-y: auto;
   background-color: var(--color-white);
   color: var(--color-black);
   animation: slideIn 200ms ease-out;
+  /* «Показати всі» in «Бренд» widens the panel smoothly. */
+  transition:
+    width var(--transition-panel),
+    box-shadow var(--transition-panel);
+}
+
+/* Drawer with every brand shown: the whole screen. */
+.panel[data-expanded="true"] {
+  width: 100vw;
 }
 
 @keyframes slideIn {
@@ -253,16 +389,23 @@
   }
 }
 
+/* «Фільтри», «Скинути все», ✕: stuck to the top of the panel while the groups scroll. */
 .panelHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  margin: 0 calc(-1 * var(--space-3)) var(--space-1);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  background-color: var(--color-white);
 }
 
 .panelTitle {
   margin: 0;
+  white-space: nowrap;
   color: var(--color-black);
   font-size: var(--font-size-md);
   letter-spacing: var(--letter-spacing-wide);
@@ -281,31 +424,68 @@
   border-bottom: var(--border-width) solid var(--color-gray-border);
 }
 
-.groupSummary {
+/* Heading row of a group: the whole row is the toggle; «+» closed, «−» open. */
+.groupHeading {
+  margin: 0;
+}
+
+.groupToggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-1);
+  width: 100%;
   min-height: var(--control-height);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--color-black);
+  font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
+  text-align: left;
   text-transform: uppercase;
-  list-style: none;
-  cursor: pointer;
 }
 
-.groupSummary::-webkit-details-marker {
-  display: none;
+/* Overrides the global black hover of buttons: the row stays white, only the icon darkens. */
+/* Focus ring drawn inside the row, so the panel's edge or an animating group never clips it. */
+.groupToggle:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width));
 }
 
-.groupSummary::after {
-  content: "+";
+.groupToggle:hover:not(:disabled) {
+  border-color: transparent;
+  background: none;
+  color: var(--color-black);
+}
+
+.groupTitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+/* The applied value next to «Ціна»: dark olive (10:1 on white). */
+.groupCurrent {
+  color: var(--color-olive-dark);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.groupIcon {
+  flex: none;
+  width: var(--icon-size);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-regular);
+  line-height: 1;
+  text-align: center;
 }
 
-.group[open] .groupSummary::after {
-  content: "−";
+.groupToggle:hover:not(:disabled) .groupIcon {
+  color: var(--color-olive-dark);
 }
 
 /* Expanded group: dark olive text on white (10:1). */
@@ -313,6 +493,411 @@
   margin: 0 0 var(--space-2);
   color: var(--color-olive-dark);
   font-size: var(--font-size-sm);
+}
+
+/* Quiet text actions: «Скинути», «Скинути все», «Показати всі (N)». */
+.textButton {
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--color-olive-dark);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-decoration: underline;
+  text-underline-offset: var(--underline-offset);
+  text-transform: none;
+}
+
+/* Overrides the global black hover of buttons. */
+.textButton:hover:not(:disabled) {
+  border-color: transparent;
+  background: none;
+  color: var(--color-black);
+}
+
+/* «Скинути все» next to the «Фільтри» heading, pushed towards the ✕; one line. */
+.panelReset {
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* A narrow panel (a 320 px phone): heading and ✕ on the first line, «Скинути все» under
+   them, so the heading never breaks into «ФІЛЬ-ТРИ». */
+@container filters (width < 240px) {
+  .panelHeader {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .panelReset {
+    order: 3;
+    margin-left: calc(-1 * var(--space-1));
+  }
+}
+
+/* «Показати N товарів» stays at the bottom of the panel (every size) while it scrolls. */
+.panelFooter {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin: auto calc(-1 * var(--space-3)) 0;
+  padding: var(--space-2) var(--space-3)
+    calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+  border-top: var(--border-width) solid var(--color-gray-border);
+  background-color: var(--color-white);
+}
+
+.showResultsButton {
+  width: 100%;
+}
+
+/* ---------- «Бренд» group: a checkbox per brand ---------- */
+.brandList {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 var(--space-1);
+  border: 0;
+  /* Most columns of the expanded list: 2 in the drawer, 3 in the laptop column. */
+  --brand-max-columns: 2;
+}
+
+.brandSearch {
+  width: 100%;
+  margin-bottom: var(--space-1);
+}
+
+/* 16px text so iOS does not zoom into the field. */
+.brandSearchInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--icon-button-size);
+  padding: 0 var(--space-1);
+  border: var(--border-width) solid var(--color-gray-border);
+  border-radius: 0;
+  background-color: var(--color-white);
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+}
+
+.brandSearchInput:hover {
+  border-color: var(--color-olive-light);
+}
+
+.brandSearchInput:focus-visible {
+  outline-color: var(--color-olive-dark);
+}
+
+/* Collapsed: one column. */
+.brandOptions {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Expanded (or searching): columns as wide as the longest name needs (--brand-name-width,
+   from BrandFilter, kept between --brand-column-min and --brand-column-max), never more than
+   --brand-max-columns, and one column when even that does not fit (a 320 px phone). Longer
+   names wrap. */
+.brandOptions[data-expanded="true"] {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(
+      max(
+        min(
+          100%,
+          clamp(
+            var(--brand-column-min),
+            var(--brand-name-width),
+            var(--brand-column-max)
+          )
+        ),
+        calc(
+          (100% - (var(--brand-max-columns) - 1) * var(--space-2)) /
+            var(--brand-max-columns)
+        )
+      ),
+      1fr
+    )
+  );
+  column-gap: var(--space-2);
+}
+
+/* The whole row is the label: 44px tall, a click anywhere toggles the brand. */
+.brandOption {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: var(--icon-button-size);
+  color: var(--color-black);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+/* The native checkbox stays in the page (keyboard, screen readers) but is drawn by the box
+   next to it. */
+.checkboxInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkboxBox {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  border: var(--border-width-thick) solid var(--color-black);
+  background-color: var(--color-white);
+  color: transparent;
+  font-size: var(--icon-size-sm);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.checkboxInput:checked + .checkboxBox {
+  background-color: var(--color-black);
+  color: var(--color-white);
+}
+
+.brandOption:hover .checkboxBox {
+  border-color: var(--color-olive-dark);
+}
+
+.checkboxInput:focus-visible + .checkboxBox {
+  outline: var(--focus-ring-width) solid var(--color-olive-dark);
+  outline-offset: var(--focus-ring-width);
+}
+
+.brandName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.brandCount {
+  color: var(--color-gray-text);
+}
+
+/* ---------- «Ціна» group: [Від … грн] – [До … грн], the slider, «Показати …» ----------
+   Laid out by the width of the PANEL (a size container, see .panel), not of the window:
+   one row when the panel's content box is at least 240px wide (a panel of ~288px), the
+   fields one under the other below that. Each field then has ≥ 100px: room for «10 000»
+   plus the «грн» suffix. Nothing here is wider than the panel. */
+.priceBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+  padding-bottom: var(--space-2);
+}
+
+.priceFields {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+}
+
+/* Both fields alike: they share the row equally and may shrink below their content. */
+.priceField {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-width: 0;
+}
+
+/* «Від» / «До»: the visible labels of the fields. */
+.priceLabel {
+  color: var(--color-gray-text);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.priceInputBox {
+  position: relative;
+  min-width: 0;
+}
+
+/* 16px text so iOS does not zoom into the field; room on the right for «грн». */
+.priceInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--icon-button-size);
+  padding: 0 calc(var(--space-1) + var(--price-suffix-width)) 0 var(--space-1);
+  border: var(--border-width) solid var(--color-gray-border);
+  border-radius: 0;
+  background-color: var(--color-white);
+  color: var(--color-black);
+  font-family: var(--font-body);
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.priceInput:hover {
+  border-color: var(--color-olive-light);
+}
+
+/* «грн» inside the field, on the right; clicks go through to the input. */
+.priceSuffix {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  color: var(--color-gray-text);
+  font-size: var(--font-size-sm);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+/* The dash sits on the fields' line, not on the labels'. */
+.priceDash {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--icon-button-size);
+  color: var(--color-gray-text);
+  font-size: var(--font-size-sm);
+}
+
+@container filters (width < 240px) {
+  .priceFields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .priceField {
+    flex: none;
+  }
+
+  .priceDash {
+    display: none;
+  }
+}
+
+/* «Показати …»: full width, green with white text (5.4:1), wraps instead of clipping. */
+.applyButton {
+  width: 100%;
+  min-height: var(--control-height);
+  height: auto;
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--color-green);
+  border-radius: 0;
+  background-color: var(--color-green);
+  color: var(--color-white);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.applyButton:hover:not(:disabled) {
+  border-color: var(--color-green-hover);
+  background-color: var(--color-green-hover);
+  color: var(--color-white);
+}
+
+/* Nothing to apply: the global disabled look (light gray, muted text). */
+.applyButton:disabled {
+  border-color: var(--color-border);
+}
+
+/* The slider is as tall as a thumb's touch zone. Its side padding is half that zone, so the
+   line runs between the centres of the edge thumbs: PRICE_MIN is exactly the line's start,
+   PRICE_MAX exactly its end, and no touch zone sticks out of the panel. pan-y keeps vertical
+   scrolling of the drawer; a horizontal drag moves a thumb. */
+.slider {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--range-hit-size);
+  padding-inline: calc(var(--range-hit-size) / 2);
+  cursor: pointer;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sliderLine {
+  position: relative;
+  height: 100%;
+}
+
+.sliderTrack,
+.sliderFill {
+  position: absolute;
+  top: 50%;
+  border-radius: var(--radius-pill);
+  transform: translateY(-50%);
+}
+
+.sliderTrack {
+  left: 0;
+  right: 0;
+  height: var(--range-track-height);
+  background-color: var(--color-range-track);
+}
+
+/* Between the thumbs: thicker and dark. */
+.sliderFill {
+  height: var(--range-fill-height);
+  background-color: var(--color-range-fill);
+}
+
+/* The thumb element is the 44px touch zone centred on its value; ::before is the visible
+   white circle with a dark ring. */
+.thumb {
+  position: absolute;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: var(--range-hit-size);
+  height: var(--range-hit-size);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  outline: none;
+  touch-action: none;
+}
+
+.thumb::before {
+  box-sizing: border-box;
+  width: var(--range-thumb-size);
+  height: var(--range-thumb-size);
+  border: var(--border-width-thick) solid var(--color-range-thumb-border);
+  border-radius: 50%;
+  background-color: var(--color-range-thumb);
+  content: "";
+  transition: transform var(--transition-fast);
+}
+
+.thumb:active::before {
+  transform: scale(1.15);
+}
+
+/* Keyboard focus: an olive ring around the visible circle. */
+.thumb:focus-visible::before {
+  box-shadow:
+    0 0 0 var(--focus-ring-width) var(--color-white),
+    0 0 0 calc(2 * var(--focus-ring-width)) var(--color-range-focus);
 }
 
 /* --bp-tablet: 3 in a row; the banner gets its wide frame and side padding. */
@@ -348,23 +933,40 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  /* A white column beside the grid, as tall as the window at most: the groups scroll inside
+     it between the sticky header and the sticky «Показати N товарів». */
   .panel {
     position: sticky;
     top: var(--space-2);
     inset: auto;
     align-self: start;
-    z-index: auto;
-    width: auto;
-    max-height: calc(100vh - 2 * var(--space-2));
-    /* A white block like the drawer, with a thin frame and inner padding. */
-    padding: var(--space-2) var(--space-3);
+    z-index: 2;
+    width: var(--filter-panel-width);
+    max-height: calc(100dvh - 2 * var(--space-2));
+    padding: 0 var(--space-3);
     border: var(--border-width) solid var(--color-gray-border);
     animation: none;
+  }
+
+  /* «Показати всі»: about twice as wide, OVER the grid (its column keeps its width, so the
+     products do not move), with a shadow. */
+  .panel[data-expanded="true"] {
+    width: var(--filter-panel-width-expanded);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .brandList {
+    --brand-max-columns: 3;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .panel {
     animation: none;
+    transition: none;
+  }
+
+  .thumb::before {
+    transition: none;
   }
 }

@@ -87,17 +87,34 @@
   box-shadow: 0 0 0 calc(2 * var(--focus-ring-width)) var(--color-white);
 }
 
+/* Brand name: a link to /?brand=<key>. One step bigger (xs → sm) and bolder (semibold →
+   bold) than before, same dark olive; underlined on hover and keyboard focus. Margins, not
+   padding, so the underline covers only the text. */
 .brand {
-  margin: 0;
-  padding-inline: var(--space-2);
+  align-self: flex-start;
+  max-width: calc(100% - 2 * var(--space-2));
+  margin: 0 var(--space-2);
   overflow: hidden;
   color: var(--color-olive-dark);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-wide);
+  text-decoration: none;
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.brand:hover,
+.brand:focus-visible {
+  color: var(--color-olive-dark);
+  text-decoration: underline;
+  text-underline-offset: var(--underline-offset);
+}
+
+.brand:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-olive-dark);
+  outline-offset: var(--focus-ring-width);
 }
 
 /* Two lines, then an ellipsis. */

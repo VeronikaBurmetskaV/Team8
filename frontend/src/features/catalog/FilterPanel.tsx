@@ -1,6 +1,21 @@
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { CloseIcon } from "../../shared/icons";
 import { catalogTexts as t } from "../../shared/messages.uk";
+import {
+  formatPriceRange,
+  hasPriceRange,
+  type BrandOption,
+  type PriceRange,
+} from "./catalog";
+import { BrandFilter } from "./BrandFilter";
+import { FilterGroup } from "./FilterGroup";
+import { PriceFilter } from "./PriceFilter";
 import styles from "./CatalogPage.module.css";
 
 interface FilterPanelProps {
@@ -8,14 +23,50 @@ interface FilterPanelProps {
   /** Below --bp-desktop the panel is a drawer over the page; on a laptop, a column. */
   isDrawer: boolean;
   onClose: () => void;
+  /** The price range applied in the URL (?minPrice=&maxPrice=). */
+  appliedPrice: PriceRange;
+  onApplyPrice: (range: PriceRange) => void;
+  onResetPrice: () => void;
+  /** Brands of the catalogue; null while loading. With none, the group is not shown. */
+  brandOptions: readonly BrandOption[] | null;
+  selectedBrands: readonly string[];
+  onToggleBrand: (key: string) => void;
+  /** Active filters (each brand + price as one); «Скинути все» shows when above 0. */
+  activeCount: number;
+  onResetAll: () => void;
+  /** Products that pass the filters now: the drawer's «Показати N товарів». */
+  resultCount: number;
+  /** «Знайдено N товарів» after a change; inside the dialog so screen readers hear it. */
+  announcement: ReactNode;
 }
 
 /**
- * Placeholder filter groups: headings that expand to «Скоро». No filter logic: categories,
- * sizes, brands and feed settings are Out of Scope of the MVP (US-04…US-07).
+ * Filter groups of the catalogue, all collapsed behind «+» (a group with an active filter
+ * opens expanded). «Ціна» and «Бренд» work on the client over the full list of GET /api/feed
+ * (all published cards in one response), kept in the URL as ?minPrice=A&maxPrice=B and
+ * ?brand=<key>&brand=<key2>; the backend and the API contract are unchanged. «Категорія
+ * одягу» and «Розмір» are still placeholders that expand to «Скоро» (Out of Scope of the MVP,
+ * US-04, US-05).
  */
-export function FilterPanel({ id, isDrawer, onClose }: FilterPanelProps) {
+export function FilterPanel({
+  id,
+  isDrawer,
+  onClose,
+  appliedPrice,
+  onApplyPrice,
+  onResetPrice,
+  brandOptions,
+  selectedBrands,
+  onToggleBrand,
+  activeCount,
+  onResetAll,
+  resultCount,
+  announcement,
+}: FilterPanelProps) {
   const panelRef = useRef<HTMLElement>(null);
+  // «Показати всі» in «Бренд» widens the panel; the panel unmounts on close, so the next
+  // opening starts narrow again.
+  const [brandsExpanded, setBrandsExpanded] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 
   // Keyboard users land in the panel when it opens.
@@ -36,8 +87,9 @@ export function FilterPanel({ id, isDrawer, onClose }: FilterPanelProps) {
   /** In the drawer, Tab cycles inside the panel, so focus never goes behind the backdrop. */
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (!isDrawer || event.key !== "Tab" || panelRef.current === null) return;
-    const focusable =
-      panelRef.current.querySelectorAll<HTMLElement>("button, summary");
+    const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+      'button, input, [role="slider"]',
+    );
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
     if (first === undefined || last === undefined) return;
@@ -62,12 +114,22 @@ export function FilterPanel({ id, isDrawer, onClose }: FilterPanelProps) {
         aria-labelledby={`${id}-title`}
         role={isDrawer ? "dialog" : undefined}
         aria-modal={isDrawer ? true : undefined}
+        data-expanded={brandsExpanded}
         onKeyDown={onKeyDown}
       >
         <div className={styles.panelHeader}>
           <h2 id={`${id}-title`} className={styles.panelTitle}>
             {t.filters}
           </h2>
+          {activeCount > 0 && (
+            <button
+              type="button"
+              className={`${styles.textButton} ${styles.panelReset}`}
+              onClick={onResetAll}
+            >
+              {t.resetAll}
+            </button>
+          )}
           <button
             ref={closeRef}
             type="button"
@@ -78,12 +140,63 @@ export function FilterPanel({ id, isDrawer, onClose }: FilterPanelProps) {
             <CloseIcon />
           </button>
         </div>
-        {t.filterGroups.map((group) => (
-          <details key={group} className={styles.group}>
-            <summary className={styles.groupSummary}>{group}</summary>
-            <p className={styles.groupSoon}>{t.soon}</p>
-          </details>
-        ))}
+        {t.filterGroups.map((group, index) =>
+          group === t.priceGroup ? (
+            <FilterGroup
+              key={group}
+              id={`${id}-price`}
+              title={group}
+              summary={formatPriceRange(appliedPrice)}
+              initialOpen={hasPriceRange(appliedPrice)}
+            >
+              <PriceFilter
+                key={`${appliedPrice.min}-${appliedPrice.max}`}
+                id={`${id}-price`}
+                applied={appliedPrice}
+                onApply={onApplyPrice}
+                onReset={onResetPrice}
+              />
+            </FilterGroup>
+          ) : group === t.brandGroup ? (
+            brandOptions !== null && brandOptions.length === 0 ? null : (
+              <FilterGroup
+                key={group}
+                id={`${id}-brand`}
+                title={group}
+                summary={
+                  selectedBrands.length > 0
+                    ? t.brandSelected(selectedBrands.length)
+                    : undefined
+                }
+                initialOpen={selectedBrands.length > 0}
+              >
+                <BrandFilter
+                  id={`${id}-brand`}
+                  options={brandOptions}
+                  selected={selectedBrands}
+                  onToggle={onToggleBrand}
+                  expanded={brandsExpanded}
+                  onToggleExpanded={() => setBrandsExpanded((value) => !value)}
+                />
+              </FilterGroup>
+            )
+          ) : (
+            <FilterGroup key={group} id={`${id}-group-${index}`} title={group}>
+              <p className={styles.groupSoon}>{t.soon}</p>
+            </FilterGroup>
+          ),
+        )}
+        {announcement}
+        {/* Sticky at the bottom on every size; the groups scroll between it and the header. */}
+        <div className={styles.panelFooter}>
+          <button
+            type="button"
+            className={styles.showResultsButton}
+            onClick={onClose}
+          >
+            {t.showResults(resultCount)}
+          </button>
+        </div>
       </aside>
     </>
   );

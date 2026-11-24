@@ -190,8 +190,58 @@ export const catalogTexts = {
   count: (count: number) => productsCount(count),
   filters: "Фільтри",
   filtersClose: "Закрити фільтри",
-  filterGroups: ["Категорія", "Розмір", "Колір", "Ціна", "Бренд"],
+  /** Panel order; «Ціна» and «Бренд» work, the others still expand to «Скоро». */
+  filterGroups: ["Категорія одягу", "Розмір", "Ціна", "Бренд"],
+  priceGroup: "Ціна",
+  brandGroup: "Бренд",
+  /** Next to «Бренд» in the panel: «Бренд · 2». */
+  brandSelected: (count: number) => `· ${count}`,
+  brandLoading: "Завантаження…",
+  brandCount: (count: number) => `(${count})`,
+  brandShowAll: (count: number) => `Показати всі (${count})`,
+  brandCollapse: "Згорнути",
+  brandSearchLabel: "Пошук бренду",
+  brandSearchEmpty: "Нічого не знайдено",
+  /** Announced (aria-live) while searching brands. */
+  brandsFound: (count: number) => `Знайдено брендів: ${count}`,
+  brandChipLabel: (name: string) => `Скинути фільтр: бренд ${name}`,
+  /** Brand name on a catalogue tile: a link to /?brand=<key>. */
+  brandLinkLabel: (name: string) => `Увесь одяг бренду ${name}`,
+  /** «Сторінка бренду»: the home page with exactly one brand and no other filter. */
+  brandPageKicker: "Бренд",
+  backToAll: "Весь одяг",
+  brandPageEmpty: "Товарів цього бренду поки немає",
+  brandPageTitle: (name: string) => `${name} — FULLA`,
+  resetAll: "Скинути все",
+  /** Sticky button at the bottom of the drawer; closes it. */
+  showResults: (count: number) => `Показати ${productsCount(count)}`,
+  /** Announced (aria-live) after a filter changes. */
+  found: (count: number) => `Знайдено ${productsCount(count)}`,
   soon: "Скоро",
+  activeFilters: (count: number) => `активних фільтрів: ${count}`,
+  /** Visible labels over the two fields of the «Ціна» group. */
+  priceFromLabel: "Від",
+  priceToLabel: "До",
+  currency: "грн",
+  /** The apply button under the slider; the prices come formatted («2 500»). */
+  priceShowBetween: (min: string, max: string) =>
+    `Показати від ${min} до ${max} грн`,
+  priceShowFrom: (min: string) => `Показати від ${min} грн`,
+  priceShowTo: (max: string) => `Показати до ${max} грн`,
+  priceShowAll: "Показати всі ціни",
+  priceMinThumb: "Мінімальна ціна",
+  priceMaxThumb: "Максимальна ціна",
+  /** The rightmost value: no upper limit. */
+  priceOrMore: (amount: number) => `${amount}+ грн`,
+  priceFrom: (price: string) => `від ${price}`,
+  priceTo: (price: string) => `до ${price}`,
+  /** «500 – 2500 грн»: the currency once, after the upper price. */
+  priceBetween: (min: string, max: string) => `${min} – ${max}`,
+  priceReset: "Скинути",
+  priceResetLabel: "Скинути фільтр за ціною",
+  priceChip: (range: string) => `Ціна: ${range}`,
+  priceChipLabel: (range: string) => `Скинути фільтр: ціна ${range}`,
+  emptyFiltered: "Немає одягу за цими фільтрами",
   loading: "Завантажуємо товари…",
   empty: "Товарів поки немає",
   error: "Не вдалося завантажити товари",

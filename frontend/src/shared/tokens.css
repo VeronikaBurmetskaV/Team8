@@ -22,6 +22,14 @@
   --color-gray-border: #d4d4cf; /* thin borders of cards and fields */
   --color-gray-text: #6b6b66; /* secondary text; 4.9:1 on --color-offwhite */
   /* States, muted to sit with the olive palette (both ≥ 5:1 on --color-offwhite). */
+  /* Muted olive green for the price slider and its «Показати …» button: 5.4:1 on white,
+     4.9:1 on --color-offwhite (≥ 3:1 for the line and thumb rings, ≥ 4.5:1 under white text). */
+  --color-green: #5e7046;
+  --color-green-hover: color-mix(
+    in srgb,
+    var(--color-green) 85%,
+    var(--color-black)
+  );
   --color-error: #a63d2f;
   --color-success: #4f6b3a;
 
@@ -184,8 +192,31 @@
   --banner-max-height: 400px;
   /* Filters: a column beside the grid on a laptop, a drawer over the page below it. */
   --filter-panel-width: 240px;
+  /* The laptop column after «Показати всі» in «Бренд»: over the grid, about twice as wide. */
+  --filter-panel-width-expanded: calc(var(--filter-panel-width) * 2);
+  --transition-panel: 250ms ease;
+  /* Columns of the expanded brand list: as wide as the longest name, within these bounds. */
+  --brand-column-min: 9rem;
+  --brand-column-max: 14rem;
   --drawer-width: 320px;
   --z-drawer: 20;
+  /* «Ціна» two-thumb slider: a thin light line, a thicker green part between the thumbs,
+     white round thumbs with a green ring. Each thumb's touch zone is --icon-button-size (44px). */
+  --range-track-height: 2px;
+  --range-fill-height: 4px;
+  --range-thumb-size: 20px;
+  --range-hit-size: var(--icon-button-size);
+  --color-range-track: var(--color-gray-border);
+  --color-range-fill: var(--color-green);
+  --color-range-thumb: var(--color-white);
+  --color-range-thumb-border: var(--color-green);
+  --color-range-focus: var(--color-green);
+  /* Width kept free on the right of a price field for the «грн» suffix. */
+  --price-suffix-width: 1.75rem;
+  /* Brand checkboxes in the filter panel (the row around each is 44px tall). */
+  --checkbox-size: 20px;
+  /* Count on «Фільтри» (active filters): white circle, olive digit. */
+  --filters-badge-size: 18px;
   /* --color-black at half opacity: the dimmed page behind the drawer and dialogs. */
   --color-backdrop: rgb(13 13 13 / 0.5);
   --heart-button-size: 40px;
