@@ -15,6 +15,12 @@ vi.mock("../../shared/productLists", async (importOriginal) => ({
   toggleFavorite: vi.fn(),
 }));
 
+// The tile is also called as a plain function below: its entrance animation is not under test.
+vi.mock("../../shared/reveal", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../shared/reveal")>()),
+  useReveal: () => () => undefined,
+}));
+
 type AnyProps = Record<string, unknown> & { children?: ReactNode };
 
 function elements(node: ReactNode): ReactElement<AnyProps>[] {
@@ -59,7 +65,11 @@ describe("brand name on a catalogue tile", () => {
   it("is a link to /?brand=<key> with «Увесь одяг бренду …»", () => {
     const markup = renderToString(
       <MemoryRouter>
-        <CatalogTile card={card("x", "  Cher'17 ")} isFavorite={false} />
+        <CatalogTile
+          card={card("x", "  Cher'17 ")}
+          isFavorite={false}
+          index={0}
+        />
       </MemoryRouter>,
     );
     const link = markup.match(/<a [^>]*>/)?.[0] ?? "";
@@ -70,7 +80,11 @@ describe("brand name on a catalogue tile", () => {
   it("a click on it scrolls to the top and does not like the product", () => {
     const scrollTo = vi.fn();
     vi.stubGlobal("window", { scrollTo });
-    const tree = CatalogTile({ card: card("x", "MINT"), isFavorite: false });
+    const tree = CatalogTile({
+      card: card("x", "MINT"),
+      isFavorite: false,
+      index: 0,
+    });
     const link = elements(tree).find((element) => element.type === Link);
     expect(link?.props.to).toBe("/?brand=mint");
     (link?.props.onClick as () => void)();

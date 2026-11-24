@@ -25,23 +25,35 @@
   --banner-frame-inset: var(--space-1);
   padding: calc(var(--space-4) + var(--space-2)) var(--space-2);
   position: relative;
-  background-color: var(--color-olive);
-  color: var(--color-white);
+  /* The swiping card is taller than the banner (110 %): its top and bottom are cut off. */
+  overflow: hidden;
+  /* Layers, bottom to top: light background picture, swiping card (.bannerCard), soft
+     light veil (.bannerVeil), thin frame (::before), text. Light gray while loading. */
+  background-color: var(--color-hero-placeholder);
+  background-image: url("../../assets/hero/fulla-hero-layer-bg.jpg");
+  background-image: image-set(
+    url("../../assets/hero/fulla-hero-layer-bg.webp") type("image/webp"),
+    url("../../assets/hero/fulla-hero-layer-bg.jpg") type("image/jpeg")
+  );
+  background-position: center;
+  background-size: cover;
+  color: var(--color-black);
   text-align: center;
   text-decoration: none;
 }
 
-/* Thin light frame around the text, inset from the edge of the olive block. */
+/* Thin dark frame around the text, inset from the edge of the banner. */
 .banner::before {
   position: absolute;
   inset: var(--banner-frame-inset);
-  border: var(--border-width) solid var(--color-frame-on-olive);
+  z-index: 2;
+  border: var(--border-width) solid var(--color-frame-on-light);
   content: "";
   pointer-events: none;
 }
 
 .banner:hover {
-  color: var(--color-white);
+  color: var(--color-black);
 }
 
 .banner:focus-visible {
@@ -49,11 +61,91 @@
   outline-offset: var(--space-half);
 }
 
-/* White on olive: 6.4:1 (WCAG AA). */
+/* ---------- The swiping card behind the text (decorative) ---------- */
+/* 110 % of the banner's height, centred; the image keeps its proportions. */
+.bannerCard {
+  position: absolute;
+  inset: -5% 0;
+  z-index: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.bannerCard picture {
+  display: contents;
+}
+
+/* Tilts right, back, left, back — with rests in the middle (see @keyframes heroSwipe).
+   Only transform is animated, so the browser moves one ready layer on the GPU. */
+.bannerCardImage {
+  display: block;
+  width: auto;
+  max-width: none;
+  height: 100%;
+  transform-origin: center bottom;
+  animation: heroSwipe var(--hero-swipe-duration) infinite;
+  will-change: transform;
+  user-select: none;
+}
+
+/* IntersectionObserver in HeroBanner.tsx: no work while the banner is off screen. */
+.banner[data-animation="paused"] .bannerCardImage {
+  animation-play-state: paused;
+}
+
+@keyframes heroSwipe {
+  0%,
+  12% {
+    transform: none;
+    animation-timing-function: ease-in-out;
+  }
+  27% {
+    transform: translateX(var(--hero-swipe-shift))
+      rotate(var(--hero-swipe-tilt));
+    animation-timing-function: ease-in-out;
+  }
+  42%,
+  56% {
+    transform: none;
+    animation-timing-function: ease-in-out;
+  }
+  71% {
+    transform: translateX(calc(-1 * var(--hero-swipe-shift)))
+      rotate(calc(-1 * var(--hero-swipe-tilt)));
+    animation-timing-function: ease-in-out;
+  }
+  86%,
+  100% {
+    transform: none;
+  }
+}
+
+/* A soft light glow behind the text, so dark letters stay readable over the card. */
+.bannerVeil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(
+    ellipse 60% 55% at center,
+    var(--color-hero-veil) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* The text sits above every layer. Near-black on the light picture. */
+.bannerTitle,
+.bannerSubtitle,
+.bannerCta {
+  position: relative;
+  z-index: 3;
+}
+
 .bannerTitle {
   margin: 0;
   max-width: 100%;
-  color: var(--color-white);
+  color: var(--color-black);
 }
 
 /* Montserrat Regular, always ONE line: the size follows the viewport (--font-size-subtitle)
@@ -61,7 +153,7 @@
 .bannerSubtitle {
   max-width: 100%;
   margin: 0;
-  color: var(--color-white);
+  color: var(--color-black);
   font-family: var(--font-subtitle);
   font-size: var(--font-size-subtitle);
   font-style: normal;
@@ -90,9 +182,26 @@
     color var(--transition-fast);
 }
 
+/* Black button with white text; on hover the usual dark-olive button hover. */
 .banner:hover .bannerCta {
-  background-color: var(--color-white);
-  color: var(--color-black);
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-primary-hover);
+  color: var(--color-on-primary);
+}
+
+/* Reduced motion: no swiping card, one static picture of the whole scene instead. */
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    background-image: url("../../assets/hero/fulla-hero-light.jpg");
+    background-image: image-set(
+      url("../../assets/hero/fulla-hero-light.webp") type("image/webp"),
+      url("../../assets/hero/fulla-hero-light.jpg") type("image/jpeg")
+    );
+  }
+
+  .bannerCard {
+    display: none;
+  }
 }
 
 /* ---------- Brand page header (instead of the banner): back link, «Бренд», h1 ---------- */

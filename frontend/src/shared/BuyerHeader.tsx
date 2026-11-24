@@ -1,4 +1,11 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link, useLocation } from "react-router";
 import styles from "./BuyerHeader.module.css";
 import {
@@ -20,6 +27,7 @@ import {
 import { headerTexts as t } from "./messages.uk";
 import { favoritesSeen, useNewItemsCount } from "./newItems";
 import { favoriteList } from "./productLists";
+import { revealDelay, useReveal } from "./reveal";
 
 const cityOptions: readonly DropdownOption<"kyiv">[] = [
   { value: "kyiv", label: t.cityKyiv },
@@ -75,6 +83,26 @@ export function BuyerHeader() {
   const [city, setCity] = useState<"kyiv">("kyiv");
   const menuRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
+  // Entrance on page load, in reading order: logo, then city / language (and the burger
+  // that holds them on a phone), then the icons. See shared/reveal.ts.
+  const logoRef = useReveal<HTMLAnchorElement>(revealDelay.headerLogo);
+  const revealBurger = useReveal<HTMLButtonElement>(revealDelay.headerPrefs);
+  const setBurger = useCallback(
+    (element: HTMLButtonElement | null) => {
+      burgerRef.current = element;
+      return revealBurger(element);
+    },
+    [revealBurger],
+  );
+  const revealPrefs = useReveal<HTMLDivElement>(revealDelay.headerPrefs);
+  const setMenu = useCallback(
+    (element: HTMLDivElement | null) => {
+      menuRef.current = element;
+      return revealPrefs(element);
+    },
+    [revealPrefs],
+  );
+  const iconsRef = useReveal<HTMLUListElement>(revealDelay.headerIcons);
   // Items added since /favorites was last opened; opening the page resets it.
   const newFavorites = useNewItemsCount(
     favoriteList,
@@ -118,6 +146,7 @@ export function BuyerHeader() {
     <header className={styles.header}>
       <div className={styles.inner}>
         <Link
+          ref={logoRef}
           to="/"
           className={styles.logo}
           aria-label={t.logoLabel}
@@ -129,7 +158,7 @@ export function BuyerHeader() {
         </Link>
 
         <button
-          ref={burgerRef}
+          ref={setBurger}
           type="button"
           className={styles.burger}
           aria-label={menuOpen ? t.menuClose : t.menuOpen}
@@ -146,7 +175,7 @@ export function BuyerHeader() {
         </button>
 
         <div
-          ref={menuRef}
+          ref={setMenu}
           id={menuId}
           role="group"
           aria-label={t.menuLabel}
@@ -177,7 +206,7 @@ export function BuyerHeader() {
 
         <nav className={styles.nav} aria-label={t.navLabel}>
           {/* One group, left to right: Свайпати, Вподобане, Кошик, Профіль. */}
-          <ul className={`${styles.group} ${styles.groupShop}`}>
+          <ul ref={iconsRef} className={`${styles.group} ${styles.groupShop}`}>
             <IconLink to="/feed" label={t.swipe} active={pathname === "/feed"}>
               <SwipeIcon className={styles.icon} />
             </IconLink>

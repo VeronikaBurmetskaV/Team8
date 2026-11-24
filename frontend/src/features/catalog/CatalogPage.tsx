@@ -39,6 +39,8 @@ import {
 } from "./catalog";
 import { CatalogTile, CatalogTileSkeleton } from "./CatalogTile";
 import { FilterPanel } from "./FilterPanel";
+import { HeroBanner } from "./HeroBanner";
+import { revealDelay, useReveal } from "../../shared/reveal";
 import styles from "./CatalogPage.module.css";
 
 const PANEL_ID = "catalog-filters";
@@ -105,6 +107,15 @@ export function CatalogPage() {
   const isDrawer = useMediaQuery(DRAWER_QUERY);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  // The toolbar both rises into place (reveal) and is the scroll target after a filter change.
+  const revealToolbar = useReveal<HTMLDivElement>(revealDelay.toolbar);
+  const toolbarRefCallback = useCallback(
+    (element: HTMLDivElement | null) => {
+      toolbarRef.current = element;
+      return revealToolbar(element);
+    },
+    [revealToolbar],
+  );
   const catalogRef = useRef<HTMLDivElement>(null);
   const scrollToList = useRef(false);
   // «Знайдено N товарів» is announced only after the buyer changes a filter.
@@ -212,11 +223,7 @@ export function CatalogPage() {
   return (
     <div className={styles.page}>
       {brandView === null ? (
-        <Link to="/feed" className={styles.banner}>
-          <h1 className={styles.bannerTitle}>{t.bannerTitle}</h1>
-          <p className={styles.bannerSubtitle}>{t.bannerSubtitle}</p>
-          <span className={styles.bannerCta}>{t.bannerCta}</span>
-        </Link>
+        <HeroBanner />
       ) : (
         <BrandHeader
           label={brandLabel}
@@ -224,7 +231,7 @@ export function CatalogPage() {
         />
       )}
 
-      <div ref={toolbarRef} className={styles.toolbar}>
+      <div ref={toolbarRefCallback} className={styles.toolbar}>
         <button
           ref={toggleRef}
           type="button"
@@ -449,9 +456,13 @@ export function CatalogResults({
 
       {shown.length > 0 && (
         <ul className={styles.grid}>
-          {shown.map((card) => (
+          {shown.map((card, index) => (
             <li key={card.id}>
-              <CatalogTile card={card} isFavorite={favoriteIds.has(card.id)} />
+              <CatalogTile
+                card={card}
+                isFavorite={favoriteIds.has(card.id)}
+                index={index}
+              />
             </li>
           ))}
         </ul>

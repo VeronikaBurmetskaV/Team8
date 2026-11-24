@@ -45,8 +45,15 @@
   --color-on-primary: var(--color-white);
   /* Hover of a black button: dark olive under white text (10:1). */
   --color-primary-hover: var(--color-olive-dark);
-  /* Thin light frame around text on an olive section (hero banner). */
-  --color-frame-on-olive: rgb(244 244 242 / 0.6);
+  /* Hero banner (catalog/HeroBanner.tsx): light picture behind near-black text. */
+  --color-hero-placeholder: #eeedea; /* shown while the background picture loads */
+  --color-frame-on-light: rgb(13 13 13 / 0.25); /* thin frame around the text */
+  /* Soft light glow behind the text over the swiping card. */
+  --color-hero-veil: rgb(238 237 234 / 0.75);
+  /* Swiping card: one cycle (right, centre, left, centre, with rests) and its reach. */
+  --hero-swipe-duration: 6s;
+  --hero-swipe-shift: 40px;
+  --hero-swipe-tilt: 6deg;
 
   /* Font families */
   --font-heading:
@@ -120,6 +127,11 @@
 
   /* Motion */
   --transition-fast: 150ms ease;
+  /* Entrance animation (index.css [data-reveal], shared/reveal.ts): calm, no overshoot. */
+  --reveal-duration: 900ms;
+  --reveal-distance: 40px;
+  --reveal-scale-from: 0.98;
+  --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Breakpoints (min-width). CSS does not allow var() inside @media, so media queries
      repeat these numbers: `@media (min-width: 768px)` = tablet, `(min-width: 1024px)` = desktop.
