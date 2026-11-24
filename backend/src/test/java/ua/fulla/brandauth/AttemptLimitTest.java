@@ -64,6 +64,25 @@ class AttemptLimitTest {
         attempt("/api/brand/register", "10.3.3.3", body).andExpect(status().isCreated());
     }
 
+    @Test
+    void buyerRegistrationSharesTheSameLimit() throws Exception {
+        // one counter per IP for all login and register endpoints (AttemptLimiter)
+        String brandBody = "{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"wrong-password\"}";
+        String buyerBody = "{\"email\":\"buyer-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\"}";
+
+        for (int attempt = 1; attempt <= 10; attempt++) {
+            attempt("/api/brand/login", "10.4.4.4", brandBody).andExpect(status().isUnauthorized());
+        }
+
+        attempt("/api/buyer/register", "10.4.4.4", buyerBody)
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$.error.code").value("TOO_MANY_REQUESTS"));
+
+        // the account was not created
+        attempt("/api/buyer/register", "10.5.5.5", buyerBody).andExpect(status().isCreated());
+    }
+
     private ResultActions attempt(String path, String ip, String body) throws Exception {
         return mvc.perform(post(path).with(csrf())
             .with(request -> {
