@@ -75,7 +75,12 @@ export const savedProductsTexts = {
   goToBrandSite: "Перейти на сайт бренду",
   goToBrandSiteLabel: (name: string) =>
     `Перейти на сайт бренду: ${name} (відкриється в новій вкладці)`,
-  remove: "Прибрати",
+  /** The «×» on a photo asks first; «Скасувати» is confirmTexts.cancel. */
+  removeQuestion: "Впевнені, що хочете видалити товар?",
+  removeConfirm: "Видалити",
+  /** A compact card in the list opens the full card over the page. */
+  openCardLabel: (name: string) => `Відкрити картку: ${name}`,
+  closeCard: "Закрити картку",
 } as const;
 
 /** «Вподобане» (/favorites): likes from the swipe feed and hearts from the catalogue. */
