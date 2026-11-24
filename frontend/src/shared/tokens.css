@@ -22,6 +22,14 @@
   --color-gray-border: #d4d4cf; /* thin borders of cards and fields */
   --color-gray-text: #6b6b66; /* secondary text; 4.9:1 on --color-offwhite */
   /* States, muted to sit with the olive palette (both ≥ 5:1 on --color-offwhite). */
+  /* Muted olive green for the price slider and its «Показати …» button: 5.4:1 on white,
+     4.9:1 on --color-offwhite (≥ 3:1 for the line and thumb rings, ≥ 4.5:1 under white text). */
+  --color-green: #5e7046;
+  --color-green-hover: color-mix(
+    in srgb,
+    var(--color-green) 85%,
+    var(--color-black)
+  );
   --color-error: #a63d2f;
   --color-success: #4f6b3a;
 
@@ -37,8 +45,15 @@
   --color-on-primary: var(--color-white);
   /* Hover of a black button: dark olive under white text (10:1). */
   --color-primary-hover: var(--color-olive-dark);
-  /* Thin light frame around text on an olive section (hero banner). */
-  --color-frame-on-olive: rgb(244 244 242 / 0.6);
+  /* Hero banner (catalog/HeroBanner.tsx): light picture behind near-black text. */
+  --color-hero-placeholder: #eeedea; /* shown while the background picture loads */
+  --color-frame-on-light: rgb(13 13 13 / 0.25); /* thin frame around the text */
+  /* Soft light glow behind the text over the swiping card. */
+  --color-hero-veil: rgb(238 237 234 / 0.75);
+  /* Swiping card: one cycle (right, centre, left, centre, with rests) and its reach. */
+  --hero-swipe-duration: 6s;
+  --hero-swipe-shift: 40px;
+  --hero-swipe-tilt: 6deg;
 
   /* Font families */
   --font-heading:
@@ -112,6 +127,11 @@
 
   /* Motion */
   --transition-fast: 150ms ease;
+  /* Entrance animation (index.css [data-reveal], shared/reveal.ts): calm, no overshoot. */
+  --reveal-duration: 900ms;
+  --reveal-distance: 40px;
+  --reveal-scale-from: 0.98;
+  --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* Breakpoints (min-width). CSS does not allow var() inside @media, so media queries
      repeat these numbers: `@media (min-width: 768px)` = tablet, `(min-width: 1024px)` = desktop.
@@ -184,8 +204,31 @@
   --banner-max-height: 400px;
   /* Filters: a column beside the grid on a laptop, a drawer over the page below it. */
   --filter-panel-width: 240px;
+  /* The laptop column after «Показати всі» in «Бренд»: over the grid, about twice as wide. */
+  --filter-panel-width-expanded: calc(var(--filter-panel-width) * 2);
+  --transition-panel: 250ms ease;
+  /* Columns of the expanded brand list: as wide as the longest name, within these bounds. */
+  --brand-column-min: 9rem;
+  --brand-column-max: 14rem;
   --drawer-width: 320px;
   --z-drawer: 20;
+  /* «Ціна» two-thumb slider: a thin light line, a thicker green part between the thumbs,
+     white round thumbs with a green ring. Each thumb's touch zone is --icon-button-size (44px). */
+  --range-track-height: 2px;
+  --range-fill-height: 4px;
+  --range-thumb-size: 20px;
+  --range-hit-size: var(--icon-button-size);
+  --color-range-track: var(--color-gray-border);
+  --color-range-fill: var(--color-green);
+  --color-range-thumb: var(--color-white);
+  --color-range-thumb-border: var(--color-green);
+  --color-range-focus: var(--color-green);
+  /* Width kept free on the right of a price field for the «грн» suffix. */
+  --price-suffix-width: 1.75rem;
+  /* Brand checkboxes in the filter panel (the row around each is 44px tall). */
+  --checkbox-size: 20px;
+  /* Count on «Фільтри» (active filters): white circle, olive digit. */
+  --filters-badge-size: 18px;
   /* --color-black at half opacity: the dimmed page behind the drawer and dialogs. */
   --color-backdrop: rgb(13 13 13 / 0.5);
   --heart-button-size: 40px;
