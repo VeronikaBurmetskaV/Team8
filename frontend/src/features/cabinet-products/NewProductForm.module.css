@@ -94,9 +94,9 @@
 }
 
 .secondaryButton:hover:not(:disabled) {
-  border-color: var(--color-accent);
+  border-color: var(--color-primary-hover);
   background-color: var(--color-surface);
-  color: var(--color-accent);
+  color: var(--color-primary-hover);
 }
 
 /* Disabled stays visible: outline and muted text on the surface instead of fading out. */

@@ -1,4 +1,4 @@
-/* The one product card (NFR-17). Colours: only the TEMPORARY --palette-* tokens.
+/* The one product card (NFR-17). Colours: the olive palette tokens from tokens.css.
    The card fills its parent. Narrow (phone): info under the photo.
    Wide (≥ 520px of card width, i.e. laptop feed): photo left, narrow info column right. */
 .card {
@@ -7,7 +7,7 @@
   width: 100%;
   height: 100%;
   perspective: 1600px;
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
 .inner {
@@ -28,11 +28,12 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* Frame of the card: drawn by the face itself, so it moves and flips with the card. */
-  border: var(--border-width-thick) solid var(--palette-warm-gray);
+  /* Frame of the card: drawn by the face itself, so it moves and flips with the card.
+     White card, thin gray frame, almost square corners. */
+  border: var(--border-width) solid var(--color-gray-border);
   border-radius: var(--radius-lg);
-  background-color: var(--palette-light-gray);
-  box-shadow: 0 12px 32px rgb(21 22 10 / 0.18);
+  background-color: var(--color-white);
+  box-shadow: var(--shadow-card);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
@@ -48,7 +49,7 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  background-color: var(--palette-warm-gray);
+  background-color: var(--color-gray-border);
 }
 
 /* Photo + something over it (photoOverlay): the overlay is outside the blurred box. */
@@ -81,9 +82,9 @@
   align-items: center;
   justify-content: center;
   padding: var(--space-2);
-  border-bottom: var(--border-width) solid var(--palette-warm-gray);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  border-bottom: var(--border-width) solid var(--color-gray-border);
+  background-color: var(--color-offwhite);
+  color: var(--color-black);
   font-family: var(--font-heading);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
@@ -109,8 +110,8 @@
   gap: var(--space-1);
   width: 100%;
   height: 100%;
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
   font-family: var(--font-heading);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
@@ -133,12 +134,17 @@
   min-width: 0;
 }
 
+/* Product names are content, not section titles: body font, as written by the brand. */
 .name,
 .backName {
   margin: 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
+  font-family: var(--font-body);
   font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
+  letter-spacing: normal;
+  text-transform: none;
   overflow-wrap: anywhere;
 }
 
@@ -154,7 +160,7 @@
 
 .brand {
   margin: 0;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
@@ -164,7 +170,7 @@
 
 .price {
   margin: 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-family: var(--font-heading);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
@@ -177,7 +183,7 @@
 
 .groupTitle {
   margin: 0 0 var(--space-half);
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-family: var(--font-body);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
@@ -202,18 +208,18 @@
   min-width: 2.25rem;
   height: 2.25rem;
   padding: 0 var(--space-half);
-  border: var(--focus-ring-width) solid var(--palette-brown);
+  border: var(--focus-ring-width) solid var(--color-olive-dark);
   border-radius: var(--radius-pill);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
 }
 
 .size[data-available="false"] {
-  border-color: var(--palette-warm-gray);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-brown);
+  border-color: var(--color-gray-border);
+  background-color: var(--color-offwhite);
+  color: var(--color-olive-dark);
   text-decoration: line-through;
   opacity: 0.6;
   cursor: not-allowed;
@@ -222,15 +228,15 @@
 .color {
   width: 1.5rem;
   height: 1.5rem;
-  border: var(--border-width) solid var(--palette-ink);
+  border: var(--border-width) solid var(--color-black);
   border-radius: var(--radius-sm);
 }
 
 .color[data-unknown="true"] {
   background: repeating-linear-gradient(
     45deg,
-    var(--palette-light-gray) 0 4px,
-    var(--palette-warm-gray) 4px 8px
+    var(--color-offwhite) 0 4px,
+    var(--color-gray-border) 4px 8px
   );
 }
 
@@ -239,19 +245,19 @@
   margin-top: var(--space-1);
   min-height: 44px;
   padding: 0 var(--space-2);
-  border-color: var(--palette-ink);
+  border-color: var(--color-black);
   background-color: transparent;
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
 .flipButton:hover:not(:disabled) {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-brown);
-  color: var(--palette-light-gray);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-dark);
+  color: var(--color-offwhite);
 }
 
 .flipButton:focus-visible {
-  outline-color: var(--palette-brown);
+  outline-color: var(--color-olive-dark);
 }
 
 .flipIcon {
@@ -272,7 +278,7 @@
 
   .photoStub {
     border-bottom: none;
-    border-right: var(--border-width) solid var(--palette-warm-gray);
+    border-right: var(--border-width) solid var(--color-gray-border);
   }
 
   .info {
@@ -312,7 +318,7 @@
 .backKicker {
   margin: 0 0 var(--space-1);
   text-align: center;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
@@ -326,7 +332,7 @@
 }
 
 .detail dt {
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
@@ -349,14 +355,14 @@
 }
 
 .sizeTextUnavailable {
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   text-decoration: line-through;
   opacity: 0.7;
 }
 
 .noDetails {
   margin: var(--space-2) 0 0;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
 }
 
 @media (prefers-reduced-motion: reduce) {

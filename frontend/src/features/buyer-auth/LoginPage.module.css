@@ -27,45 +27,47 @@
 }
 
 /* Two equal tabs side by side, as wide as the card. */
+/* Text tabs on a thin gray line; the active one is underlined with a thin black line. */
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-1);
   margin-bottom: var(--space-2);
+  border-bottom: var(--border-width) solid var(--color-border);
 }
 
 /* Never wraps to two lines: on a narrow phone the font shrinks instead (--font-size-tab). */
 .tab {
   min-width: 0;
+  margin-bottom: calc(-1 * var(--border-width));
   padding: 0 var(--space-1);
-  border-color: var(--color-border);
-  background-color: var(--color-surface);
+  border: none;
+  border-bottom: var(--border-width) solid transparent;
+  border-radius: 0;
+  background-color: transparent;
   color: var(--color-text-muted);
   font-size: var(--font-size-tab);
   letter-spacing: normal;
   white-space: nowrap;
 }
 
-.tab[aria-selected="true"] {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-brown);
-  color: var(--color-on-primary);
+.tab[aria-selected="true"],
+.tab[aria-selected="true"]:hover {
+  border: none;
+  border-bottom: var(--border-width) solid var(--color-primary);
+  background-color: transparent;
+  color: var(--color-primary);
 }
 
 .tab:hover:not([aria-selected="true"]) {
-  border-color: var(--color-accent);
-  background-color: var(--color-surface);
+  border: none;
+  border-bottom: var(--border-width) solid var(--color-border);
+  background-color: transparent;
   color: var(--color-text);
 }
 
-.tab[aria-selected="true"]:hover {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-brown);
-  color: var(--color-on-primary);
-}
-
 .tab:focus-visible {
-  outline: var(--focus-ring-width) solid var(--palette-accent);
+  outline: var(--focus-ring-width) solid var(--color-olive);
   outline-offset: var(--focus-ring-width);
 }
 

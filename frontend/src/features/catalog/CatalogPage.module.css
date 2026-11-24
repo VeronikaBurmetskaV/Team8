@@ -1,4 +1,4 @@
-/* Catalogue home page (/). Colours: only the --palette-* tokens.
+/* Catalogue home page (/). Colours: the olive palette tokens from tokens.css.
    Grid: 2 in a row on a phone, 3 from --bp-tablet (768px), 4 from --bp-desktop (1024px),
    3 on a laptop while the filter column is open. Below --bp-desktop the filters are a drawer. */
 .page {
@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: var(--space-4);
   padding-block: var(--space-2) var(--space-4);
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
 /* ---------- Banner: the whole block is a link to /feed ---------- */
@@ -19,35 +19,55 @@
   width: 100%;
   min-height: calc(var(--banner-min-height) * 0.75);
   margin-inline: auto;
-  padding: var(--space-4) var(--space-2);
-  background-color: var(--palette-ink);
-  color: var(--palette-light-gray);
+  /* Room between the edge and the thin frame (::before), and between the frame and the text.
+     Phone: narrow sides (frame 8px in, text 16px in), so the one-line subtitle stays
+     readable; wider from --bp-tablet. --font-size-subtitle in tokens.css relies on these. */
+  --banner-frame-inset: var(--space-1);
+  padding: calc(var(--space-4) + var(--space-2)) var(--space-2);
+  position: relative;
+  background-color: var(--color-olive);
+  color: var(--color-white);
   text-align: center;
   text-decoration: none;
 }
 
+/* Thin light frame around the text, inset from the edge of the olive block. */
+.banner::before {
+  position: absolute;
+  inset: var(--banner-frame-inset);
+  border: var(--border-width) solid var(--color-frame-on-olive);
+  content: "";
+  pointer-events: none;
+}
+
 .banner:hover {
-  color: var(--palette-light-gray);
+  color: var(--color-white);
 }
 
 .banner:focus-visible {
-  outline-color: var(--palette-brown);
+  outline-color: var(--color-black);
   outline-offset: var(--space-half);
 }
 
+/* White on olive: 6.4:1 (WCAG AA). */
 .bannerTitle {
   margin: 0;
-  color: var(--palette-light-gray);
-  font-size: var(--font-size-xl);
-  font-weight: var(--font-weight-bold);
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
+  max-width: 100%;
+  color: var(--color-white);
 }
 
+/* Montserrat Regular, always ONE line: the size follows the viewport (--font-size-subtitle)
+   so the line fits inside the frame from 320 px up. */
 .bannerSubtitle {
+  max-width: 100%;
   margin: 0;
-  color: var(--palette-light-gray);
-  font-size: var(--font-size-md);
+  color: var(--color-white);
+  font-family: var(--font-subtitle);
+  font-size: var(--font-size-subtitle);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-subtitle);
+  white-space: nowrap;
 }
 
 /* Looks like a button; a real button inside a link would be nested interactive content. */
@@ -57,18 +77,22 @@
   min-height: var(--control-height);
   margin-top: var(--space-1);
   padding: 0 var(--space-3);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
-  font-family: var(--font-heading);
-  font-size: var(--font-size-sm);
+  border: var(--border-width) solid var(--color-black);
+  background-color: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
-  transition: background-color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .banner:hover .bannerCta {
-  background-color: var(--palette-light-gray);
+  background-color: var(--color-white);
+  color: var(--color-black);
 }
 
 /* ---------- Toolbar: «Фільтри» left, «Усі товари» + count right ---------- */
@@ -83,14 +107,22 @@
 .filtersButton,
 .secondaryButton,
 .iconButton {
-  border: var(--border-width) solid var(--palette-ink);
+  border: var(--border-width) solid var(--color-black);
   border-radius: 0;
   background-color: transparent;
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
+/* «Фільтри»: brand olive with white text and icon (6.4:1); ~10 % darker on hover and
+   while the panel is open. */
 .filtersButton {
   padding: 0 var(--space-2);
+  border-color: var(--color-olive);
+  background-color: var(--color-olive);
+  color: var(--color-white);
+  transition:
+    background-color var(--transition-heart),
+    border-color var(--transition-heart);
 }
 
 .filtersButton svg {
@@ -98,19 +130,24 @@
 }
 
 .filtersButton:hover:not(:disabled),
-.secondaryButton:hover:not(:disabled),
-.iconButton:hover:not(:disabled),
 .filtersButton[aria-expanded="true"] {
-  border-color: var(--palette-ink);
-  background-color: var(--palette-ink);
-  color: var(--palette-light-gray);
+  border-color: var(--color-olive-hover);
+  background-color: var(--color-olive-hover);
+  color: var(--color-white);
+}
+
+.secondaryButton:hover:not(:disabled),
+.iconButton:hover:not(:disabled) {
+  border-color: var(--color-black);
+  background-color: var(--color-black);
+  color: var(--color-offwhite);
 }
 
 .filtersButton:focus-visible,
 .secondaryButton:focus-visible,
 .iconButton:focus-visible,
 .groupSummary:focus-visible {
-  outline-color: var(--palette-brown);
+  outline-color: var(--color-olive-dark);
 }
 
 .title {
@@ -119,14 +156,14 @@
   align-items: baseline;
   gap: var(--space-1);
   margin: 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-size: var(--font-size-lg);
   letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
 .count {
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -176,7 +213,7 @@
 .messageText,
 .message [role="alert"] {
   margin: 0;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-md);
 }
 
@@ -205,8 +242,8 @@
   width: min(var(--drawer-width), 85vw);
   padding: var(--space-2) var(--space-3);
   overflow-y: auto;
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  background-color: var(--color-white);
+  color: var(--color-black);
   animation: slideIn 200ms ease-out;
 }
 
@@ -226,7 +263,7 @@
 
 .panelTitle {
   margin: 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-size: var(--font-size-md);
   letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
@@ -241,7 +278,7 @@
 }
 
 .group {
-  border-bottom: var(--border-width) solid var(--palette-warm-gray);
+  border-bottom: var(--border-width) solid var(--color-gray-border);
 }
 
 .groupSummary {
@@ -249,6 +286,7 @@
   align-items: center;
   justify-content: space-between;
   min-height: var(--control-height);
+  color: var(--color-black);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
@@ -270,21 +308,23 @@
   content: "−";
 }
 
+/* Expanded group: dark olive text on white (10:1). */
 .groupSoon {
   margin: 0 0 var(--space-2);
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-sm);
 }
 
-/* --bp-tablet: 3 in a row. */
+/* --bp-tablet: 3 in a row; the banner gets its wide frame and side padding. */
 @media (min-width: 768px) {
+  .banner {
+    --banner-frame-inset: var(--space-2);
+    padding-inline: calc(var(--space-2) + var(--space-3));
+  }
+
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-4) var(--space-3);
-  }
-
-  .bannerTitle {
-    font-size: var(--font-size-2xl);
   }
 }
 
@@ -294,10 +334,6 @@
     width: 80%;
     min-height: var(--banner-min-height);
     max-height: var(--banner-max-height);
-  }
-
-  .bannerSubtitle {
-    font-size: var(--font-size-lg);
   }
 
   .grid {
@@ -320,9 +356,9 @@
     z-index: auto;
     width: auto;
     max-height: calc(100vh - 2 * var(--space-2));
-    padding: 0 var(--space-2) 0 0;
-    border-right: var(--border-width) solid var(--palette-warm-gray);
-    background-color: transparent;
+    /* A white block like the drawer, with a thin frame and inner padding. */
+    padding: var(--space-2) var(--space-3);
+    border: var(--border-width) solid var(--color-gray-border);
     animation: none;
   }
 }

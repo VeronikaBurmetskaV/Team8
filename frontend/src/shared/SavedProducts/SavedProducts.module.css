@@ -1,13 +1,13 @@
 /* Grid of «Вподобане»: compact cards (the whole card opens the full one), «×» on the photo,
    the «Видалити?» question over the blurred photo.
-   Same TEMPORARY palette
+   Same olive palette (tokens.css)
    as the feed and the card. Phone: one column. --bp-tablet: 3 in a row. --bp-desktop: 4. */
 .page {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding-block: var(--space-2) var(--space-4);
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
 .title {
@@ -16,15 +16,17 @@
   align-items: baseline;
   gap: var(--space-1);
   margin: 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
   overflow-wrap: anywhere;
 }
 
 .count {
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-family: var(--font-body);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .empty {
@@ -45,7 +47,7 @@
 
 .emptyText {
   margin: 0;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
 }
 
 .grid {
@@ -138,7 +140,7 @@
   min-height: var(--icon-button-size);
   padding: 0 var(--space-2);
   border: var(--border-width-thick) solid var(--color-on-photo-overlay);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -149,7 +151,7 @@
 /* «Видалити»: filled light; «Скасувати»: outlined. */
 .questionConfirm {
   background-color: var(--color-on-photo-overlay);
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
 .questionCancel {
@@ -159,9 +161,9 @@
 
 .questionConfirm:hover:not(:disabled),
 .questionCancel:hover:not(:disabled) {
-  border-color: var(--palette-beige);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  border-color: var(--color-olive-light);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
 }
 
 /* On the dark block the ring is light, not the page's brown. */
@@ -176,41 +178,41 @@
   justify-content: center;
   min-height: var(--icon-button-size);
   padding: 0 var(--space-2);
-  border: var(--border-width) solid var(--palette-ink);
-  border-radius: var(--radius-pill);
+  border: var(--border-width) solid var(--color-black);
+  border-radius: var(--radius-sm);
   font-family: var(--font-body);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  letter-spacing: normal;
+  letter-spacing: var(--letter-spacing-wide);
   text-align: center;
   text-decoration: none;
-  text-transform: none;
+  text-transform: uppercase;
 }
 
 .primaryLink {
-  background-color: var(--palette-ink);
-  color: var(--palette-light-gray);
+  background-color: var(--color-black);
+  color: var(--color-offwhite);
 }
 
 .primaryLink:hover {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-brown);
-  color: var(--palette-light-gray);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-dark);
+  color: var(--color-offwhite);
 }
 
 .secondaryButton {
   background-color: transparent;
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
 .secondaryButton:hover:not(:disabled) {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
 }
 
 .page :focus-visible {
-  outline: var(--focus-ring-width) solid var(--palette-brown);
+  outline: var(--focus-ring-width) solid var(--color-olive-dark);
   outline-offset: var(--focus-ring-width);
 }
 
