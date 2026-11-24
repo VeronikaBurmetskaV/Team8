@@ -261,6 +261,133 @@
   border: 0;
 }
 
+/* ---------- Thin bar after scrolling (shared/headerState.ts) ----------
+   The full header above stays in the page flow; the bar is fixed over the page, so the
+   products never jump when it appears. --header-compact-offset = bar + iPhone safe area. */
+
+/* Focus and anchors scrolled into view stop below the bar, not under it. */
+:global(html):has(.header) {
+  scroll-padding-top: var(--header-compact-offset);
+}
+
+/* Invisible line under the full header, watched by an IntersectionObserver. */
+.marker {
+  height: 1px;
+  margin-top: -1px;
+  pointer-events: none;
+}
+
+.barHost {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: var(--z-header);
+}
+
+.bar {
+  padding-top: env(safe-area-inset-top, 0px);
+  background-color: var(--color-header-background);
+  color: var(--color-on-header);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+}
+
+.barInner {
+  display: grid;
+  grid-template-columns: var(--icon-button-size) minmax(0, 1fr) var(
+      --icon-button-size
+    );
+  align-items: center;
+  height: var(--header-compact-height);
+  max-width: calc(var(--container-wide) + 2 * var(--layout-gutter));
+  margin: 0 auto;
+  padding-inline: var(--layout-gutter);
+}
+
+/* Small FULLA without «SWIPING», in the middle. */
+.header .barLogo {
+  grid-column: 2;
+  justify-self: center;
+  padding-left: var(--letter-spacing-logo-wide);
+  color: var(--color-on-header);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-heading);
+  line-height: 1;
+  letter-spacing: var(--letter-spacing-logo-wide);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header .barLogo:hover,
+.header .barLogo:focus-visible {
+  color: var(--color-header-hover);
+}
+
+.header .barArrow {
+  grid-column: 3;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-button-size);
+  height: var(--icon-button-size);
+  min-height: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-on-header);
+  transition: color var(--transition-fast);
+}
+
+.header .barArrow:hover,
+.header .barArrow:focus-visible {
+  border: none;
+  background-color: transparent;
+  color: var(--color-header-hover);
+}
+
+.header .barLogo:focus-visible,
+.header .barArrow:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-header-hover);
+  outline-offset: var(--focus-ring-width);
+}
+
+/* Chevron down = «Розгорнути меню»; turned up while the header is open. */
+.chevron {
+  transition: transform var(--header-expand-duration) ease;
+}
+
+.bar[data-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+
+/* The full header opened from the bar: over the content right under the bar. The host has
+   no height of its own, so it never blocks clicks on the page. */
+.panelHost {
+  position: fixed;
+  top: var(--header-compact-offset);
+  right: 0;
+  left: 0;
+  z-index: var(--z-header);
+}
+
+/* Positioned: the phone burger menu (.prefsOpen) hangs under it. */
+.panel {
+  position: relative;
+  background-color: var(--color-header-background);
+  color: var(--color-on-header);
+  box-shadow: var(--shadow-lg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
 /* --bp-tablet: empty | logo | icons + burger, in one row. The left cell stays empty. */
 @media (min-width: 768px) {
   .header {
@@ -319,6 +446,11 @@
 
   .header .burger {
     display: none;
+  }
+
+  .barInner {
+    max-width: none;
+    padding-inline: var(--header-padding-wide);
   }
 
   .groupShop {

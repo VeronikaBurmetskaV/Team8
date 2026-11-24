@@ -111,6 +111,9 @@ export const headerTexts = {
   menuOpen: "Відкрити меню",
   menuClose: "Закрити меню",
   menuLabel: "Місто та мова",
+  /** The thin bar after scrolling: its arrow opens the full header over the page. */
+  compactExpand: "Розгорнути меню",
+  compactCollapse: "Згорнути меню",
 } as const;
 
 /** Cart page (/cart). The cart lives only in this browser's localStorage. */

@@ -191,9 +191,24 @@
   /* Side padding of the buyer header from --bp-desktop: 32px at 1024, 41 at 1280,
      46 at 1440, 61 at 1920, 64 from ~2000 px. */
   --header-padding-wide: clamp(var(--space-4), 3.2vw, 64px);
+  /* The thin bar the header turns into after scrolling (fixed at the top, same dark fill).
+     --header-compact-offset adds the iPhone notch / status bar (0 without viewport-fit=cover):
+     anything sticky on buyer pages starts below it. */
+  --header-compact-height: 48px;
+  --header-compact-offset: calc(
+    var(--header-compact-height) + env(safe-area-inset-top, 0px)
+  );
+  --header-expand-duration: 250ms;
+
+  /* z-index scale. Page-local layers (banner frame, tile hearts, card overlays, tooltips)
+     stay in 1–5 inside their own components. Native modal <dialog>s (ConfirmDialog, the hint,
+     the full product card) live in the browser's top layer, above all of these. */
   --z-header-menu: 10;
   /* Open list of shared/Dropdown (city, language): above the page and the header menu. */
   --z-dropdown: 15;
+  /* The thin bar and the header expanded from it: above content, badges and page dropdowns,
+     below the filter drawer (--z-drawer) and the product modal (--z-product-modal). */
+  --z-header: 18;
   --dropdown-max-height: 280px;
 
   /* Product cards: white, thin gray frame, a barely visible shadow. */
