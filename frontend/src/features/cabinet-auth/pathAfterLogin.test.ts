@@ -2,14 +2,7 @@ import { describe, expect, it } from "vitest";
 import { pathAfterLogin } from "./pathAfterLogin";
 
 describe("pathAfterLogin", () => {
-  it("sends a brand without a name to the profile", () => {
-    expect(pathAfterLogin("INCOMPLETE")).toBe("/brand/profile");
+  it("always sends the brand to the cabinet home page", () => {
+    expect(pathAfterLogin()).toBe("/brand");
   });
-
-  it.each(["ACTIVE", "CONSENTED"] as const)(
-    "sends a brand with the state %s to the products",
-    (profileState) => {
-      expect(pathAfterLogin(profileState)).toBe("/brand/products");
-    },
-  );
 });

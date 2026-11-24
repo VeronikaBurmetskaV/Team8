@@ -1,7 +1,8 @@
-/* Centred column of moderate width: the title, the card and the link share its left edge. */
+/* Centred column as wide as the square card; full width on a narrow screen.
+   The title and the card share its left edge. */
 .page {
   width: 100%;
-  max-width: var(--auth-card-max-width);
+  max-width: var(--cabinet-profile-card-size);
   margin: 0 auto;
 }
 
@@ -16,16 +17,48 @@
   margin-bottom: var(--space-3);
 }
 
-/* Same card as the login and registration pages; the gap separates the field and the button. */
+/* Same look as the login card, with more room. Below --bp-tablet: as tall as its content. */
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  justify-content: center;
+  gap: var(--space-4);
   padding: var(--space-4) var(--space-3);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-lg);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-md);
+}
+
+/* Labels as large as the inputs (16 px). */
+.card label {
+  font-size: var(--font-size-md);
+}
+
+/* --bp-tablet: a square with the form centred in it. aspect-ratio keeps min-height: auto,
+   so a card whose content does not fit grows taller instead of cutting the text. */
+@media (min-width: 768px) {
+  .card {
+    aspect-ratio: 1 / 1;
+    padding: var(--space-4) calc(var(--space-4) * 2);
+  }
+}
+
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* «Згоду надано 23.11.2026» / «Зберігаємо згоду…» under the checkbox; empty otherwise. */
+.consentStatus {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.consentStatus:empty {
+  display: none;
 }
 
 /* Form-level error. */

@@ -1,15 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  addSwipeLike,
   addToFavorites,
-  createFavoriteLists,
+  createFavoriteList,
   createProductList,
   FAVORITES_STORAGE_KEY,
-  SWIPE_FAVORITES_STORAGE_KEY,
+  LEGACY_SWIPE_FAVORITES_STORAGE_KEY,
+  migrateSwipeFavorites,
+  toggleFavorite,
   type SavedProduct,
 } from "./productLists";
 import { productsCount } from "./messages.uk";
 import { brokenStorage, memoryStorage } from "./testStorage";
+import type { KeyValueStorage } from "./storage";
 
 function product(id: string): SavedProduct {
   return {
@@ -24,128 +26,154 @@ function product(id: string): SavedProduct {
 
 function setup() {
   const storage = memoryStorage();
-  return { storage, lists: createFavoriteLists(() => storage) };
+  return { storage, list: createFavoriteList(() => storage) };
 }
 
 const ids = (items: readonly SavedProduct[]) => items.map((item) => item.id);
 
-describe("swipe like (feed → «Вподобане зі свайпів»)", () => {
-  it("adds only to «Вподобане зі свайпів», not to «Вподобане»", () => {
-    const { storage, lists } = setup();
-    addSwipeLike(product("a"), lists);
-    expect(ids(lists.swipeFavorites.read())).toEqual(["a"]);
-    expect(lists.favorites.read()).toEqual([]);
-    expect(storage.getItem(FAVORITES_STORAGE_KEY)).toBeNull();
+function storeLegacy(storage: KeyValueStorage, items: SavedProduct[]) {
+  storage.setItem(
+    LEGACY_SWIPE_FAVORITES_STORAGE_KEY,
+    JSON.stringify({ version: 1, items }),
+  );
+}
+
+describe("one «Вподобане» for the feed and the catalogue", () => {
+  it("a swipe like and the catalogue heart land in the same list, once", () => {
+    const { storage, list } = setup();
+    addToFavorites(product("a"), list); // swipe right / «Сподобалось»
+    toggleFavorite(product("b"), list); // heart on a catalogue tile
+    addToFavorites(product("b"), list); // the same product liked in the feed
+    expect(toggleFavorite(product("a"), list)).toBe(false); // heart again removes
+    toggleFavorite(product("a"), list); // and adds back, still once
+    expect(ids(list.read())).toEqual(["b", "a"]);
+    expect(storage.getItem(LEGACY_SWIPE_FAVORITES_STORAGE_KEY)).toBeNull();
   });
 
   it("does not duplicate the same product", () => {
-    const { lists } = setup();
-    addSwipeLike(product("a"), lists);
-    addSwipeLike(product("b"), lists);
-    const result = addSwipeLike(product("a"), lists);
+    const { list } = setup();
+    addToFavorites(product("a"), list);
+    addToFavorites(product("b"), list);
+    const result = addToFavorites(product("a"), list);
     expect(ids(result)).toEqual(["a", "b"]);
-    expect(ids(lists.swipeFavorites.read())).toEqual(["a", "b"]);
   });
 
   it("stores only the card fields, not the whole feed card", () => {
-    const { lists } = setup();
-    addSwipeLike({ ...product("a"), material: "льон" } as SavedProduct, lists);
-    expect(lists.swipeFavorites.read()[0]).toEqual(product("a"));
+    const { list } = setup();
+    addToFavorites({ ...product("a"), material: "льон" } as SavedProduct, list);
+    expect(list.read()[0]).toEqual(product("a"));
+  });
+
+  it("«Прибрати» removes a product", () => {
+    const { list } = setup();
+    addToFavorites(product("a"), list);
+    addToFavorites(product("b"), list);
+    expect(ids(list.remove("a"))).toEqual(["b"]);
+    expect(list.has("a")).toBe(false);
   });
 });
 
-describe("«Додати у Вподобане»", () => {
-  it("adds to the general list and keeps the swipe list as it was", () => {
-    const { lists } = setup();
-    addSwipeLike(product("a"), lists);
-    addToFavorites(product("a"), lists);
-    expect(ids(lists.favorites.read())).toEqual(["a"]);
-    expect(lists.favorites.has("a")).toBe(true);
-    expect(ids(lists.swipeFavorites.read())).toEqual(["a"]);
+describe("moving the old «Вподобане зі свайпів»", () => {
+  it("merges the old swipe likes into «Вподобане» without duplicates and deletes the old key", () => {
+    const storage = memoryStorage();
+    storage.setItem(
+      FAVORITES_STORAGE_KEY,
+      JSON.stringify({ version: 1, items: [product("b")] }),
+    );
+    storeLegacy(storage, [product("a"), product("b"), product("c")]);
+
+    const list = createFavoriteList(() => storage);
+    expect(ids(list.read())).toEqual(["b", "a", "c"]);
+    expect(storage.getItem(LEGACY_SWIPE_FAVORITES_STORAGE_KEY)).toBeNull();
   });
 
-  it("does not duplicate in «Вподобане»", () => {
-    const { lists } = setup();
-    addToFavorites(product("a"), lists);
-    addToFavorites(product("a"), lists);
-    expect(lists.favorites.read()).toHaveLength(1);
-  });
-});
+  it("runs only once: a later start changes nothing", () => {
+    const storage = memoryStorage();
+    storeLegacy(storage, [product("a")]);
+    const list = createFavoriteList(() => storage);
+    list.remove("a");
 
-describe("«Прибрати»", () => {
-  it("removes from «Вподобане зі свайпів» only", () => {
-    const { lists } = setup();
-    addSwipeLike(product("a"), lists);
-    addSwipeLike(product("b"), lists);
-    addToFavorites(product("a"), lists);
-    expect(ids(lists.swipeFavorites.remove("a"))).toEqual(["b"]);
-    expect(ids(lists.favorites.read())).toEqual(["a"]);
+    const reloaded = createFavoriteList(() => storage);
+    expect(reloaded.read()).toEqual([]);
   });
 
-  it("removes from «Вподобане» only", () => {
-    const { lists } = setup();
-    addSwipeLike(product("a"), lists);
-    addToFavorites(product("a"), lists);
-    expect(lists.favorites.remove("a")).toEqual([]);
-    expect(lists.favorites.has("a")).toBe(false);
-    expect(ids(lists.swipeFavorites.read())).toEqual(["a"]);
+  it("drops a broken old list without touching «Вподобане»", () => {
+    const storage = memoryStorage();
+    storage.setItem(LEGACY_SWIPE_FAVORITES_STORAGE_KEY, "{not json");
+    addToFavorites(
+      product("a"),
+      createFavoriteList(() => storage),
+    );
+    migrateSwipeFavorites(() => storage);
+    expect(storage.getItem(LEGACY_SWIPE_FAVORITES_STORAGE_KEY)).toBeNull();
+    expect(ids(createFavoriteList(() => storage).read())).toEqual(["a"]);
+  });
+
+  it("keeps the old key when «Вподобане» could not be written", () => {
+    const storage = memoryStorage();
+    storeLegacy(storage, [product("a")]);
+    const full: KeyValueStorage = {
+      ...storage,
+      setItem: () => {
+        throw new Error("quota");
+      },
+    };
+    migrateSwipeFavorites(() => full);
+    expect(storage.getItem(LEGACY_SWIPE_FAVORITES_STORAGE_KEY)).not.toBeNull();
+  });
+
+  it("does nothing when storage is blocked", () => {
+    const storage = brokenStorage();
+    expect(() => createFavoriteList(() => storage)).not.toThrow();
   });
 });
 
 describe("persistence", () => {
-  it("keeps both lists after a reload (a new store over the same storage)", () => {
-    const { storage, lists } = setup();
-    addSwipeLike(product("a"), lists);
-    addSwipeLike(product("b"), lists);
-    addToFavorites(product("b"), lists);
-
-    const reloaded = createFavoriteLists(() => storage);
-    expect(ids(reloaded.swipeFavorites.read())).toEqual(["a", "b"]);
-    expect(ids(reloaded.favorites.read())).toEqual(["b"]);
+  it("keeps the list after a reload (a new store over the same storage)", () => {
+    const { storage, list } = setup();
+    addToFavorites(product("a"), list);
+    addToFavorites(product("b"), list);
+    expect(ids(createFavoriteList(() => storage).read())).toEqual(["a", "b"]);
   });
 
-  it("writes each list under its own key with a version", () => {
-    const { storage, lists } = setup();
-    addSwipeLike(product("a"), lists);
-    addToFavorites(product("b"), lists);
-    expect(
-      JSON.parse(storage.getItem(SWIPE_FAVORITES_STORAGE_KEY) ?? "null"),
-    ).toEqual({ version: 1, items: [product("a")] });
+  it("writes the list under its key with a version", () => {
+    const { storage, list } = setup();
+    addToFavorites(product("a"), list);
     expect(
       JSON.parse(storage.getItem(FAVORITES_STORAGE_KEY) ?? "null"),
-    ).toEqual({ version: 1, items: [product("b")] });
+    ).toEqual({ version: 1, items: [product("a")] });
   });
 
   it("reads broken JSON, another version or malformed items as empty", () => {
-    const { storage, lists } = setup();
+    const { storage, list } = setup();
     storage.setItem(FAVORITES_STORAGE_KEY, "{not json");
-    expect(lists.favorites.read()).toEqual([]);
+    expect(list.read()).toEqual([]);
     storage.setItem(
       FAVORITES_STORAGE_KEY,
       JSON.stringify({ version: 2, items: [product("a")] }),
     );
-    expect(lists.favorites.read()).toEqual([]);
+    expect(list.read()).toEqual([]);
     storage.setItem(
       FAVORITES_STORAGE_KEY,
       JSON.stringify({ version: 1, items: [product("a"), { id: 5 }] }),
     );
-    expect(ids(lists.favorites.read())).toEqual(["a"]);
+    expect(ids(list.read())).toEqual(["a"]);
   });
 
   it("returns the same array until the data changes (stable snapshot)", () => {
-    const { lists } = setup();
-    addSwipeLike(product("a"), lists);
-    const first = lists.swipeFavorites.read();
-    expect(lists.swipeFavorites.read()).toBe(first);
-    addSwipeLike(product("b"), lists);
-    expect(lists.swipeFavorites.read()).not.toBe(first);
+    const { list } = setup();
+    addToFavorites(product("a"), list);
+    const first = list.read();
+    expect(list.read()).toBe(first);
+    addToFavorites(product("b"), list);
+    expect(list.read()).not.toBe(first);
   });
 
   it("sees a change written by another tab", () => {
-    const { storage, lists } = setup();
-    const otherTab = createFavoriteLists(() => storage);
-    otherTab.favorites.add(product("a"));
-    expect(ids(lists.favorites.read())).toEqual(["a"]);
+    const { storage, list } = setup();
+    const otherTab = createFavoriteList(() => storage);
+    otherTab.add(product("a"));
+    expect(ids(list.read())).toEqual(["a"]);
   });
 
   it("keeps working for this page view when storage is blocked", () => {
@@ -159,16 +187,16 @@ describe("persistence", () => {
 
 describe("subscribe", () => {
   it("notifies listeners on add and remove, not on a no-op", () => {
-    const { lists } = setup();
+    const { list } = setup();
     const listener = vi.fn();
-    const unsubscribe = lists.favorites.subscribe(listener);
-    lists.favorites.add(product("a"));
-    lists.favorites.add(product("a"));
-    lists.favorites.remove("zzz");
-    lists.favorites.remove("a");
+    const unsubscribe = list.subscribe(listener);
+    list.add(product("a"));
+    list.add(product("a"));
+    list.remove("zzz");
+    list.remove("a");
     expect(listener).toHaveBeenCalledTimes(2);
     unsubscribe();
-    lists.favorites.add(product("b"));
+    list.add(product("b"));
     expect(listener).toHaveBeenCalledTimes(2);
   });
 });

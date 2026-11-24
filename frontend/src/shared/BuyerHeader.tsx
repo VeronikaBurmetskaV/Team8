@@ -4,29 +4,36 @@ import styles from "./BuyerHeader.module.css";
 import {
   BurgerIcon,
   CartIcon,
-  ChevronDownIcon,
   CloseIcon,
   HeartIcon,
   PinIcon,
-  SwipeHeartIcon,
   SwipeIcon,
   UserIcon,
 } from "./icons";
+import { Dropdown, type DropdownOption } from "./Dropdown";
 import {
-  isLanguage,
   LANGUAGES,
   readLanguage,
   saveLanguage,
   type Language,
 } from "./language";
 import { headerTexts as t } from "./messages.uk";
-import { favoriteLists, useProductList } from "./productLists";
+import { favoritesSeen, useNewItemsCount } from "./newItems";
+import { favoriteList } from "./productLists";
+
+const cityOptions: readonly DropdownOption<"kyiv">[] = [
+  { value: "kyiv", label: t.cityKyiv },
+];
+
+const languageOptions: readonly DropdownOption<Language>[] = LANGUAGES.map(
+  (code) => ({ value: code, label: code }),
+);
 
 type IconLinkProps = {
   to: string;
   label: string;
   active: boolean;
-  /** Small counter on the icon; hidden at 0. */
+  /** Small counter of new items on the icon; hidden at 0. */
   count?: number;
   children: ReactNode;
 };
@@ -65,12 +72,15 @@ export function BuyerHeader() {
   const [menuPath, setMenuPath] = useState<string | null>(null);
   const menuOpen = menuPath === pathname;
   const menuId = useId();
-  const cityId = useId();
-  const languageId = useId();
+  const [city, setCity] = useState<"kyiv">("kyiv");
   const menuRef = useRef<HTMLDivElement>(null);
   const burgerRef = useRef<HTMLButtonElement>(null);
-  const swipeFavorites = useProductList(favoriteLists.swipeFavorites);
-  const favorites = useProductList(favoriteLists.favorites);
+  // Items added since /favorites was last opened; opening the page resets it.
+  const newFavorites = useNewItemsCount(
+    favoriteList,
+    favoritesSeen,
+    pathname === "/favorites",
+  );
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -97,8 +107,7 @@ export function BuyerHeader() {
     };
   }, [menuOpen]);
 
-  function changeLanguage(value: string) {
-    if (!isLanguage(value)) return;
+  function changeLanguage(value: Language) {
     setLanguage(value);
     saveLanguage(value);
   }
@@ -145,62 +154,38 @@ export function BuyerHeader() {
             menuOpen ? `${styles.prefs} ${styles.prefsOpen}` : styles.prefs
           }
         >
-          <div className={styles.field}>
-            <label htmlFor={cityId} className={styles.visuallyHidden}>
-              {t.city}
-            </label>
-            <PinIcon className={styles.fieldIcon} />
-            <select
-              id={cityId}
-              className={styles.select}
-              title={t.city}
-              defaultValue="kyiv"
-            >
-              <option value="kyiv">{t.cityKyiv}</option>
-            </select>
-            <ChevronDownIcon className={styles.chevron} />
-          </div>
-          <div className={styles.field}>
-            <label htmlFor={languageId} className={styles.visuallyHidden}>
-              {t.language}
-            </label>
-            <select
-              id={languageId}
-              className={styles.select}
-              title={t.language}
-              value={language}
-              onChange={(event) => changeLanguage(event.target.value)}
-            >
-              {LANGUAGES.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
-            </select>
-            <ChevronDownIcon className={styles.chevron} />
-          </div>
+          <Dropdown
+            label={t.city}
+            options={cityOptions}
+            value={city}
+            onChange={setCity}
+            icon={<PinIcon className={styles.fieldIcon} />}
+            className={styles.field}
+            buttonClassName={styles.select}
+            listClassName={styles.list}
+          />
+          <Dropdown
+            label={t.language}
+            options={languageOptions}
+            value={language}
+            onChange={changeLanguage}
+            className={styles.field}
+            buttonClassName={styles.select}
+            listClassName={styles.list}
+          />
         </div>
 
         <nav className={styles.nav} aria-label={t.navLabel}>
-          <ul className={`${styles.group} ${styles.groupSwipe}`}>
+          {/* One group, left to right: Свайпати, Вподобане, Кошик, Профіль. */}
+          <ul className={`${styles.group} ${styles.groupShop}`}>
             <IconLink to="/feed" label={t.swipe} active={pathname === "/feed"}>
               <SwipeIcon className={styles.icon} />
             </IconLink>
             <IconLink
-              to="/swipe-favorites"
-              label={t.swipeFavorites}
-              active={pathname === "/swipe-favorites"}
-              count={swipeFavorites.length}
-            >
-              <SwipeHeartIcon className={styles.icon} />
-            </IconLink>
-          </ul>
-          <ul className={`${styles.group} ${styles.groupShop}`}>
-            <IconLink
               to="/favorites"
               label={t.favorites}
               active={pathname === "/favorites"}
-              count={favorites.length}
+              count={newFavorites}
             >
               <HeartIcon className={styles.icon} />
             </IconLink>

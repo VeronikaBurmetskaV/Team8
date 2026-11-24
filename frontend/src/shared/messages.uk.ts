@@ -58,7 +58,18 @@ export function productsCount(count: number): string {
   return `${count} ${word}`;
 }
 
-/** Common parts of the «Вподобане зі свайпів» and «Вподобане» pages (shared/SavedProducts). */
+/** «1 новий товар», «3 нові товари», «5 нових товарів». */
+export function newProductsCount(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  let words = "нових товарів";
+  if (mod10 === 1 && mod100 !== 11) words = "новий товар";
+  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
+    words = "нові товари";
+  return `${count} ${words}`;
+}
+
+/** Common parts of the «Вподобане» page (shared/SavedProducts). */
 export const savedProductsTexts = {
   count: (count: number) => productsCount(count),
   goToBrandSite: "Перейти на сайт бренду",
@@ -67,24 +78,12 @@ export const savedProductsTexts = {
   remove: "Прибрати",
 } as const;
 
-/** «Вподобане зі свайпів» (/swipe-favorites): every like from the feed. */
-export const swipeFavoritesTexts = {
-  title: "Вподобане зі свайпів",
-  empty: "Ви ще нічого не вподобали у стрічці",
-  toFeed: "Перейти до свайпання",
-  listLabel: "Товари, вподобані у стрічці",
-  add: "Додати у Вподобане",
-  addLabel: (name: string) => `Додати у Вподобане: ${name}`,
-  alreadyInFavorites: "Уже у Вподобаному",
-  alreadyInFavoritesLabel: (name: string) => `${name}: уже у Вподобаному`,
-  removeLabel: (name: string) => `Прибрати з вподобаного зі свайпів: ${name}`,
-} as const;
-
-/** «Вподобане» (/favorites): products the buyer added explicitly. */
+/** «Вподобане» (/favorites): likes from the swipe feed and hearts from the catalogue. */
 export const favoritesTexts = {
   title: "Вподобане",
-  empty: "Тут з'являться товари, які ви оберете",
-  toSwipeFavorites: "Переглянути вподобане зі свайпів",
+  empty: "Тут з'являться товари, які вам сподобались",
+  toFeed: "Почати свайпати",
+  toCatalog: "До каталогу",
   listLabel: "Вподобані товари",
   removeLabel: (name: string) => `Прибрати з Вподобаного: ${name}`,
 } as const;
@@ -95,11 +94,10 @@ export const headerTexts = {
   tagline: "SWIPING",
   navLabel: "Навігація покупця",
   swipe: "Свайпати",
-  swipeFavorites: "Вподобане зі свайпів",
   favorites: "Вподобане",
-  /** Accessible name of an icon with a counter, e.g. «Вподобане: 3 товари». */
+  /** Accessible name of an icon with a counter of new items, e.g. «Вподобане: 3 нові товари». */
   withCount: (label: string, count: number) =>
-    count === 0 ? label : `${label}: ${productsCount(count)}`,
+    count === 0 ? label : `${label}: ${newProductsCount(count)}`,
   cart: "Кошик",
   profile: "Профіль",
   city: "Місто",
@@ -162,7 +160,7 @@ export const feedTexts = {
   brandAll: (brand: string) => `${brand} — усі товари бренду на FULLA`,
   soon: "Скоро",
   allViewed: "Ви переглянули всі доступні речі",
-  toFavorites: "Переглянути вподобане зі свайпів",
+  toFavorites: "Переглянути Вподобане",
   hintOpen: "Як користуватись свайпанням",
   hintTitle: "Як користуватися стрічкою",
   hintClose: "Закрити підказку",
@@ -178,6 +176,27 @@ export const feedTexts = {
   demoPicture: (n: number) => `Картинка ${n}`,
 } as const;
 
+/** Catalogue home page (/): banner, filters placeholder and the grid of all products. */
+export const catalogTexts = {
+  bannerTitle: "Свайпай і знаходь своє",
+  bannerSubtitle: "Одяг українських брендів в одній стрічці",
+  bannerCta: "Почати свайпати",
+  title: "Усі товари",
+  count: (count: number) => productsCount(count),
+  filters: "Фільтри",
+  filtersClose: "Закрити фільтри",
+  filterGroups: ["Категорія", "Розмір", "Колір", "Ціна", "Бренд"],
+  soon: "Скоро",
+  loading: "Завантажуємо товари…",
+  empty: "Товарів поки немає",
+  error: "Не вдалося завантажити товари",
+  retry: "Спробувати ще раз",
+  showMore: "Показати ще",
+  listLabel: "Усі товари",
+  favoriteLabel: (name: string) => `Додати у Вподобане: ${name}`,
+  photoPlaceholder: "Фото недоступне",
+} as const;
+
 /** True for a code of the dictionary; the server or a library may send anything. */
 export function isErrorCode(code: unknown): code is ErrorCode {
   return typeof code === "string" && Object.hasOwn(messages, code);
@@ -187,3 +206,52 @@ export function isErrorCode(code: unknown): code is ErrorCode {
 export function errorText(code: string): string {
   return messages[isErrorCode(code) ? code : "SERVICE_UNAVAILABLE"];
 }
+
+/** Single login page /login with the «Вхід» / «Вхід для бренду» tabs. */
+export const loginTexts = {
+  title: "Вхід до FULLA",
+  tabsLabel: "Тип входу",
+  buyerTab: "Вхід",
+  brandTab: "Вхід для бренду",
+  buyerPlaceholder: "Тут скоро буде вхід для покупця",
+  noAccount: "Немає акаунту?",
+  createAccount: "Створити",
+  createAccountSoon: "Реєстрація покупця скоро з'явиться",
+  registerBrand: "Зареєструвати бренд",
+} as const;
+
+/** Brand cabinet home page (/brand) and the «Додати товар» entry it shares with /brand/products. */
+export const cabinetHomeTexts = {
+  title: "Кабінет бренду",
+  home: "Головна",
+  addProduct: "Додати товар",
+  fillProfile: "Заповнити профіль бренду",
+  noProducts: "У вас поки немає товарів",
+  profileTitle: "Профіль бренду",
+  brandName: "Назва бренду",
+  noBrandName: "Ще не вказана",
+  consent: "Згода на показ матеріалів",
+  consentGiven: (date: string) => `Дана ${date}`,
+  consentNotGiven: "Не дана",
+  editProfile: "Редагувати профіль",
+  productsTitle: "Товари",
+  total: "Усього",
+  published: "Опубліковано",
+  drafts: "Чернетки",
+  allProducts: "Усі товари",
+  loading: "Завантаження…",
+  retry: "Спробувати ще раз",
+} as const;
+
+/** Confirmation dialogs of the brand cabinet (shared/ConfirmDialog). */
+export const confirmTexts = {
+  cancel: "Скасувати",
+  consentQuestion:
+    "Після підтвердження згоду не можна буде відкликати самостійно. Підтвердити?",
+  consentConfirm: "Підтвердити",
+  consentSaving: "Зберігаємо згоду…",
+  consentGivenOn: (date: string) => `Згоду надано ${date}`,
+  consentNeedsName: "Спочатку збережіть назву бренду, потім надайте згоду",
+  logoutQuestion: "Ви точно хочете вийти з профілю?",
+  logoutConfirm: "Вийти",
+} as const;

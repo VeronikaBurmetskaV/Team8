@@ -23,10 +23,12 @@ function stubFetch(status: number, body: unknown) {
 }
 
 /** Vitest runs in node: the browser globals the client reads are stubbed. */
-function stubBrowser(cookie: string, pathname = "/") {
+function stubBrowser(cookie: string, path = "/") {
   const assign = vi.fn();
+  const [pathname, query] = path.split("?");
+  const search = query === undefined ? "" : `?${query}`;
   vi.stubGlobal("document", { cookie });
-  vi.stubGlobal("location", { pathname, assign });
+  vi.stubGlobal("location", { pathname, search, assign });
   return assign;
 }
 
@@ -165,14 +167,14 @@ describe("401 handling", () => {
     error: { code: "UNAUTHENTICATED", message: "Authentication required" },
   };
 
-  it("sends the brand to /brand/login when the session is gone", async () => {
+  it("sends the brand to /login?tab=brand when the session is gone", async () => {
     const assign = stubBrowser("", "/brand/profile");
     stubFetch(401, unauthenticated);
     await expect(apiGet("/api/brand/profile")).rejects.toMatchObject({
       status: 401,
       code: "UNAUTHENTICATED",
     });
-    expect(assign).toHaveBeenCalledWith("/brand/login");
+    expect(assign).toHaveBeenCalledWith("/login?tab=brand");
   });
 
   it("sends the buyer to /login", async () => {
@@ -185,7 +187,7 @@ describe("401 handling", () => {
   });
 
   it("does not redirect on a wrong password", async () => {
-    const assign = stubBrowser("XSRF-TOKEN=token-123", "/brand/login");
+    const assign = stubBrowser("XSRF-TOKEN=token-123", "/login?tab=brand");
     stubFetch(401, {
       error: {
         code: "INVALID_CREDENTIALS",
@@ -200,7 +202,7 @@ describe("401 handling", () => {
   });
 
   it("does not reload the login page the user is already on", async () => {
-    const assign = stubBrowser("XSRF-TOKEN=token-123", "/brand/login");
+    const assign = stubBrowser("XSRF-TOKEN=token-123", "/login?tab=brand");
     stubFetch(401, unauthenticated);
     await expect(apiPost("/api/brand/logout")).rejects.toBeInstanceOf(ApiError);
     expect(assign).not.toHaveBeenCalled();
@@ -289,6 +291,6 @@ describe("brand product helpers", () => {
     await expect(createBrandProduct(body)).rejects.toMatchObject({
       status: 401,
     });
-    expect(assign).toHaveBeenCalledWith("/brand/login");
+    expect(assign).toHaveBeenCalledWith("/login?tab=brand");
   });
 });

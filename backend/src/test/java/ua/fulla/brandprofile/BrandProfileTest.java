@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import ua.fulla.common.SessionAccount;
 import ua.fulla.common.SessionAccount.AccountType;
 
-/** US-22.1, brand name only. */
+/** US-22.1 (brand name) and US-22.2 (one-way consent). */
 @SpringBootTest
 @AutoConfigureMockMvc
 @AutoConfigureEmbeddedDatabase(provider = ZONKY)
@@ -295,6 +295,97 @@ class BrandProfileTest {
     // ---------- helpers ----------
 
     /** Sends the documented request shape; {@code nameJson} is a JSON literal such as {@code "\"Lileya\""}. */
+    // ---------- US-22.2: one-way consent (INV-09, T-5) ----------
+
+    private static String profileBody(String name, boolean consentGiven) {
+        return "{\"name\":\"" + name + "\",\"logoImageId\":null,\"logoUrl\":null,\"consentGiven\":"
+            + consentGiven + "}";
+    }
+
+    @Test
+    void consentIsStoredWithTheServerTextAndSurvivesAReload() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+        putName(session, "\"Lileya\"").andExpect(status().isOk());
+
+        putProfile(session, profileBody("Lileya", true))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.consentGiven").value(true))
+            .andExpect(jsonPath("$.consentGivenAt").isString())
+            .andExpect(jsonPath("$.consentText").value(BrandProfileService.CONSENT_TEXT))
+            .andExpect(jsonPath("$.state").value("CONSENTED"));
+
+        // A new GET (page reload) reads the consent from the database.
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.consentGiven").value(true))
+            .andExpect(jsonPath("$.consentText").value(BrandProfileService.CONSENT_TEXT))
+            .andExpect(jsonPath("$.state").value("CONSENTED"));
+    }
+
+    @Test
+    void consentCanBeGivenTogetherWithTheFirstName() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        putProfile(session, profileBody("Lileya", true))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Lileya"))
+            .andExpect(jsonPath("$.state").value("CONSENTED"));
+    }
+
+    @Test
+    void consentCannotBeWithdrawnByTheBrand() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+        putProfile(session, profileBody("Lileya", true)).andExpect(status().isOk());
+
+        putProfile(session, profileBody("Other name", false))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.error.code").value("CONSENT_LOCKED"))
+            .andExpect(jsonPath("$.error.fields").doesNotExist());
+
+        // Nothing was saved: neither the withdrawal nor the new name.
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(jsonPath("$.name").value("Lileya"))
+            .andExpect(jsonPath("$.consentGiven").value(true))
+            .andExpect(jsonPath("$.state").value("CONSENTED"));
+    }
+
+    @Test
+    void repeatedConsentKeepsTheFirstTimeAndText() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+        putProfile(session, profileBody("Lileya", true)).andExpect(status().isOk());
+        UUID brandId = brandIdOf(session);
+        jdbc.sql("UPDATE brand_profiles SET consent_given_at = '2026-01-01T00:00:00Z', consent_text = 'shown in January' "
+                + "WHERE brand_id = :id")
+            .param("id", brandId).update();
+
+        putProfile(session, profileBody("Lileya 2", true))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.name").value("Lileya 2"))
+            .andExpect(jsonPath("$.consentGivenAt").value("2026-01-01T00:00:00Z"))
+            .andExpect(jsonPath("$.consentText").value("shown in January"));
+    }
+
+    @Test
+    void savingTheNameWithoutConsentKeepsTheProfileActive() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        putProfile(session, profileBody("Lileya", false))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.consentGiven").value(false))
+            .andExpect(jsonPath("$.consentText").value((Object) null))
+            .andExpect(jsonPath("$.state").value("ACTIVE"));
+    }
+
+    private UUID brandIdOf(MockHttpSession session) throws Exception {
+        String email = mvc.perform(get("/api/session").session(session))
+            .andReturn().getResponse().getContentAsString()
+            .replaceAll(".*\"email\":\"([^\"]+)\".*", "$1");
+        return jdbc.sql("SELECT id FROM brand_accounts WHERE email = :email")
+            .param("email", email)
+            .query(UUID.class)
+            .single();
+    }
+
     private ResultActions putName(MockHttpSession session, String nameJson) throws Exception {
         return putProfile(session,
             "{\"name\":" + nameJson + ",\"logoImageId\":null,\"logoUrl\":null,\"consentGiven\":false}");

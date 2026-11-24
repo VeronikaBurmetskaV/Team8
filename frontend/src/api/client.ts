@@ -54,11 +54,12 @@ function redirectToLogin(path: string): void {
   let loginPage: string | null = null;
   // Uploading an image is a brand action (api.md §2.1).
   if (path.startsWith("/api/brand/") || path.startsWith("/api/images")) {
-    loginPage = "/brand/login";
+    // The «Вхід для бренду» tab of the single login page.
+    loginPage = "/login?tab=brand";
   }
   if (path.startsWith("/api/me/")) loginPage = "/login";
   if (loginPage === null || typeof location === "undefined") return;
-  if (location.pathname !== loginPage) {
+  if (location.pathname + location.search !== loginPage) {
     location.assign(loginPage);
   }
 }

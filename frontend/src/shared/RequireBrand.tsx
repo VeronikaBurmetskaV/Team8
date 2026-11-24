@@ -14,7 +14,7 @@ export function RequireBrand() {
     return <p role="alert">{errorMessage(session.error)}</p>;
   }
   if (session.data.accountType !== "BRAND") {
-    return <Navigate to="/brand/login" replace />;
+    return <Navigate to="/login?tab=brand" replace />;
   }
   return <Outlet />;
 }

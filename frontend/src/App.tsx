@@ -1,16 +1,16 @@
 import { createBrowserRouter, RouterProvider } from "react-router";
+import { legacyRoutes } from "./legacyRoutes";
 import { Layout } from "./shared/Layout";
 import { NotFoundPage } from "./shared/NotFoundPage";
 import { RequireBrand } from "./shared/RequireBrand";
-import { StartPage } from "./features/start/StartPage";
+import { CatalogPage } from "./features/catalog/CatalogPage";
 import { FeedPage } from "./features/feed/FeedPage";
 import { FavoritesPage } from "./features/favorites/FavoritesPage";
-import { SwipeFavoritesPage } from "./features/swipe-favorites/SwipeFavoritesPage";
 import { BuyerRegisterPage } from "./features/buyer-auth/BuyerRegisterPage";
-import { BuyerLoginPage } from "./features/buyer-auth/BuyerLoginPage";
+import { LoginPage } from "./features/buyer-auth/LoginPage";
 import { CartPage } from "./features/cart/CartPage";
 import { BrandRegisterPage } from "./features/cabinet-auth/BrandRegisterPage";
-import { BrandLoginPage } from "./features/cabinet-auth/BrandLoginPage";
+import { BrandHomePage } from "./features/cabinet-home/BrandHomePage";
 import { BrandProfilePage } from "./features/cabinet-profile/BrandProfilePage";
 import { BrandProductsPage } from "./features/cabinet-products/BrandProductsPage";
 import { BrandProductPage } from "./features/cabinet-products/BrandProductPage";
@@ -20,19 +20,20 @@ const router = createBrowserRouter([
   {
     element: <Layout />,
     children: [
-      { path: "/", element: <StartPage /> },
+      { path: "/", element: <CatalogPage /> },
       { path: "/feed", element: <FeedPage /> },
-      { path: "/swipe-favorites", element: <SwipeFavoritesPage /> },
+      // Old addresses that moved (legacyRoutes.ts).
+      ...legacyRoutes,
       { path: "/favorites", element: <FavoritesPage /> },
       { path: "/register", element: <BuyerRegisterPage /> },
-      { path: "/login", element: <BuyerLoginPage /> },
+      { path: "/login", element: <LoginPage /> },
       { path: "/cart", element: <CartPage /> },
       { path: "/brand/register", element: <BrandRegisterPage /> },
-      { path: "/brand/login", element: <BrandLoginPage /> },
       {
         // Cabinet pages need a brand session (US-21.1 CL).
         element: <RequireBrand />,
         children: [
+          { path: "/brand", element: <BrandHomePage /> },
           { path: "/brand/profile", element: <BrandProfilePage /> },
           { path: "/brand/products", element: <BrandProductsPage /> },
           { path: "/brand/products/:id", element: <BrandProductPage /> },

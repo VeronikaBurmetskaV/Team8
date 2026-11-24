@@ -1,5 +1,6 @@
 package ua.fulla.catalogimport;
 
+import java.time.Duration;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -27,15 +28,18 @@ class CatalogSourceRepository {
     }
 
     /**
-     * T-18: at most one run per source per 6 hours, also across restarts. A conditional update,
-     * not check-then-act: of two parallel claims only one gets the row.
+     * T-18: at most one run per source per {@code minInterval}, also across restarts. A
+     * conditional update, not check-then-act: of two parallel claims only one gets the row.
+     * The interval is bound as whole seconds (PostgreSQL JDBC has no {@code Duration} type).
      */
-    boolean claimRun(String code) {
+    boolean claimRun(String code, Duration minInterval) {
         return jdbc.sql("""
                 UPDATE catalog_sources SET last_run_at = now()
-                WHERE code = :code AND (last_run_at IS NULL OR last_run_at < now() - interval '6 hours')
+                WHERE code = :code
+                  AND (last_run_at IS NULL OR last_run_at < now() - :intervalSeconds * interval '1 second')
                 """)
             .param("code", code)
+            .param("intervalSeconds", minInterval.toSeconds())
             .update() == 1;
     }
 

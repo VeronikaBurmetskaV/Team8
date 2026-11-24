@@ -94,7 +94,17 @@
   /* Side padding of the page; grows at the breakpoints in index.css. */
   --layout-gutter: var(--space-2);
   --auth-card-max-width: 400px;
+  /* Square brand profile card (/brand/profile, the profile card on /brand): 1.4× the login
+     card. Below --bp-tablet it is full width and not forced square. */
+  --cabinet-profile-card-size: 560px;
+  /* ConfirmDialog (shared/): never wider than this, nor than the screen. */
+  --dialog-max-width: 440px;
+  /* The big «Додати товар» on the cabinet home page (/brand). */
+  --cabinet-action-max-width: 480px;
+  --cabinet-action-height: 96px;
   --control-height: 48px;
+  /* /login tabs: 16px, shrinking on a 320 px phone so «Вхід для бренду» stays on one line. */
+  --font-size-tab: clamp(0.75rem, 3.6vw, 1rem);
 
   /* Buyer header (BuyerHeader.module.css): dark full-width bar with light text.
      Only the --palette-* colours: ink bar, warm-gray text and icons, beige highlight. */
@@ -118,6 +128,9 @@
   --indicator-width: 2px;
   --header-menu-width: 240px;
   --z-header-menu: 10;
+  /* Open list of shared/Dropdown (city, language): above the page and the header menu. */
+  --z-dropdown: 15;
+  --dropdown-max-height: 280px;
 
   /* TEMPORARY palette of the swipe feed and ProductCard (will change with the final design).
      The feed page and the card use only these five colours. */
@@ -128,4 +141,15 @@
   --palette-ink: #15160a;
   /* Accent: hover and focus highlight in the buyer header. */
   --palette-accent: #cb8f00;
+
+  /* Catalogue home page (features/catalog). */
+  --banner-min-height: 320px;
+  --banner-max-height: 400px;
+  /* Filters: a column beside the grid on a laptop, a drawer over the page below it. */
+  --filter-panel-width: 240px;
+  --drawer-width: 320px;
+  --z-drawer: 20;
+  /* --palette-ink at half opacity: the dimmed page behind the drawer. */
+  --color-backdrop: rgb(21 22 10 / 0.5);
+  --heart-button-size: 40px;
 }

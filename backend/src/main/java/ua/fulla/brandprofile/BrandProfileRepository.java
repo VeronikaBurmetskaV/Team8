@@ -34,10 +34,26 @@ class BrandProfileRepository {
             .optional();
     }
 
-    Optional<BrandProfile> updateName(UUID brandId, String name) {
-        return jdbc.sql("UPDATE brand_profiles SET name = :name, updated_at = now() "
-                + "WHERE brand_id = :brandId RETURNING " + COLUMNS)
+    /**
+     * Saves the name and, when {@code giveConsent}, records the consent (T-5). COALESCE keeps the
+     * first consent time and text: a repeated or parallel consent never moves them, and nothing in
+     * this statement can clear them (INV-09). The name is set in the same statement, so the
+     * {@code CHECK (consent_given_at IS NULL OR name IS NOT NULL)} holds.
+     */
+    Optional<BrandProfile> updateNameAndConsent(UUID brandId, String name, boolean giveConsent, String consentText) {
+        return jdbc.sql("""
+                UPDATE brand_profiles SET
+                    name = :name,
+                    consent_given_at = CASE WHEN :give THEN COALESCE(consent_given_at, now())
+                                            ELSE consent_given_at END,
+                    consent_text = CASE WHEN :give THEN COALESCE(consent_text, :consentText)
+                                        ELSE consent_text END,
+                    updated_at = now()
+                WHERE brand_id = :brandId
+                RETURNING\s""" + COLUMNS)
             .param("name", name)
+            .param("give", giveConsent)
+            .param("consentText", consentText)
             .param("brandId", brandId)
             .query(BrandProfileRepository::mapRow)
             .optional();

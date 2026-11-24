@@ -3,19 +3,23 @@ import type { PublicCard } from "../api/types";
 import {
   browserStorage,
   safeGet,
+  safeRemove,
   safeSet,
   type KeyValueStorage,
 } from "./storage";
 
 /**
- * Two lists of liked products, kept only in this browser (localStorage), each under its own
- * versioned key. The server is not involved yet.
- * - «Вподобане зі свайпів»: every like in the swipe feed lands here.
- * - «Вподобане»: only what the buyer explicitly adds (from «Вподобане зі свайпів», later the catalogue).
+ * «Вподобане»: the one list of liked products, kept only in this browser (localStorage)
+ * under a versioned key. A like in the swipe feed and the heart in the catalogue both add
+ * here; a product is never stored twice. The server is not involved yet.
  * Tabs stay in sync through the `storage` event.
  */
-export const SWIPE_FAVORITES_STORAGE_KEY = "fulla.swipeFavorites.v1";
 export const FAVORITES_STORAGE_KEY = "fulla.favorites.v1";
+/**
+ * The old separate «Вподобане зі свайпів» list. Read only once, by `migrateSwipeFavorites`,
+ * which moves its items into «Вподобане» and deletes the key.
+ */
+export const LEGACY_SWIPE_FAVORITES_STORAGE_KEY = "fulla.swipeFavorites.v1";
 
 /** What a list keeps of a product: only the card fields, never the whole feed card. */
 export type SavedProduct = Pick<
@@ -145,41 +149,65 @@ export function createProductList(
   };
 }
 
-export interface FavoriteLists {
-  swipeFavorites: ProductList;
-  favorites: ProductList;
-}
-
-/** Both lists over one storage; tests pass an in-memory one. */
-export function createFavoriteLists(
+/**
+ * One-time move of the old «Вподобане зі свайпів» into «Вподобане»: items already there keep
+ * their place, the rest are added after them without duplicates. The old key is deleted only
+ * when every item is safely stored in «Вподобане», so nothing is lost if storage is full.
+ */
+export function migrateSwipeFavorites(
   getStorage: () => KeyValueStorage | undefined = browserStorage,
-): FavoriteLists {
-  return {
-    swipeFavorites: createProductList(SWIPE_FAVORITES_STORAGE_KEY, getStorage),
-    favorites: createProductList(FAVORITES_STORAGE_KEY, getStorage),
-  };
+): void {
+  const storage = getStorage();
+  if (safeGet(storage, LEGACY_SWIPE_FAVORITES_STORAGE_KEY) === null) return;
+  const legacy = createProductList(
+    LEGACY_SWIPE_FAVORITES_STORAGE_KEY,
+    getStorage,
+  );
+  const target = createProductList(FAVORITES_STORAGE_KEY, getStorage);
+  legacy.read().forEach((product) => target.add(product));
+  // A fresh reader sees only what really reached the storage.
+  const stored = createProductList(FAVORITES_STORAGE_KEY, getStorage);
+  if (legacy.read().every((product) => stored.has(product.id))) {
+    safeRemove(storage, LEGACY_SWIPE_FAVORITES_STORAGE_KEY);
+  }
 }
 
-/** The app's shared store of both lists. */
-export const favoriteLists = createFavoriteLists();
-
-/** A like in the swipe feed: saved ONLY to «Вподобане зі свайпів», never to «Вподобане». */
-export function addSwipeLike(
-  product: SavedProduct,
-  lists: FavoriteLists = favoriteLists,
-): readonly SavedProduct[] {
-  return lists.swipeFavorites.add(product);
+/** «Вподобане» over a storage, after moving the old swipe list in; tests pass an in-memory one. */
+export function createFavoriteList(
+  getStorage: () => KeyValueStorage | undefined = browserStorage,
+): ProductList {
+  migrateSwipeFavorites(getStorage);
+  return createProductList(FAVORITES_STORAGE_KEY, getStorage);
 }
+
+/** The app's shared «Вподобане». */
+export const favoriteList = createFavoriteList();
 
 /**
- * Explicit «Додати у Вподобане»: from «Вподобане зі свайпів» now, from the catalogue later.
- * Adding the same product again changes nothing.
+ * Adds a product to «Вподобане»: a like in the swipe feed (swipe right or «Сподобалось»)
+ * and the heart in the catalogue. Adding the same product again changes nothing.
  */
 export function addToFavorites(
   product: SavedProduct,
-  lists: FavoriteLists = favoriteLists,
+  list: ProductList = favoriteList,
 ): readonly SavedProduct[] {
-  return lists.favorites.add(product);
+  return list.add(product);
+}
+
+/**
+ * The heart on a catalogue tile: adds through `addToFavorites`, a second click removes.
+ * Returns true when the product is in «Вподобане» afterwards.
+ */
+export function toggleFavorite(
+  product: SavedProduct,
+  list: ProductList = favoriteList,
+): boolean {
+  if (list.has(product.id)) {
+    list.remove(product.id);
+    return false;
+  }
+  addToFavorites(product, list);
+  return true;
 }
 
 /** The current items of a list; re-renders on changes in this tab and in other tabs. */

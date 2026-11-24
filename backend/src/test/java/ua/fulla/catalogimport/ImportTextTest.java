@@ -55,7 +55,7 @@ class ImportTextTest {
 
     @Test
     void configuredLimitsCannotExceedTheAdr() {
-        var properties = new ImportProperties(true, Duration.ofMillis(100), 500, 1000, null);
+        var properties = new ImportProperties(true, Duration.ofMillis(100), 500, 1000, null, null);
 
         assertThat(properties.delay()).isEqualTo(Duration.ofSeconds(2));
         assertThat(properties.maxProducts()).isEqualTo(50);

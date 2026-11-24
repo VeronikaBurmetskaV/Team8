@@ -1,11 +1,25 @@
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { BrandProfileResponse } from "../../api/types";
 import { useBrandProfile } from "../../shared/brandProfile";
-import { errorCodeOf, toFormErrors } from "../../shared/errors";
-import { brandNameInvalidMessage, messages } from "../../shared/messages.uk";
+import { ConfirmDialog } from "../../shared/ConfirmDialog";
+import { formatConsentDate } from "../../shared/consentDate";
+import { errorCodeOf, errorMessage, toFormErrors } from "../../shared/errors";
+import {
+  brandNameInvalidMessage,
+  confirmTexts,
+  messages,
+} from "../../shared/messages.uk";
 import { useSaveBrandProfile } from "./api";
 import styles from "./BrandProfilePage.module.css";
+import {
+  consentCheckbox,
+  consentTransition,
+  toConsentRequest,
+  type ConsentEvent,
+  type ConsentStep,
+} from "./consent";
 import {
   brandProfileFormSchema,
   CONSENT_TEXT,
@@ -30,7 +44,7 @@ export function BrandProfilePage() {
 
 function LoadError({ error }: { error: unknown }) {
   const code = errorCodeOf(error);
-  // No session: the API client is already redirecting to /brand/login (US-21.1 CL).
+  // No session: the API client is already redirecting to /login?tab=brand (US-21.1 CL).
   if (code === "UNAUTHENTICATED") return null;
   return <p role="alert">{messages[code]}</p>;
 }
@@ -47,8 +61,6 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
     resolver: zodResolver(brandProfileFormSchema),
     defaultValues: toBrandProfileFormValues(profile),
   });
-  // Locked only by the server's answer (the query cache), never by the ticked box (INV-09).
-  const consentLocked = profile.consentGiven;
 
   async function onSubmit(values: BrandProfileForm) {
     try {
@@ -97,31 +109,12 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
           </p>
         )}
       </div>
-      <div>
-        {/* The box sits inside its label, so the global styles put them on one line. */}
-        <label>
-          {consentLocked ? (
-            // Saved consent cannot be withdrawn by the brand: shown, not part of the form.
-            <input type="checkbox" checked disabled readOnly />
-          ) : (
-            <input
-              type="checkbox"
-              disabled={isSubmitting}
-              aria-invalid={errors.consentGiven ? true : undefined}
-              aria-describedby={
-                errors.consentGiven ? "consentGiven-error" : undefined
-              }
-              {...register("consentGiven")}
-            />
-          )}{" "}
-          {CONSENT_TEXT}
-        </label>
-        {errors.consentGiven && (
-          <p id="consentGiven-error" role="alert">
-            {errors.consentGiven.message}
-          </p>
-        )}
-      </div>
+      <ConsentField profile={profile} />
+      {errors.consentGiven && (
+        <p id="consentGiven-error" role="alert">
+          {errors.consentGiven.message}
+        </p>
+      )}
       <button className={styles.submit} type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Зберігаємо…" : "Зберегти профіль"}
       </button>
@@ -136,5 +129,80 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
         </p>
       )}
     </form>
+  );
+}
+
+/**
+ * The consent checkbox (US-22.2). Ticking asks for confirmation first; «Підтвердити» saves the
+ * consent at once, without «Зберегти профіль». The box is locked only by the server's answer
+ * (the query cache), so after a reload it is still ticked and disabled (INV-09).
+ */
+function ConsentField({ profile }: { profile: BrandProfileResponse }) {
+  const saveConsent = useSaveBrandProfile();
+  const [step, setStep] = useState<ConsentStep>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const box = consentCheckbox(profile, step);
+
+  function send(event: ConsentEvent): boolean {
+    const next = consentTransition(step, event, profile);
+    setStep(next.step);
+    return next.save;
+  }
+
+  function finish(event: "saveSucceeded" | "saveFailed") {
+    setStep((current) => consentTransition(current, event, profile).step);
+  }
+
+  function confirm() {
+    if (!send("confirm")) return;
+    setError(null);
+    saveConsent.mutate(toConsentRequest(profile), {
+      onSuccess: () => finish("saveSucceeded"),
+      onError: (saveError) => {
+        finish("saveFailed");
+        setError(errorMessage(saveError));
+      },
+    });
+  }
+
+  return (
+    <div className={styles.consent}>
+      {/* The box sits inside its label, so the global styles put them on one line. */}
+      <label>
+        <input
+          type="checkbox"
+          checked={box.checked}
+          disabled={box.disabled}
+          aria-describedby="consent-status"
+          onChange={(event) => {
+            if (event.target.checked) send("tick");
+          }}
+        />{" "}
+        {CONSENT_TEXT}
+      </label>
+      <p id="consent-status" className={styles.consentStatus} role="status">
+        {profile.consentGiven && profile.consentGivenAt !== null
+          ? confirmTexts.consentGivenOn(
+              formatConsentDate(profile.consentGivenAt),
+            )
+          : step === "saving"
+            ? confirmTexts.consentSaving
+            : profile.name === null
+              ? confirmTexts.consentNeedsName
+              : null}
+      </p>
+      {error && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+      <ConfirmDialog
+        open={step === "confirming"}
+        title={confirmTexts.consentQuestion}
+        confirmLabel={confirmTexts.consentConfirm}
+        onConfirm={confirm}
+        onCancel={() => send("cancel")}
+      />
+    </div>
   );
 }

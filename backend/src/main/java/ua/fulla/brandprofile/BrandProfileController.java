@@ -16,10 +16,9 @@ import ua.fulla.common.SessionAccount;
 class BrandProfileController {
 
     /**
-     * The documented request shape. Only {@code name} is saved so far (US-22.1). Until the logo
-     * is stored, a non-null logo is refused by {@link BrandProfileService#save}
-     * ({@code 400 PROFILE_INVALID}, {@code fields.logo}); {@code consentGiven} is not processed
-     * until US-22.2.
+     * The documented request shape: {@code name} (US-22.1) and the one-way {@code consentGiven}
+     * (US-22.2, INV-09). Until the logo is stored, a non-null logo is refused by
+     * {@link BrandProfileService#save} ({@code 400 PROFILE_INVALID}, {@code fields.logo}).
      */
     record ProfileRequest(
             @BrandName String name,
@@ -67,6 +66,7 @@ class BrandProfileController {
     @PutMapping("/api/brand/profile")
     ProfileResponse save(@AuthenticationPrincipal SessionAccount brand, @Valid @RequestBody ProfileRequest request) {
         return ProfileResponse.of(
-            service.save(brand.accountId(), request.name(), request.logoImageId(), request.logoUrl()));
+            service.save(brand.accountId(), request.name(), request.logoImageId(), request.logoUrl(),
+                request.consentGiven()));
     }
 }

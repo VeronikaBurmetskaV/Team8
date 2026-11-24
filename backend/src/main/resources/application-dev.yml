@@ -8,11 +8,13 @@ fulla:
     max-attempts-per-minute: 1000
   import:
     # Demo catalogue import (ADR-0014, dev only). Runs ~10 s after start, then checks every
-    # 30 min; each source really runs at most once per 6 h (stored in catalog_sources).
+    # 10 min; each source really runs at most once per min-run-interval (1 h here, 6 h by
+    # default, never below 10 min; last run stored in catalog_sources).
     # Set to false to start offline. The demo with imported cards is never published.
     enabled: true
     initial-delay: 10s
-    check-interval: 30m
+    check-interval: 10m
+    min-run-interval: 1h         # never below 10 min
     delay-between-requests: 2s   # never below 2 s
     max-products-per-source: 50  # never above 50
     max-requests-per-source: 100 # never above 100
