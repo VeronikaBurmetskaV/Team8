@@ -1,0 +1,112 @@
+/* /login: tabs on top, the card with the active form under them. Mobile-first (ADR-0002):
+   the column fills the page width (the layout gutter gives the side padding) up to
+   --auth-card-max-width. */
+.page {
+  width: 100%;
+  max-width: var(--auth-card-max-width);
+  margin: 0 auto;
+}
+
+/* --bp-tablet: more air above the card on large screens. */
+@media (min-width: 768px) {
+  .page {
+    margin-top: var(--space-4);
+  }
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Two equal tabs side by side, as wide as the card. */
+.tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+/* Never wraps to two lines: on a narrow phone the font shrinks instead (--font-size-tab). */
+.tab {
+  min-width: 0;
+  padding: 0 var(--space-1);
+  border-color: var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-tab);
+  letter-spacing: normal;
+  white-space: nowrap;
+}
+
+.tab[aria-selected="true"] {
+  border-color: var(--palette-brown);
+  background-color: var(--palette-brown);
+  color: var(--color-on-primary);
+}
+
+.tab:hover:not([aria-selected="true"]) {
+  border-color: var(--color-accent);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.tab[aria-selected="true"]:hover {
+  border-color: var(--palette-brown);
+  background-color: var(--palette-brown);
+  color: var(--color-on-primary);
+}
+
+.tab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--palette-accent);
+  outline-offset: var(--focus-ring-width);
+}
+
+/* The height is animated by motion; overflow hides the content while it changes. */
+.card {
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.cardInner {
+  padding: var(--space-4) var(--space-3);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.placeholder {
+  margin: 0;
+  padding: var(--space-3) 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+/* «Немає акаунту? …» at the bottom of the card. */
+.footer {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* Buyer registration does not exist yet: looks like a link, does nothing. */
+.disabledLink {
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: var(--underline-offset);
+  cursor: not-allowed;
+}

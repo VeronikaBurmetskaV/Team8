@@ -6,7 +6,7 @@ export const brandProfileQueryKey = ["brand", "profile"] as const;
 
 /**
  * GET /api/brand/profile. Shared: the profile page edits it, the product list needs its state.
- * Without a brand session the API client redirects to /brand/login.
+ * Without a brand session the API client redirects to /login?tab=brand.
  */
 export function useBrandProfile() {
   return useQuery({

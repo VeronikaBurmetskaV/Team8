@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import type { BrandCard } from "../../api/types";
 import { useBrandProfile } from "../../shared/brandProfile";
-import { errorCodeOf } from "../../shared/errors";
-import { messages } from "../../shared/messages.uk";
+import { AddProductEntry } from "./AddProductEntry";
+import { LoadError } from "./LoadError";
 import { useBrandProducts } from "./queries";
 import styles from "./BrandProductsPage.module.css";
 
@@ -32,57 +31,18 @@ function Thumbnail({ card }: { card: BrandCard }) {
   );
 }
 
-/**
- * «Додати товар», or a hint with the way to the profile while the brand has no name:
- * the entry is hidden for an INCOMPLETE profile (api.md §3.2 PROFILE_INCOMPLETE, US-22.1 CL).
- * The server still answers 409 if the form is opened anyway.
- */
-function AddProductEntry() {
-  const profile = useBrandProfile();
-  if (profile.isPending) return null;
-  if (profile.data?.state === "INCOMPLETE") {
-    return (
-      <p className={styles.hint}>
-        {messages.PROFILE_INCOMPLETE}{" "}
-        <Link to="/brand/profile">Заповнити профіль бренду</Link>
-      </p>
-    );
-  }
-  return (
-    <Link className={styles.addLink} to="/brand/products/new">
-      Додати товар
-    </Link>
-  );
-}
-
-function LoadError({
-  error,
-  onRetry,
-}: {
-  error: unknown;
-  onRetry: () => void;
-}) {
-  const code = errorCodeOf(error);
-  // No session: the API client is already redirecting to /brand/login (US-21.1 CL).
-  if (code === "UNAUTHENTICATED") return null;
-  return (
-    <div className={styles.loadError} role="alert">
-      <p>{messages[code]}</p>
-      <button type="button" onClick={onRetry}>
-        Спробувати ще раз
-      </button>
-    </div>
-  );
-}
-
 export function BrandProductsPage() {
   const products = useBrandProducts();
+  const profile = useBrandProfile();
 
   return (
     <section className={styles.page}>
       <div className={styles.header}>
         <h1 className={styles.title}>Товари бренду</h1>
-        <AddProductEntry />
+        <AddProductEntry
+          profileState={profile.data?.state ?? null}
+          size="medium"
+        />
       </div>
 
       {products.isPending && <p>Завантаження…</p>}

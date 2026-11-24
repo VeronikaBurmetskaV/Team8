@@ -17,39 +17,9 @@
   gap: var(--space-2);
 }
 
-/* «Додати товар»: the main action of the page, set apart from the list. */
-.addLink {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--letter-spacing-wide);
-}
-
-/* Shown instead of «Додати товар» while the brand has no name. */
-.hint {
-  margin: 0;
-  padding: var(--space-2);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface);
-  font-size: var(--font-size-sm);
-}
-
 .empty {
   margin: 0;
   color: var(--color-text-muted);
-}
-
-.loadError {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: 0;
-}
-
-.loadError p {
-  margin: 0;
 }
 
 /* The list is one <table>. On a phone every row is drawn as a card, one under another;

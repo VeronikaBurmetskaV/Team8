@@ -241,6 +241,7 @@ button:disabled {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   letter-spacing: var(--letter-spacing-logo);
+  text-decoration: none;
 }
 
 /* Cabinet navigation in the header (brand session only).

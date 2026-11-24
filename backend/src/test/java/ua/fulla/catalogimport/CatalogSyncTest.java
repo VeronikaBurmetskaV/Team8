@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.jayway.jsonpath.JsonPath;
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -149,16 +150,39 @@ class CatalogSyncTest {
             .query(String.class).single()).isEqualTo("published");
     }
 
-    // ---------- T-18: 6-hour gate ----------
+    // ---------- T-18: run-interval gate ----------
+
+    private static final Duration SIX_HOURS = Duration.ofHours(6);
+
+    private void lastRunAgo(String interval) {
+        jdbc.sql("UPDATE catalog_sources SET last_run_at = now() - CAST(:i AS interval) WHERE code = :c")
+            .param("i", interval)
+            .param("c", code)
+            .update();
+    }
 
     @Test
-    void aSourceCanBeClaimedOnlyOnceInSixHours() {
-        assertThat(sync.claimRun(code)).isTrue();
-        assertThat(sync.claimRun(code)).isFalse();
+    void aSourceCanBeClaimedOnlyOnceInSixHoursByDefault() {
+        assertThat(sync.claimRun(code, SIX_HOURS)).isTrue();
+        assertThat(sync.claimRun(code, SIX_HOURS)).isFalse();
 
-        jdbc.sql("UPDATE catalog_sources SET last_run_at = now() - interval '6 hours 1 minute' WHERE code = :c")
-            .param("c", code).update();
-        assertThat(sync.claimRun(code)).isTrue();
+        lastRunAgo("5 hours 59 minutes");
+        assertThat(sync.claimRun(code, SIX_HOURS)).isFalse();
+
+        lastRunAgo("6 hours 1 minute");
+        assertThat(sync.claimRun(code, SIX_HOURS)).isTrue();
+    }
+
+    @Test
+    void theGateUsesTheGivenInterval() {
+        Duration oneHour = Duration.ofHours(1);
+        assertThat(sync.claimRun(code, oneHour)).isTrue();
+
+        lastRunAgo("59 minutes");
+        assertThat(sync.claimRun(code, oneHour)).isFalse();
+
+        lastRunAgo("61 minutes");
+        assertThat(sync.claimRun(code, oneHour)).isTrue();
     }
 
     @Test
@@ -166,7 +190,7 @@ class CatalogSyncTest {
         CountDownLatch start = new CountDownLatch(1);
         Callable<Boolean> claim = () -> {
             start.await();
-            return sync.claimRun(code);
+            return sync.claimRun(code, SIX_HOURS);
         };
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {

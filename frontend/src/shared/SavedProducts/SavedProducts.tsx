@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { withUtm } from "../links";
 import { savedProductsTexts as t } from "../messages.uk";
@@ -11,15 +10,13 @@ interface SavedProductsProps {
   title: string;
   items: readonly SavedProduct[];
   emptyText: string;
-  emptyLinkTo: string;
-  emptyLinkText: string;
+  /** Links of the empty state; the first one is the main action. */
+  emptyLinks: readonly { to: string; text: string }[];
   /** Accessible name of the list. */
   listLabel: string;
   /** Text of the «Прибрати» button's aria-label for one product. */
   removeLabel: (name: string) => string;
   onRemove: (id: string) => void;
-  /** Extra button before «Перейти на сайт бренду» (e.g. «Додати у Вподобане»). */
-  extraAction?: (item: SavedProduct) => ReactNode;
 }
 
 /**
@@ -32,12 +29,10 @@ export function SavedProducts({
   title,
   items,
   emptyText,
-  emptyLinkTo,
-  emptyLinkText,
+  emptyLinks,
   listLabel,
   removeLabel,
   onRemove,
-  extraAction,
 }: SavedProductsProps) {
   return (
     <section className={styles.page} aria-labelledby={titleId}>
@@ -51,9 +46,19 @@ export function SavedProducts({
       {items.length === 0 ? (
         <div className={styles.empty}>
           <p className={styles.emptyText}>{emptyText}</p>
-          <Link to={emptyLinkTo} className={styles.primaryLink}>
-            {emptyLinkText}
-          </Link>
+          <div className={styles.emptyLinks}>
+            {emptyLinks.map((link, index) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={
+                  index === 0 ? styles.primaryLink : styles.secondaryButton
+                }
+              >
+                {link.text}
+              </Link>
+            ))}
+          </div>
         </div>
       ) : (
         <ul className={styles.grid} aria-label={listLabel}>
@@ -65,7 +70,6 @@ export function SavedProducts({
                   <ProductCard card={item} />
                 </div>
                 <div className={styles.actions}>
-                  {extraAction?.(item)}
                   {href !== null && (
                     <a
                       className={styles.primaryLink}
@@ -94,6 +98,3 @@ export function SavedProducts({
     </section>
   );
 }
-
-/** Class for an extra action button so it looks like the others. */
-export const savedProductsButtonClass = styles.secondaryButton;

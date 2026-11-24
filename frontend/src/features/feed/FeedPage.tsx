@@ -14,12 +14,12 @@ import { errorMessage } from "../../shared/errors";
 import {
   CartIcon,
   CloseIcon,
+  HeartIcon,
   QuestionIcon,
-  SwipeHeartIcon,
 } from "../../shared/icons";
 import { feedTexts as t } from "../../shared/messages.uk";
 import { ProductCard } from "../../shared/ProductCard/ProductCard";
-import { addSwipeLike } from "../../shared/productLists";
+import { addToFavorites } from "../../shared/productLists";
 import { addToCart } from "../cart/cart";
 import { demoPictureNumber, withDemoFallback } from "./demoFeed";
 import { HintDialog } from "./HintDialog";
@@ -70,8 +70,8 @@ export function FeedPage() {
         type: direction === "right" ? "like" : "skip",
         id: current.id,
       });
-      // A like goes ONLY to «Вподобане зі свайпів» (localStorage), never to «Вподобане».
-      if (direction === "right") addSwipeLike(current);
+      // A like (swipe right or «Сподобалось») goes to the one «Вподобане» (localStorage).
+      if (direction === "right") addToFavorites(current);
       setFlying({ card: current, direction });
       return true;
     },
@@ -153,7 +153,7 @@ export function FeedPage() {
     content = (
       <div className={styles.empty}>
         <p className={styles.emptyTitle}>{t.allViewed}</p>
-        <Link to="/swipe-favorites" className={styles.primaryLink}>
+        <Link to="/favorites" className={styles.primaryLink}>
           {t.toFavorites}
         </Link>
       </div>
@@ -223,7 +223,7 @@ export function FeedPage() {
           onClick={() => decide("right")}
         >
           <span className={styles.actionCircle}>
-            <SwipeHeartIcon className={styles.actionIcon} />
+            <HeartIcon className={styles.actionIcon} />
           </span>
           <span className={styles.actionText}>{t.like}</span>
         </button>

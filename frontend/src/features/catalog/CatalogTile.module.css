@@ -1,0 +1,159 @@
+/* A catalogue tile. Colours: only the --palette-* tokens. Minimal decor, lots of air. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-half);
+  min-width: 0;
+  color: var(--palette-ink);
+}
+
+.photoBox {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  margin-bottom: var(--space-1);
+  overflow: hidden;
+  background-color: var(--palette-light-gray);
+}
+
+.photo,
+.placeholder {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.photo {
+  display: block;
+  object-fit: cover;
+  transition: transform 400ms ease;
+}
+
+.tile:hover .photo {
+  transform: scale(1.04);
+}
+
+.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-logo);
+}
+
+/* Heart: top right corner of the photo. Overrides the global primary-button look. */
+.heart {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: var(--heart-button-size);
+  min-height: var(--heart-button-size);
+  height: var(--heart-button-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background-color: var(--palette-light-gray);
+  color: var(--palette-ink);
+  font-size: var(--icon-size);
+}
+
+.heart:hover:not(:disabled) {
+  border: none;
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+}
+
+.heart[aria-pressed="true"] {
+  color: var(--palette-brown);
+}
+
+.heart:focus-visible {
+  outline-color: var(--palette-brown);
+}
+
+.brand {
+  margin: 0;
+  overflow: hidden;
+  color: var(--palette-brown);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Two lines, then an ellipsis. */
+.name {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--palette-ink);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.price {
+  margin: 0;
+  color: var(--palette-ink);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+}
+
+/* ---------- Loading stub ---------- */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.skeletonPhoto,
+.skeletonLine {
+  background-color: var(--palette-light-gray);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonPhoto {
+  aspect-ratio: 3 / 4;
+}
+
+.skeletonLine {
+  height: var(--space-2);
+  width: 80%;
+}
+
+.skeletonLineShort {
+  width: 40%;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo {
+    transition: none;
+  }
+
+  .tile:hover .photo {
+    transform: none;
+  }
+
+  .skeletonPhoto,
+  .skeletonLine {
+    animation: none;
+  }
+}

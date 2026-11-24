@@ -1,6 +1,7 @@
 package ua.fulla.catalogimport;
 
 import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -9,7 +10,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 /**
  * Runs the importers: shortly after start, then every check interval. The database gate (T-18)
- * makes a source actually run at most once per 6 hours, also across restarts. Sources run one
+ * makes a source actually run at most once per {@code fulla.import.min-run-interval} (6 h by
+ * default, never below 10 min), also across restarts. Sources run one
  * after another; an error in one source never stops the others.
  */
 class CatalogImportJob {
@@ -44,8 +46,9 @@ class CatalogImportJob {
     RunStatus runSource(CatalogImporter importer) {
         String code = importer.code();
         UUID sourceId = sync.registerSource(code, importer.baseUrl().toString());
-        if (!sync.claimRun(code)) {
-            log.info("Import of {} skipped: it already ran in the last 6 hours", code);
+        Duration minInterval = properties.minRunInterval();
+        if (!sync.claimRun(code, minInterval)) {
+            log.info("Import of {} skipped: it already ran in the last {} min", code, minInterval.toMinutes());
             return null;
         }
         PoliteFetcher fetcher = new PoliteFetcher(httpClient, importer.baseUrl(), properties.delay(),

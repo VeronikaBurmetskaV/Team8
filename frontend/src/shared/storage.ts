@@ -37,3 +37,15 @@ export function safeSet(
     // The value simply is not remembered.
   }
 }
+
+/** Deletes a value; a failure only means the value stays. */
+export function safeRemove(
+  storage: KeyValueStorage | undefined,
+  key: string,
+): void {
+  try {
+    storage?.removeItem(key);
+  } catch {
+    // Left in place; reading it again is harmless.
+  }
+}

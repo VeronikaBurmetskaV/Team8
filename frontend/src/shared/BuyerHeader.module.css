@@ -1,6 +1,6 @@
 /* Buyer header: dark full-width bar, light text. Mobile-first.
-   Phone: logo + burger, one row of five icons under it; city and language in the burger menu.
-   --bp-tablet (768px): one row — swipe icons | logo | shop icons + burger.
+   Phone: logo + burger, one row of four icons under it; city and language in the burger menu.
+   --bp-tablet (768px): one row — empty | logo | icons + burger.
    --bp-desktop (1024px): two rows — logo in the centre spans both, city and language top right.
    Selectors are prefixed with .header so they win over the global element styles in index.css. */
 
@@ -130,7 +130,7 @@
   content: "";
 }
 
-/* Counter of «Вподобане зі свайпів» and «Вподобане»: a small pill at the icon's top right. */
+/* Counter of «Вподобане»: a small pill at the icon's top right. */
 .badge {
   position: absolute;
   top: var(--space-half);
@@ -202,56 +202,38 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* City and language: shared/Dropdown, the list opens under the button. */
 .field {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.fieldIcon,
-.chevron {
-  position: absolute;
-  top: 50%;
-  font-size: var(--icon-size-sm);
-  transform: translateY(-50%);
-  pointer-events: none;
+  width: 100%;
 }
 
 .fieldIcon {
-  left: 0;
-}
-
-.chevron {
-  right: 0;
-  color: var(--color-on-header);
+  flex-shrink: 0;
+  font-size: var(--icon-size-sm);
 }
 
 .header .select {
   width: 100%;
   min-height: var(--icon-button-size);
-  padding: 0 calc(var(--icon-size-sm) + var(--space-half)) 0 0;
+  padding: 0;
   border: none;
   border-bottom: var(--border-width) solid var(--color-header-divider);
   border-radius: 0;
   background-color: transparent;
   color: var(--color-on-header);
   font-family: var(--font-body);
-  /* ≥ 16px on a phone so iOS does not zoom into the select. */
+  /* ≥ 16px on a phone, like the form fields. */
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-medium);
   letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
-  cursor: pointer;
-  appearance: none;
-}
-
-.fieldIcon ~ .select {
-  padding-left: calc(var(--icon-size-sm) + var(--space-1));
 }
 
 .header .select:hover,
-.header .select:focus {
+.header .select:focus,
+.header .select[aria-expanded="true"] {
   border-color: var(--color-header-hover);
+  background-color: transparent;
   color: var(--color-header-hover);
   box-shadow: none;
 }
@@ -261,10 +243,10 @@
   outline-offset: var(--focus-ring-width);
 }
 
-/* The open list is drawn by the OS: keep it readable on a light background. */
-.select option {
-  background-color: var(--color-surface);
-  color: var(--color-text);
+/* The open list: light card on the dark header, same letters as the button. */
+.list {
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
 }
 
 .visuallyHidden {
@@ -279,7 +261,7 @@
   border: 0;
 }
 
-/* --bp-tablet: swipe icons | logo | shop icons + burger, in one row. */
+/* --bp-tablet: empty | logo | icons + burger, in one row. The left cell stays empty. */
 @media (min-width: 768px) {
   .header {
     margin-bottom: var(--space-4);
@@ -287,7 +269,7 @@
 
   .inner {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    grid-template-areas: "swipe logo shop";
+    grid-template-areas: ". logo shop";
     column-gap: var(--space-2);
     padding-block: var(--space-2);
   }
@@ -298,11 +280,6 @@
 
   .nav {
     display: contents;
-  }
-
-  .groupSwipe {
-    grid-area: swipe;
-    justify-self: start;
   }
 
   .groupShop {
@@ -322,7 +299,7 @@
   .inner {
     grid-template-areas:
       ". logo prefs"
-      "swipe logo shop";
+      ". logo shop";
     row-gap: var(--space-1);
     padding-block: var(--space-2);
   }
@@ -356,6 +333,10 @@
     padding: 0;
     border: none;
     box-shadow: none;
+  }
+
+  .field {
+    width: auto;
   }
 
   .header .select {

@@ -8,7 +8,7 @@ import {
 import type { CardFormValues } from "../../shared/validation";
 import { toCreateProductRequest } from "./cardForm";
 
-const brandProductsKey = ["brand", "products"] as const;
+export const brandProductsKey = ["brand", "products"] as const;
 
 /** The brand's own cards, newest first as the server returns them. */
 export function useBrandProducts() {

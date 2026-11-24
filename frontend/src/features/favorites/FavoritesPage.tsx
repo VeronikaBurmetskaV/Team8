@@ -1,13 +1,13 @@
 import { favoritesTexts as t } from "../../shared/messages.uk";
-import { favoriteLists, useProductList } from "../../shared/productLists";
+import { favoriteList, useProductList } from "../../shared/productLists";
 import { SavedProducts } from "../../shared/SavedProducts/SavedProducts";
 
 /**
- * «Вподобане» (/favorites): only products the buyer added explicitly with «Додати у Вподобане».
- * A swipe in the feed does NOT add here. Stored in this browser only.
+ * «Вподобане» (/favorites): the one list of liked products — likes from the swipe feed and
+ * hearts from the catalogue, each product once. Stored in this browser only.
  */
 export function FavoritesPage() {
-  const items = useProductList(favoriteLists.favorites);
+  const items = useProductList(favoriteList);
 
   return (
     <SavedProducts
@@ -15,11 +15,13 @@ export function FavoritesPage() {
       title={t.title}
       items={items}
       emptyText={t.empty}
-      emptyLinkTo="/swipe-favorites"
-      emptyLinkText={t.toSwipeFavorites}
+      emptyLinks={[
+        { to: "/feed", text: t.toFeed },
+        { to: "/", text: t.toCatalog },
+      ]}
       listLabel={t.listLabel}
       removeLabel={t.removeLabel}
-      onRemove={(id) => favoriteLists.favorites.remove(id)}
+      onRemove={(id) => favoriteList.remove(id)}
     />
   );
 }

@@ -1,0 +1,334 @@
+/* Catalogue home page (/). Colours: only the --palette-* tokens.
+   Grid: 2 in a row on a phone, 3 from --bp-tablet (768px), 4 from --bp-desktop (1024px),
+   3 on a laptop while the filter column is open. Below --bp-desktop the filters are a drawer. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-block: var(--space-2) var(--space-4);
+  color: var(--palette-ink);
+}
+
+/* ---------- Banner: the whole block is a link to /feed ---------- */
+.banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: calc(var(--banner-min-height) * 0.75);
+  margin-inline: auto;
+  padding: var(--space-4) var(--space-2);
+  background-color: var(--palette-ink);
+  color: var(--palette-light-gray);
+  text-align: center;
+  text-decoration: none;
+}
+
+.banner:hover {
+  color: var(--palette-light-gray);
+}
+
+.banner:focus-visible {
+  outline-color: var(--palette-brown);
+  outline-offset: var(--space-half);
+}
+
+.bannerTitle {
+  margin: 0;
+  color: var(--palette-light-gray);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.bannerSubtitle {
+  margin: 0;
+  color: var(--palette-light-gray);
+  font-size: var(--font-size-md);
+}
+
+/* Looks like a button; a real button inside a link would be nested interactive content. */
+.bannerCta {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-height);
+  margin-top: var(--space-1);
+  padding: 0 var(--space-3);
+  background-color: var(--palette-beige);
+  color: var(--palette-ink);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  transition: background-color var(--transition-fast);
+}
+
+.banner:hover .bannerCta {
+  background-color: var(--palette-light-gray);
+}
+
+/* ---------- Toolbar: «Фільтри» left, «Усі товари» + count right ---------- */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.filtersButton,
+.secondaryButton,
+.iconButton {
+  border: var(--border-width) solid var(--palette-ink);
+  border-radius: 0;
+  background-color: transparent;
+  color: var(--palette-ink);
+}
+
+.filtersButton {
+  padding: 0 var(--space-2);
+}
+
+.filtersButton svg {
+  font-size: var(--icon-size);
+}
+
+.filtersButton:hover:not(:disabled),
+.secondaryButton:hover:not(:disabled),
+.iconButton:hover:not(:disabled),
+.filtersButton[aria-expanded="true"] {
+  border-color: var(--palette-ink);
+  background-color: var(--palette-ink);
+  color: var(--palette-light-gray);
+}
+
+.filtersButton:focus-visible,
+.secondaryButton:focus-visible,
+.iconButton:focus-visible,
+.groupSummary:focus-visible {
+  outline-color: var(--palette-brown);
+}
+
+.title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--palette-ink);
+  font-size: var(--font-size-lg);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.count {
+  color: var(--palette-brown);
+  font-family: var(--font-body);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* ---------- Catalogue: [filters] + results ---------- */
+.catalog {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding-block: var(--space-4);
+  text-align: center;
+}
+
+/* Overrides the global red alert colour: the error is calm text with a retry button. */
+.messageText,
+.message [role="alert"] {
+  margin: 0;
+  color: var(--palette-brown);
+  font-size: var(--font-size-md);
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Filter panel: drawer by default (phone, tablet) ---------- */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-drawer);
+  background-color: var(--color-backdrop);
+}
+
+.panel {
+  position: fixed;
+  inset: 0 auto 0 0;
+  z-index: calc(var(--z-drawer) + 1);
+  width: min(var(--drawer-width), 85vw);
+  padding: var(--space-2) var(--space-3);
+  overflow-y: auto;
+  background-color: var(--palette-light-gray);
+  color: var(--palette-ink);
+  animation: slideIn 200ms ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.panelTitle {
+  margin: 0;
+  color: var(--palette-ink);
+  font-size: var(--font-size-md);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.iconButton {
+  width: var(--icon-button-size);
+  min-height: var(--icon-button-size);
+  padding: 0;
+  border-color: transparent;
+  font-size: var(--icon-size);
+}
+
+.group {
+  border-bottom: var(--border-width) solid var(--palette-warm-gray);
+}
+
+.groupSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--control-height);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+  list-style: none;
+  cursor: pointer;
+}
+
+.groupSummary::-webkit-details-marker {
+  display: none;
+}
+
+.groupSummary::after {
+  content: "+";
+  font-weight: var(--font-weight-regular);
+}
+
+.group[open] .groupSummary::after {
+  content: "−";
+}
+
+.groupSoon {
+  margin: 0 0 var(--space-2);
+  color: var(--palette-brown);
+  font-size: var(--font-size-sm);
+}
+
+/* --bp-tablet: 3 in a row. */
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-3);
+  }
+
+  .bannerTitle {
+    font-size: var(--font-size-2xl);
+  }
+}
+
+/* --bp-desktop: banner ~80% of the container, filters become a column beside the grid. */
+@media (min-width: 1024px) {
+  .banner {
+    width: 80%;
+    min-height: var(--banner-min-height);
+    max-height: var(--banner-max-height);
+  }
+
+  .bannerSubtitle {
+    font-size: var(--font-size-lg);
+  }
+
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .catalog[data-filters-open="true"] {
+    grid-template-columns: var(--filter-panel-width) minmax(0, 1fr);
+  }
+
+  .catalog[data-filters-open="true"] .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel {
+    position: sticky;
+    top: var(--space-2);
+    inset: auto;
+    align-self: start;
+    z-index: auto;
+    width: auto;
+    max-height: calc(100vh - 2 * var(--space-2));
+    padding: 0 var(--space-2) 0 0;
+    border-right: var(--border-width) solid var(--palette-warm-gray);
+    background-color: transparent;
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

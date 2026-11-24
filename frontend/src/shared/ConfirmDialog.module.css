@@ -1,0 +1,52 @@
+/* The native <dialog>: centred by the browser in the top layer. Never wider than the screen
+   minus the page gutters, so it fits a 320 px phone. No padding on the element itself: a click
+   that targets the <dialog> is then always a click on the backdrop. */
+.dialog {
+  width: min(var(--dialog-max-width), calc(100vw - 2 * var(--space-2)));
+  max-width: none;
+  padding: 0;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+}
+
+.dialog::backdrop {
+  background-color: var(--color-backdrop);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-base);
+  overflow-wrap: anywhere;
+}
+
+/* Two buttons: one under another on a phone, side by side at the right from --bp-tablet. */
+.actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-1);
+}
+
+/* The secondary action: outlined instead of filled. */
+.cancel {
+  border-color: var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+@media (min-width: 768px) {
+  .actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}

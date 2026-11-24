@@ -1,5 +1,6 @@
 package ua.fulla.catalogimport;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -34,9 +35,9 @@ class CatalogSyncService {
         return sources.registerSource(code, baseUrl);
     }
 
-    /** T-18: false when the source already ran in the last 6 hours. */
-    boolean claimRun(String code) {
-        return sources.claimRun(code);
+    /** T-18: false when the source already ran within {@code minInterval}. */
+    boolean claimRun(String code, Duration minInterval) {
+        return sources.claimRun(code, minInterval);
     }
 
     void finishRun(String code, RunStatus status) {

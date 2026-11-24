@@ -47,16 +47,6 @@ export function SwipeIcon(props: IconProps) {
   );
 }
 
-/** A heart with a small swipe arrow under it: favourites collected in the feed. */
-export function SwipeHeartIcon(props: IconProps) {
-  return (
-    <Icon {...props}>
-      <path d="M12 16s-5.5-3.3-5.5-7.3A3.2 3.2 0 0 1 12 6.6a3.2 3.2 0 0 1 5.5 2.1c0 4-5.5 7.3-5.5 7.3Z" />
-      <path d="M7 20.5h10M15 18.5l2 2-2 2" />
-    </Icon>
-  );
-}
-
 export function CartIcon(props: IconProps) {
   return (
     <Icon {...props}>
@@ -132,6 +122,18 @@ export function QuestionIcon(props: IconProps) {
       <circle cx="12" cy="12" r="9" />
       <path d="M9.6 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.2.9-1.2 1.8v.5" />
       <path d="M12 17h.01" />
+    </Icon>
+  );
+}
+
+/** Three sliders: the «Фільтри» button of the catalogue. */
+export function FiltersIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8M4 12h2M10 12h10" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+      <circle cx="8" cy="12" r="2" />
     </Icon>
   );
 }

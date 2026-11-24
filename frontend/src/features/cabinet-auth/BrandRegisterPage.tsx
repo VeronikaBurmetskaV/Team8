@@ -29,9 +29,9 @@ export function BrandRegisterPage() {
 
   async function onSubmit(credentials: BrandRegisterForm) {
     try {
-      const brand = await registerBrand.mutateAsync(credentials);
-      // A new brand has no name yet, so it goes to the profile (US-21 CL).
-      navigate(pathAfterLogin(brand.profileState));
+      await registerBrand.mutateAsync(credentials);
+      // The cabinet home page; a new brand has no name yet, so it shows the way to the profile (US-21 CL).
+      navigate(pathAfterLogin());
     } catch (error) {
       // The entered data stays in the form on any error (US-21 S2).
       showError(error);
@@ -97,7 +97,7 @@ export function BrandRegisterPage() {
         )}
       </form>
       <p className={styles.switch}>
-        Вже маєте кабінет? <Link to="/brand/login">Увійти</Link>
+        Вже маєте кабінет? <Link to="/login?tab=brand">Увійти</Link>
       </p>
     </div>
   );
