@@ -7,7 +7,6 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Link } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getFeed } from "../../api/client";
 import { FiltersIcon } from "../../shared/icons";
@@ -22,6 +21,8 @@ import {
 } from "./catalog";
 import { CatalogTile, CatalogTileSkeleton } from "./CatalogTile";
 import { FilterPanel } from "./FilterPanel";
+import { HeroBanner } from "./HeroBanner";
+import { revealDelay, useReveal } from "../../shared/reveal";
 import styles from "./CatalogPage.module.css";
 
 const PANEL_ID = "catalog-filters";
@@ -48,6 +49,7 @@ export function CatalogPage() {
   const [filtersOpen, dispatch] = useReducer(filterPanelReducer, false);
   const isDrawer = useMediaQuery(DRAWER_QUERY);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const toolbarRef = useReveal<HTMLDivElement>(revealDelay.toolbar);
 
   const closeFilters = useCallback(() => {
     dispatch({ type: "close" });
@@ -68,13 +70,9 @@ export function CatalogPage() {
 
   return (
     <div className={styles.page}>
-      <Link to="/feed" className={styles.banner}>
-        <h1 className={styles.bannerTitle}>{t.bannerTitle}</h1>
-        <p className={styles.bannerSubtitle}>{t.bannerSubtitle}</p>
-        <span className={styles.bannerCta}>{t.bannerCta}</span>
-      </Link>
+      <HeroBanner />
 
-      <div className={styles.toolbar}>
+      <div ref={toolbarRef} className={styles.toolbar}>
         <button
           ref={toggleRef}
           type="button"
@@ -140,11 +138,12 @@ export function CatalogPage() {
 
           {shown.length > 0 && (
             <ul className={styles.grid}>
-              {shown.map((card) => (
+              {shown.map((card, index) => (
                 <li key={card.id}>
                   <CatalogTile
                     card={card}
                     isFavorite={favoriteIds.has(card.id)}
+                    index={index}
                   />
                 </li>
               ))}

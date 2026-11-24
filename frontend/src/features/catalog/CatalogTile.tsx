@@ -4,11 +4,14 @@ import { HeartIcon } from "../../shared/icons";
 import { catalogTexts as t } from "../../shared/messages.uk";
 import { formatPrice } from "../../shared/price";
 import { toggleFavorite } from "../../shared/productLists";
+import { cardRevealDelay, useReveal } from "../../shared/reveal";
 import styles from "./CatalogTile.module.css";
 
 interface CatalogTileProps {
   card: PublicCard;
   isFavorite: boolean;
+  /** Place in the grid (reading order): sets the entrance-animation stagger on page load. */
+  index: number;
 }
 
 /**
@@ -16,9 +19,11 @@ interface CatalogTileProps {
  * product to the shared «Вподобане». The tile itself opens nothing yet; the brand logo is
  * never shown to buyers.
  */
-export function CatalogTile({ card, isFavorite }: CatalogTileProps) {
+export function CatalogTile({ card, isFavorite, index }: CatalogTileProps) {
+  // Rises into place when it scrolls into view; cards visible on load go in reading order.
+  const revealRef = useReveal<HTMLElement>(cardRevealDelay(index), true);
   return (
-    <article className={styles.tile}>
+    <article ref={revealRef} className={styles.tile}>
       <div className={styles.photoBox}>
         <TilePhoto key={card.photoUrl} url={card.photoUrl} alt={card.name} />
         <button

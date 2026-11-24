@@ -200,6 +200,44 @@ button:disabled {
   font-size: var(--font-size-sm);
 }
 
+/* Entrance animation (shared/reveal.ts → useReveal): the element rises 40px into place and
+   fades in. Only transform and opacity change, so there is no layout shift. The hidden state
+   exists only while JS has set data-reveal="hidden"; "done" removes the animation again. */
+[data-reveal="hidden"] {
+  opacity: 0;
+  transform: translateY(var(--reveal-distance)) scale(var(--reveal-scale, 1));
+}
+
+[data-reveal="shown"] {
+  animation: reveal-up var(--reveal-duration) var(--ease-reveal)
+    var(--reveal-delay, 0ms) both;
+}
+
+/* Large blocks (hero banner, product cards) also grow from 0.98 for a touch of depth. */
+[data-reveal-scale] {
+  --reveal-scale: var(--reveal-scale-from);
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(var(--reveal-distance)) scale(var(--reveal-scale, 1));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
 /* Layout
    Mobile-first: the base rules are for 320 px+, the media queries only add space.
    Breakpoints are --bp-tablet (768px) and --bp-desktop (1024px) from tokens.css. */
