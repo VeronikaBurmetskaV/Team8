@@ -1,6 +1,6 @@
 /* The full product card over «Вподобане». The <dialog> covers the whole screen (top layer);
    its own ::backdrop is transparent: the dimmed, blurred page is the .backdrop element, so
-   motion can fade it in and out. Only --palette-* colours, like the feed and the card. */
+   motion can fade it in and out. Olive palette colours, like the feed and the card. */
 .dialog {
   position: fixed;
   inset: 0;
@@ -13,7 +13,7 @@
   padding: var(--space-2);
   border: none;
   background: transparent;
-  color: var(--palette-ink);
+  color: var(--color-black);
   overflow: hidden;
 }
 
@@ -56,15 +56,15 @@
   padding: 0;
   border-color: transparent;
   border-radius: var(--radius-pill);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  background-color: var(--color-offwhite);
+  color: var(--color-black);
   font-size: var(--icon-size);
 }
 
 .close:hover:not(:disabled) {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
 }
 
 /* The card fills its parent (ProductCard), so the box sets the size. */
@@ -86,7 +86,7 @@
   min-height: var(--control-height);
   padding: 0 var(--space-2);
   border: var(--border-width-thick) solid var(--color-brand-link);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-sm);
   background-color: var(--color-brand-link);
   color: var(--color-on-brand-link);
   font-family: var(--font-body);
@@ -111,7 +111,7 @@
 }
 
 .panel :focus-visible {
-  outline: var(--focus-ring-width) solid var(--palette-beige);
+  outline: var(--focus-ring-width) solid var(--color-olive-light);
   outline-offset: var(--focus-ring-width);
 }
 

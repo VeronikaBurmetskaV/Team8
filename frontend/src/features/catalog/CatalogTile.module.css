@@ -1,18 +1,22 @@
-/* A catalogue tile. Colours: only the --palette-* tokens. Minimal decor, lots of air. */
+/* A catalogue tile. Colours: the olive palette tokens from tokens.css. Minimal decor, lots of air. */
 .tile {
   display: flex;
   flex-direction: column;
   gap: var(--space-half);
   min-width: 0;
-  color: var(--palette-ink);
+  padding-bottom: var(--space-2);
+  border: var(--border-width) solid var(--color-gray-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-white);
+  color: var(--color-black);
 }
 
 .photoBox {
   position: relative;
   aspect-ratio: 3 / 4;
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
   overflow: hidden;
-  background-color: var(--palette-light-gray);
+  background-color: var(--color-offwhite);
 }
 
 .photo,
@@ -37,8 +41,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
   font-family: var(--font-heading);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
@@ -56,29 +60,38 @@
   padding: 0;
   border: none;
   border-radius: var(--radius-pill);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  background-color: var(--color-heart-background);
+  /* Olive icon: outline when not liked, filled when liked (CatalogTile.tsx sets the fill). */
+  color: var(--color-olive);
   font-size: var(--icon-size);
+  cursor: pointer;
+  transition: background-color var(--transition-heart);
 }
 
-.heart:hover:not(:disabled) {
+/* Hover, liked or not: the white circle turns light gray, the icon stays olive. */
+.heart:hover:not(:disabled),
+.heart[aria-pressed="true"]:hover:not(:disabled) {
   border: none;
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  background-color: var(--color-heart-background-hover);
+  color: var(--color-olive);
 }
 
 .heart[aria-pressed="true"] {
-  color: var(--palette-brown);
+  color: var(--color-olive);
 }
 
+/* Keyboard focus: a dark olive ring around the circle, clear on any photo. */
 .heart:focus-visible {
-  outline-color: var(--palette-brown);
+  outline: var(--focus-ring-width) solid var(--color-olive-dark);
+  outline-offset: var(--focus-ring-width);
+  box-shadow: 0 0 0 calc(2 * var(--focus-ring-width)) var(--color-white);
 }
 
 .brand {
   margin: 0;
+  padding-inline: var(--space-2);
   overflow: hidden;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
@@ -91,12 +104,15 @@
 .name {
   display: -webkit-box;
   margin: 0;
+  padding-inline: var(--space-2);
   overflow: hidden;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-regular);
   line-height: var(--line-height-tight);
+  letter-spacing: normal;
+  text-transform: none;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -105,7 +121,8 @@
 
 .price {
   margin: 0;
-  color: var(--palette-ink);
+  padding-inline: var(--space-2);
+  color: var(--color-black);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
   white-space: nowrap;
@@ -120,7 +137,7 @@
 
 .skeletonPhoto,
 .skeletonLine {
-  background-color: var(--palette-light-gray);
+  background-color: var(--color-gray-border);
   animation: pulse 1.4s ease-in-out infinite;
 }
 

@@ -1,4 +1,4 @@
-/* Swipe feed (US-08.1, US-09, US-10). Colours: only the TEMPORARY --palette-* tokens.
+/* Swipe feed (US-08.1, US-09, US-10). Colours: the olive palette tokens from tokens.css.
    Phone and tablet: the card, «Не сьогодні» / «Сподобалось» under it, then the brand line.
    Laptop (--bp-desktop): «Не сьогодні» left of the card, «Сподобалось» right of it, both
    centred on the card's height; the card is as tall as the window allows, so no page scroll.
@@ -16,7 +16,7 @@
   align-items: center;
   gap: var(--space-1);
   min-width: 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
 }
 
 .visuallyHidden {
@@ -52,18 +52,18 @@
   min-height: 40px;
   height: 40px;
   padding: 0;
-  border-color: var(--palette-warm-gray);
+  border-color: var(--color-gray-border);
   border-radius: var(--radius-pill);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  background-color: var(--color-offwhite);
+  color: var(--color-black);
   font-size: var(--icon-size);
   text-transform: none;
 }
 
 .hintButton:hover:not(:disabled) {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
 }
 
 .hintTooltip {
@@ -74,8 +74,8 @@
   display: none;
   padding: var(--space-half) var(--space-1);
   border-radius: var(--radius-sm);
-  background-color: var(--palette-ink);
-  color: var(--palette-light-gray);
+  background-color: var(--color-black);
+  color: var(--color-offwhite);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
@@ -91,7 +91,7 @@
 /* Visible focus on every control of the page, in palette colours. */
 .page :focus-visible,
 .hintDialog :focus-visible {
-  outline: 3px solid var(--palette-brown);
+  outline: 3px solid var(--color-olive-dark);
   outline-offset: 2px;
 }
 
@@ -150,7 +150,7 @@
   padding: var(--space-half) var(--space-2);
   border: 3px solid currentColor;
   border-radius: var(--radius-md);
-  background-color: var(--palette-light-gray);
+  background-color: var(--color-offwhite);
   font-family: var(--font-heading);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
@@ -161,13 +161,13 @@
 
 .stampLike {
   left: var(--space-3);
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   transform: rotate(-12deg);
 }
 
 .stampSkip {
   right: var(--space-3);
-  color: var(--palette-ink);
+  color: var(--color-black);
   transform: rotate(12deg);
 }
 
@@ -181,7 +181,7 @@
   gap: var(--space-1);
   max-width: 100%;
   margin: 0;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-sm);
   text-align: center;
   overflow-wrap: anywhere;
@@ -195,9 +195,9 @@
 
 .soonBadge {
   padding: 0 var(--space-1);
-  border-radius: var(--radius-pill);
-  background-color: var(--palette-warm-gray);
-  color: var(--palette-ink);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-gray-border);
+  color: var(--color-black);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
 }
@@ -215,7 +215,7 @@
   border: none;
   border-radius: var(--radius-md);
   background-color: transparent;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-family: var(--font-body);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
@@ -237,7 +237,7 @@
   justify-content: center;
   width: var(--feed-action-size);
   height: var(--feed-action-size);
-  border: var(--focus-ring-width) solid var(--palette-ink);
+  border: var(--focus-ring-width) solid var(--color-black);
   border-radius: var(--radius-pill);
   transition:
     background-color var(--transition-fast),
@@ -246,31 +246,31 @@
 }
 
 .likeButton .actionCircle {
-  background-color: var(--palette-ink);
-  color: var(--palette-light-gray);
+  background-color: var(--color-black);
+  color: var(--color-offwhite);
 }
 
 .skipButton .actionCircle {
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  background-color: var(--color-offwhite);
+  color: var(--color-black);
 }
 
 .actionButton:hover:not(:disabled) {
   border: none;
   background-color: transparent;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
 }
 
 .actionButton:hover:not(:disabled) .actionCircle {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-brown);
-  color: var(--palette-light-gray);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-dark);
+  color: var(--color-offwhite);
 }
 
 .actionButton:disabled {
   border: none;
   background-color: transparent;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   opacity: 0.6;
 }
 
@@ -288,25 +288,25 @@
   flex: 0 0 auto;
   min-height: 44px;
   padding: 0 var(--space-2);
-  border-color: var(--palette-brown);
-  border-radius: var(--radius-pill);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  border-color: var(--color-olive-dark);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
   font-size: var(--font-size-sm);
   letter-spacing: normal;
   text-transform: none;
 }
 
 .cartButton:hover:not(:disabled) {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-brown);
-  color: var(--palette-light-gray);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-dark);
+  color: var(--color-offwhite);
 }
 
 .cartButton:disabled {
-  border-color: var(--palette-warm-gray);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-brown);
+  border-color: var(--color-gray-border);
+  background-color: var(--color-offwhite);
+  color: var(--color-olive-dark);
   opacity: 0.6;
 }
 
@@ -328,7 +328,7 @@
 
 .emptyTitle {
   margin: 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-family: var(--font-heading);
   font-size: var(--font-size-xl);
   font-weight: var(--font-weight-semibold);
@@ -339,23 +339,26 @@
   align-items: center;
   min-height: var(--control-height);
   padding: 0 var(--space-3);
-  border-radius: var(--radius-pill);
-  background-color: var(--palette-ink);
-  color: var(--palette-light-gray);
-  font-family: var(--font-heading);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-black);
+  color: var(--color-white);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
   text-decoration: none;
+  text-transform: uppercase;
 }
 
 .primaryLink:hover {
-  background-color: var(--palette-brown);
-  color: var(--palette-light-gray);
+  background-color: var(--color-olive-dark);
+  color: var(--color-offwhite);
 }
 
 .secondaryButton {
-  border-color: var(--palette-ink);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  border-color: var(--color-black);
+  background-color: var(--color-offwhite);
+  color: var(--color-black);
 }
 
 /* ---------- Toast ---------- */
@@ -366,9 +369,9 @@
   z-index: 20;
   margin: 0;
   padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  background-color: var(--palette-ink);
-  color: var(--palette-light-gray);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-black);
+  color: var(--color-offwhite);
   font-weight: var(--font-weight-semibold);
   transform: translate(-50%, 0);
   transition: opacity var(--transition-fast);
@@ -390,14 +393,14 @@
   margin: auto;
   padding: 0;
   overflow: auto;
-  border: var(--border-width) solid var(--palette-warm-gray);
+  border: var(--border-width) solid var(--color-gray-border);
   border-radius: var(--radius-lg);
-  background-color: var(--palette-light-gray);
-  color: var(--palette-ink);
+  background-color: var(--color-offwhite);
+  color: var(--color-black);
 }
 
 .hintDialog::backdrop {
-  background-color: rgb(21 22 10 / 0.55);
+  background-color: var(--color-backdrop);
 }
 
 .hintContent {
@@ -414,19 +417,19 @@
   padding: 0;
   border-color: transparent;
   background-color: transparent;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-size: var(--icon-size);
 }
 
 .hintClose:hover:not(:disabled) {
-  border-color: var(--palette-brown);
-  background-color: var(--palette-beige);
-  color: var(--palette-ink);
+  border-color: var(--color-olive-dark);
+  background-color: var(--color-olive-light);
+  color: var(--color-black);
 }
 
 .hintTitle {
   margin: 0 var(--space-4) var(--space-2) 0;
-  color: var(--palette-ink);
+  color: var(--color-black);
   font-size: var(--font-size-lg);
 }
 
@@ -439,7 +442,7 @@
 
 .hintKeyboard {
   margin: var(--space-2) 0 0;
-  color: var(--palette-brown);
+  color: var(--color-olive-dark);
   font-size: var(--font-size-sm);
 }
 

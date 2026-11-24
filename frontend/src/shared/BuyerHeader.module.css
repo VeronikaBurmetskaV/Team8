@@ -1,4 +1,4 @@
-/* Buyer header: dark full-width bar, light text. Mobile-first.
+/* Buyer header: black full-width bar, light text. Mobile-first.
    Phone: logo + burger, one row of four icons under it; city and language in the burger menu.
    --bp-tablet (768px): one row — empty | logo | icons + burger.
    --bp-desktop (1024px): two rows — logo in the centre spans both, city and language top right.
@@ -57,7 +57,7 @@
   padding-left: var(--letter-spacing-logo-wide);
   font-family: var(--font-heading);
   font-size: var(--font-size-logo);
-  font-weight: var(--font-weight-semibold);
+  font-weight: var(--font-weight-heading);
   letter-spacing: var(--letter-spacing-logo-wide);
 }
 
@@ -294,9 +294,14 @@
   }
 }
 
-/* --bp-desktop: two rows; city and language always visible top right, no burger. */
+/* --bp-desktop: two rows; city and language always visible top right, no burger.
+   The bar is no longer limited to the page container: on wide screens (1920–2560 px) the
+   right block sits at the window's edge with --header-padding-wide. The 1fr | auto | 1fr
+   columns are equal, so the logo stays exactly in the middle of the window. */
 @media (min-width: 1024px) {
   .inner {
+    max-width: none;
+    padding-inline: var(--header-padding-wide);
     grid-template-areas:
       ". logo prefs"
       ". logo shop";

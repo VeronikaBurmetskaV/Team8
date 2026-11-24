@@ -23,7 +23,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Typography */
+/* Typography
+   h1–h3: wide bold grotesque (Unbounded) in upper case, dense line height. Sizes are fluid
+   and long words may break, so a heading never runs off a 320 px screen. */
 h1,
 h2,
 h3,
@@ -31,24 +33,33 @@ h4 {
   margin: 0 0 var(--space-2);
   color: var(--color-primary);
   font-family: var(--font-heading);
-  font-weight: var(--font-weight-semibold);
-  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-heading);
+  line-height: var(--line-height-heading);
+  letter-spacing: var(--letter-spacing-heading);
+  text-transform: uppercase;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 h1 {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-h1);
 }
 
 h2 {
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-h2);
 }
 
 h3 {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-h3);
 }
 
+/* h4: small label in the body font, not a display heading. */
 h4 {
+  font-family: var(--font-body);
   font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-wide);
 }
 
 p {
@@ -65,7 +76,7 @@ a {
 }
 
 a:hover {
-  color: var(--color-accent);
+  color: var(--color-primary-hover);
 }
 
 :focus-visible {
@@ -145,7 +156,7 @@ input[type="radio"] {
   accent-color: var(--color-primary);
 }
 
-/* Buttons: primary by default */
+/* Buttons: primary by default — black, small white upper-case body text, sharp corners. */
 button {
   display: inline-flex;
   align-items: center;
@@ -154,11 +165,11 @@ button {
   min-height: var(--control-height);
   padding: 0 var(--space-3);
   border: var(--border-width) solid var(--color-primary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background-color: var(--color-primary);
   color: var(--color-on-primary);
-  font-family: var(--font-heading);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-body);
+  font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
@@ -170,9 +181,9 @@ button {
 }
 
 button:hover:not(:disabled) {
-  border-color: var(--color-accent);
-  background-color: var(--color-accent);
-  color: var(--color-primary);
+  border-color: var(--color-primary-hover);
+  background-color: var(--color-primary-hover);
+  color: var(--color-on-primary);
 }
 
 button:disabled {
@@ -239,7 +250,7 @@ button:disabled {
   color: var(--color-primary);
   font-family: var(--font-heading);
   font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
+  font-weight: var(--font-weight-heading);
   letter-spacing: var(--letter-spacing-logo);
   text-decoration: none;
 }
@@ -251,20 +262,32 @@ button:disabled {
   align-items: center;
   flex-basis: 100%;
   gap: var(--space-2);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
 }
 
-/* Touch target as tall as a button. */
+/* Touch target as tall as a button. Plain text; the active page is underlined. */
 .layout-nav a {
   display: inline-flex;
   align-items: center;
   min-height: var(--control-height);
+  color: var(--color-text-muted);
+  text-decoration: none;
 }
 
+.layout-nav a:hover {
+  color: var(--color-primary);
+}
+
+/* Active item: a thin line under the text. */
 .layout-nav a[aria-current="page"] {
-  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  text-decoration: underline;
   text-decoration-color: var(--color-primary);
+  text-decoration-thickness: var(--border-width);
+  text-underline-offset: 6px;
 }
 
 .layout-nav button {
@@ -306,5 +329,13 @@ button:disabled {
 @media (min-width: 1024px) {
   .layout {
     --layout-gutter: var(--space-4);
+  }
+}
+
+/* Large screens (1440 px+): the wide pages use a little more of the window, but stay a
+   centred column — on 1920–2560 px nothing is stretched edge to edge. */
+@media (min-width: 1440px) {
+  .layout--wide {
+    --container-width: var(--container-xwide);
   }
 }
