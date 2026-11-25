@@ -5,6 +5,7 @@ import {
   apiPost,
   apiPut,
   createBrandProduct,
+  publishBrandProduct,
   uploadImage,
 } from "./client";
 
@@ -292,5 +293,42 @@ describe("brand product helpers", () => {
       status: 401,
     });
     expect(assign).toHaveBeenCalledWith("/login?tab=brand");
+  });
+});
+
+describe("publishBrandProduct", () => {
+  it("POSTs to /api/brand/products/{id}/publish with the CSRF header and no body", async () => {
+    stubBrowser("XSRF-TOKEN=tok-123");
+    stubFetch(200, { id: "0b9e7c52", status: "PUBLISHED" });
+
+    await expect(publishBrandProduct("0b9e7c52")).resolves.toMatchObject({
+      status: "PUBLISHED",
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/brand/products/0b9e7c52/publish",
+      expect.anything(),
+    );
+    const init = lastRequestInit();
+    expect(init.method).toBe("POST");
+    expect(init.body).toBeUndefined();
+    expect(init.headers).toMatchObject({ "X-XSRF-TOKEN": "tok-123" });
+  });
+
+  it("turns 409 CONSENT_REQUIRED into an ApiError with that code", async () => {
+    stubBrowser("XSRF-TOKEN=tok-123");
+    stubFetch(409, {
+      error: {
+        code: "CONSENT_REQUIRED",
+        message: "Brand consent is required before publishing",
+      },
+    });
+
+    const error = await publishBrandProduct("0b9e7c52").catch(
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 409, code: "CONSENT_REQUIRED" });
   });
 });

@@ -452,6 +452,14 @@ export const cabinetHomeTexts = {
   retry: "Спробувати ще раз",
 } as const;
 
+/** Publishing a card from the product list /brand/products (US-31, US-22.2). */
+export const publishTexts = {
+  publish: "Опублікувати у стрічку", // US-31 CL, exact
+  // PROVISIONAL: no story gives these texts.
+  actions: "Дії",
+  toProfile: "Надати згоду в профілі",
+} as const;
+
 /** The error page of a route that crashed (shared/RouteError, errorElement in App.tsx). */
 export const routeErrorTexts = {
   title: "Щось пішло не так",
