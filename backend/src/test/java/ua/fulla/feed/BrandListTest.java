@@ -116,6 +116,45 @@ class BrandListTest {
     }
 
     @Test
+    void registeredBrandLogoComesFromTheProfileThenItsSiteThenNone() throws Exception {
+        String withBoth = unique("Both");
+        MockHttpSession both = brand(withBoth, "https://brand-site.ua/profile-logo.png");
+        publish(both, createCard(both));
+        siteLogo(withBoth, "https://both.example.com/site-logo.png");
+        String siteOnly = unique("SiteOnly");
+        MockHttpSession site = brand(siteOnly, null);
+        publish(site, createCard(site));
+        siteLogo(siteOnly, "https://siteonly.example.com/site-logo.png");
+        String none = unique("Monogram");
+        MockHttpSession plain = brand(none, null);
+        publish(plain, createCard(plain));
+
+        List<BrandSummary> dev = new BrandListService(repository, true).brands();
+        assertThat(summary(dev, withBoth).logoUrl()).as("the profile logo first")
+            .isEqualTo("https://brand-site.ua/profile-logo.png");
+        assertThat(summary(dev, siteOnly).logoUrl()).as("then the site logo (dev)")
+            .isEqualTo("https://siteonly.example.com/site-logo.png");
+        assertThat(summary(dev, none).logoUrl()).as("then none: the client draws the monogram").isNull();
+
+        // Without the dev flag (prod, ops, these tests' own context) the site logo is never used.
+        assertThat(entry(json(), siteOnly)).containsEntry("logoUrl", null);
+        assertThat(entry(json(), withBoth)).containsEntry("logoUrl", "https://brand-site.ua/profile-logo.png");
+    }
+
+    @Test
+    void aRegisteredAndADemoBrandOfTheSameNameAreOneTileWithBothCounts() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        MockHttpSession brand = brand("BEVZA (demo) " + suffix, null);
+        publish(brand, createCard(brand));
+        publish(brand, createCard(brand));
+        importedCard(source(null), "Bevza  (Demo) " + suffix);
+
+        List<Map<String, Object>> found = JsonPath.read(json(), "$[?(@.key == 'bevza (demo) " + suffix + "')]");
+        assertThat(found).hasSize(1);
+        assertThat(found.get(0)).containsEntry("productCount", 3).containsEntry("name", "BEVZA (demo) " + suffix);
+    }
+
+    @Test
     void ownersWithTheSameBrandKeyAreOneBrand() throws Exception {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         MockHttpSession brand = brand("CHER'17 " + suffix, null);
@@ -128,6 +167,16 @@ class BrandListTest {
     }
 
     // ---------- helpers ----------
+
+    /** What a brand site import with the dev flag stores (BrandImportRepository#saveSiteLogo). */
+    private void siteLogo(String brandName, String url) {
+        jdbc.sql("""
+                INSERT INTO brand_imports (brand_id, site_logo_url)
+                SELECT brand_id, :url FROM brand_profiles WHERE name = :name
+                ON CONFLICT (brand_id) DO UPDATE SET site_logo_url = EXCLUDED.site_logo_url
+                """)
+            .param("url", url).param("name", brandName).update();
+    }
 
     private static String unique(String name) {
         return name + " " + UUID.randomUUID().toString().substring(0, 8);
@@ -199,7 +248,7 @@ class BrandListTest {
     private MockHttpSession brand(String name, String logoUrl) throws Exception {
         MockHttpSession session = (MockHttpSession) mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
+                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\",\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isCreated())
             .andReturn().getRequest().getSession(false);
         mvc.perform(put("/api/brand/profile").with(csrf()).session(session)

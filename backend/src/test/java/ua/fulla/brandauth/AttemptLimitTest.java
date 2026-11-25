@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import io.zonky.test.db.AutoConfigureEmbeddedDatabase;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,9 +49,36 @@ class AttemptLimitTest {
     }
 
     @Test
+    void everyKindOfFailedLoginCountsTowardsTheLimit() throws Exception {
+        String email = "brand-" + UUID.randomUUID() + "@example.com";
+        attempt("/api/brand/register", "10.6.6.6", "{\"contactName\":\"Olena\",\"name\":\"Lileya\","
+            + "\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"" + email + "\",\"password\":\"secret-123\"}")
+            .andExpect(status().isCreated());
+        String unknownEmail = "{\"brandName\":\"Lileya\",\"email\":\"nobody-" + UUID.randomUUID()
+            + "@example.com\",\"password\":\"secret-123\"}";
+        String wrongPassword = "{\"brandName\":\"Lileya\",\"email\":\"" + email + "\",\"password\":\"wrong-password\"}";
+        String wrongName = "{\"brandName\":\"Other\",\"email\":\"" + email + "\",\"password\":\"secret-123\"}";
+        List<String> codes = List.of("EMAIL_NOT_FOUND", "WRONG_PASSWORD", "BRAND_NAME_MISMATCH");
+        List<String> bodies = List.of(unknownEmail, wrongPassword, wrongName);
+
+        // the registration was attempt 1; nine failures of all three kinds make 10
+        for (int attempt = 0; attempt < 9; attempt++) {
+            attempt("/api/brand/login", "10.6.6.6", bodies.get(attempt % 3))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value(codes.get(attempt % 3)));
+        }
+
+        // the 11th attempt is refused, even with the right name, email and password
+        attempt("/api/brand/login", "10.6.6.6", "{\"brandName\":\"Lileya\",\"email\":\"" + email
+                + "\",\"password\":\"secret-123\"}")
+            .andExpect(status().isTooManyRequests())
+            .andExpect(jsonPath("$.error.code").value("TOO_MANY_REQUESTS"));
+    }
+
+    @Test
     void registerAndLoginShareTheLimitAndARefusedRegistrationCreatesNothing() throws Exception {
         String email = "brand-" + UUID.randomUUID() + "@example.com";
-        String body = "{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}";
+        String body = "{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}";
 
         for (int attempt = 1; attempt <= 10; attempt++) {
             attempt("/api/brand/login", "10.2.2.2", body).andExpect(status().isUnauthorized());

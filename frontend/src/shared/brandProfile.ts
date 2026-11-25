@@ -37,6 +37,7 @@ export function toBrandProfile(raw: unknown): BrandProfileResponse {
   const consentGivenAt = text(data.consentGivenAt);
   const state = STATES.find((value) => value === data.state);
   return {
+    contactName: text(data.contactName),
     name,
     websiteUrl: text(data.websiteUrl),
     logoImageId: text(data.logoImageId),

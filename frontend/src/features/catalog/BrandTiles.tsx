@@ -1,4 +1,10 @@
-import { useState, type CSSProperties, type Ref } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type Ref,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "motion/react";
 import { getBrands } from "../../api/client";
@@ -170,13 +176,40 @@ interface BrandTileProps {
 export function BrandTile({ option, logoUrl = null }: BrandTileProps) {
   // The URL that failed: a new URL (fresh data) gets a new try.
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const nameRef = useRef<HTMLSpanElement>(null);
+  const truncated = useIsTruncated(nameRef, option.label);
   return (
     <BrandTileView
       option={option}
       logoUrl={logoUrl !== null && logoUrl !== failedUrl ? logoUrl : null}
       onLogoError={() => setFailedUrl(logoUrl)}
+      nameRef={nameRef}
+      truncated={truncated}
     />
   );
+}
+
+/**
+ * Whether the one-line name is cut off with «…» (wider than its box). Measured after render
+ * and again when the tile changes size; false on the server and until measured.
+ */
+function useIsTruncated(
+  ref: { current: HTMLElement | null },
+  text: string,
+): boolean {
+  const [truncated, setTruncated] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (element === null) return;
+    const measure = () =>
+      setTruncated(element.scrollWidth > element.clientWidth + 1);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [ref, text]);
+  return truncated;
 }
 
 interface BrandTileViewProps {
@@ -184,47 +217,68 @@ interface BrandTileViewProps {
   /** The logo to show, or null for the monogram. */
   logoUrl: string | null;
   onLogoError: () => void;
+  /** The name's <span>, measured by BrandTile. */
+  nameRef?: Ref<HTMLSpanElement>;
+  /** The name is cut off: the full name is shown over this tile on hover and focus. */
+  truncated?: boolean;
 }
 
-/** Hook-free markup of a tile: logo or monogram, the name on one line, the product count. */
+/**
+ * Hook-free markup of a tile: logo or monogram, the name on one line, the product count.
+ *
+ * No native `title`: the browser draws it next to the mouse pointer, not over the tile, so on the
+ * grid it covered the neighbouring tile — and it only repeated the name shown under the logo.
+ * Only a name cut off with «…» gets the full name, drawn inside this tile's own box (so it can't
+ * cover another tile or leave the screen). Screen readers get the full name from aria-label.
+ */
 export function BrandTileView({
   option,
   logoUrl,
   onLogoError,
+  nameRef,
+  truncated = false,
 }: BrandTileViewProps) {
   return (
-    <Link
-      to={brandHref(option.key)}
-      className={styles.tile}
-      style={monogramStyle(option.key) as CSSProperties}
-      aria-label={t.brandTileLabel(option.label, option.count)}
-      title={option.label}
-      // The brand page starts at its top, like «← Весь одяг».
-      onClick={() => window.scrollTo({ top: 0 })}
-    >
-      {logoUrl !== null ? (
-        <span className={styles.logoBox}>
-          <img
-            className={styles.logo}
-            src={logoUrl}
-            alt={t.brandLogoAlt(option.label)}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            onError={onLogoError}
-          />
+    <div className={styles.tileWrap}>
+      <Link
+        to={brandHref(option.key)}
+        className={styles.tile}
+        style={monogramStyle(option.key) as CSSProperties}
+        aria-label={t.brandTileLabel(option.label, option.count)}
+        // The brand page starts at its top, like «← Весь одяг».
+        onClick={() => window.scrollTo({ top: 0 })}
+      >
+        {logoUrl !== null ? (
+          <span className={styles.logoBox}>
+            <img
+              className={styles.logo}
+              src={logoUrl}
+              alt={t.brandLogoAlt(option.label)}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
+              onError={onLogoError}
+            />
+          </span>
+        ) : (
+          <span className={styles.monogram} aria-hidden="true">
+            {monogram(option.label)}
+          </span>
+        )}
+        <span className={styles.caption} aria-hidden="true">
+          <span ref={nameRef} className={styles.name}>
+            {option.label}
+          </span>
+          <span className={styles.tileCount}>
+            {t.brandTileCount(option.count)}
+          </span>
         </span>
-      ) : (
-        <span className={styles.monogram} aria-hidden="true">
-          {monogram(option.label)}
+      </Link>
+      {truncated && (
+        <span className={styles.tooltip} aria-hidden="true">
+          {option.label}
         </span>
       )}
-      <span className={styles.caption} aria-hidden="true">
-        <span className={styles.name}>{option.label}</span>
-        <span className={styles.tileCount}>
-          {t.brandTileCount(option.count)}
-        </span>
-      </span>
-    </Link>
+    </div>
   );
 }

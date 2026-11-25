@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { BrandCard } from "../../api/types";
 import {
   draftIds,
-  filterCards,
-  filterParam,
-  isImported,
-  parseFilter,
+  displayStatus,
+  isNotOnSite,
+  listOrder,
+  rowClickToggles,
   selectedDrafts,
+  splitNotOnSite,
   toCardFormValues,
   toggle,
   toggleAll,
@@ -40,22 +41,9 @@ const cards = [
   card("c", "DRAFT"),
 ];
 
-describe("the filter", () => {
-  it("«Чернетки з сайту» keeps only imported drafts", () => {
-    expect(filterCards(cards, "imported-drafts").map((c) => c.id)).toEqual([
-      "a",
-    ]);
-    expect(filterCards(cards, "all")).toHaveLength(3);
-    expect(isImported(cards[0]!)).toBe(true);
-    expect(isImported(cards[2]!)).toBe(false);
-  });
-
-  it("lives in ?filter=imported", () => {
-    expect(parseFilter("imported")).toBe("imported-drafts");
-    expect(parseFilter(null)).toBe("all");
-    expect(parseFilter("anything")).toBe("all");
-    expect(filterParam("imported-drafts")).toBe("imported");
-    expect(filterParam("all")).toBeNull();
+describe("the list", () => {
+  it("always shows every card, in the server's order", () => {
+    expect(listOrder(cards).map((c) => c.id)).toEqual(["a", "b", "c"]);
   });
 });
 
@@ -75,9 +63,49 @@ describe("selection", () => {
   });
 
   it("publishes only the selected cards that are shown drafts", () => {
-    expect(selectedDrafts(new Set(["a", "b", "x"]), draftIds(cards))).toEqual([
-      "a",
-    ]);
+    expect(selectedDrafts(new Set(["a", "b", "x"]), cards)).toEqual(["a"]);
+  });
+});
+
+describe("«Немає на сайті» (ADR-0017)", () => {
+  const gone: BrandCard = {
+    ...card("g", "DRAFT", true),
+    notOnSiteSince: "2026-11-30T10:00:00Z",
+  };
+  const list = [gone, ...cards];
+
+  it("is its own status, at the end of the list", () => {
+    expect(isNotOnSite(gone)).toBe(true);
+    expect(displayStatus(gone)).toBe("NOT_ON_SITE");
+    expect(displayStatus(cards[1]!)).toBe("PUBLISHED");
+    expect(listOrder(list).map((c) => c.id)).toEqual(["a", "b", "c", "g"]);
+  });
+
+  it("can't be selected with «вибрати всі» nor published with «Опублікувати всі»", () => {
+    expect(draftIds(list)).toEqual(["a", "c"]);
+    expect([...toggleAll(new Set(), draftIds(list))]).not.toContain("g");
+  });
+
+  it("a selected card that went missing is reported as skipped, not sent", () => {
+    const ids = selectedDrafts(new Set(["a", "g"]), list);
+    expect(ids).toEqual(["g", "a"]);
+    expect(splitNotOnSite(ids, list)).toEqual({
+      publish: ["a"],
+      notOnSite: ["g"],
+    });
+  });
+});
+
+describe("a click on the row", () => {
+  it("toggles, except on links, buttons and form controls", () => {
+    // Without a DOM: the target only needs closest().
+    const fake = (inside: boolean) => ({
+      closest: (selector: string) =>
+        inside && selector.includes("button") ? {} : null,
+    });
+    expect(rowClickToggles(fake(false))).toBe(true);
+    expect(rowClickToggles(fake(true))).toBe(false);
+    expect(rowClickToggles(null)).toBe(true);
   });
 });
 

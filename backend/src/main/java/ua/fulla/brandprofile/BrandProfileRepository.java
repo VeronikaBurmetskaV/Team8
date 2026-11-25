@@ -14,7 +14,7 @@ import ua.fulla.common.Timestamps;
 class BrandProfileRepository {
 
     private static final String COLUMNS =
-        "brand_id, name, logo_image_id, logo_url, website_url, consent_given_at, consent_text, verification_token, "
+        "brand_id, contact_name, name, logo_image_id, logo_url, website_url, consent_given_at, consent_text, verification_token, "
         + "site_verified_at, site_domain, feed_url, created_at, updated_at";
 
     private final JdbcClient jdbc;
@@ -23,10 +23,14 @@ class BrandProfileRepository {
         this.jdbc = jdbc;
     }
 
-    /** The profile row of a new brand, with the name and website from registration (US-21). */
-    void insert(UUID brandId, String name, String websiteUrl) {
-        jdbc.sql("INSERT INTO brand_profiles (brand_id, name, website_url) VALUES (:brandId, :name, :websiteUrl)")
+    /** The profile row of a new brand, with the contact name, name and website from registration (US-21). */
+    void insert(UUID brandId, String contactName, String name, String websiteUrl) {
+        jdbc.sql("""
+                INSERT INTO brand_profiles (brand_id, contact_name, name, website_url)
+                VALUES (:brandId, :contactName, :name, :websiteUrl)
+                """)
             .param("brandId", brandId)
+            .param("contactName", contactName)
             .param("name", name)
             .param("websiteUrl", websiteUrl)
             .update();
@@ -45,11 +49,12 @@ class BrandProfileRepository {
      * this statement can clear them (INV-09). The name is set in the same statement, so the
      * {@code CHECK (consent_given_at IS NULL OR name IS NOT NULL)} holds.
      */
-    Optional<BrandProfile> updateNameAndConsent(UUID brandId, String name, String websiteUrl, String feedUrl,
-            boolean giveConsent, String consentText) {
+    Optional<BrandProfile> updateNameAndConsent(UUID brandId, String contactName, String name, String websiteUrl,
+            String feedUrl, boolean giveConsent, String consentText) {
         // ADR-0017: a website on another domain clears the site verification in the same statement.
         return jdbc.sql("""
                 UPDATE brand_profiles SET
+                    contact_name = COALESCE(CAST(:contactName AS varchar), contact_name),
                     name = :name,
                     website_url = :websiteUrl,
                     feed_url = CAST(:feedUrl AS varchar),
@@ -64,6 +69,8 @@ class BrandProfileRepository {
                     updated_at = now()
                 WHERE brand_id = :brandId
                 RETURNING\s""" + COLUMNS)
+            // null = not sent: the stored contact name stays (COALESCE above)
+            .param("contactName", contactName)
             .param("name", name)
             .param("websiteUrl", websiteUrl)
             .param("feedUrl", feedUrl)
@@ -98,6 +105,7 @@ class BrandProfileRepository {
     private static BrandProfile mapRow(ResultSet rs, int rowNum) throws SQLException {
         return new BrandProfile(
             rs.getObject("brand_id", UUID.class),
+            rs.getString("contact_name"),
             rs.getString("name"),
             rs.getObject("logo_image_id", UUID.class),
             rs.getString("logo_url"),

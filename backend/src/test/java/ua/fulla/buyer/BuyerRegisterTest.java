@@ -366,7 +366,7 @@ class BuyerRegisterTest {
     /** JSON escapes such as \u0000 in the examples are kept as written. */
     /** A brand registration (US-21): with the brand name and website. */
     private static String brandRegistration(String email, String password) {
-        return "{\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\",\"email\":\"" + email
+        return "{\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\",\"email\":\"" + email
             + "\",\"password\":\"" + password + "\"}";
     }
 

@@ -33,9 +33,11 @@ fulla:
     max-products: 50
     max-requests: 100
     min-interval: 10m
-    # Daily refresh of brands with a verified site and imported cards.
+    # Automatic sync of brands with a verified site and imported cards (ADR-0017): new products
+    # become drafts, changes are applied, products gone from a complete listing become
+    # «Немає на сайті». Never below 1 h. application-dev.yml: 1h.
     auto-refresh: true
-    refresh-interval: 24h
+    sync-interval: 24h
     refresh-check-initial-delay: 5m
     refresh-check-interval: 1h
     # Ownership by the email domain trusts an unverified email (ADR-0017): switch off before

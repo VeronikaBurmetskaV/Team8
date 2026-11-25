@@ -498,15 +498,6 @@
   background-color: var(--color-white);
   color: var(--color-black);
   animation: slideIn 200ms ease-out;
-  /* «Показати всі» in «Бренд» widens the panel smoothly. */
-  transition:
-    width var(--transition-panel),
-    box-shadow var(--transition-panel);
-}
-
-/* Drawer with every brand shown: the whole screen. */
-.panel[data-expanded="true"] {
-  width: 100vw;
 }
 
 @keyframes slideIn {
@@ -758,8 +749,6 @@
   margin: 0;
   padding: 0 0 var(--space-1);
   border: 0;
-  /* Most columns of the expanded list: 2 in the drawer, 3 in the laptop column. */
-  --brand-max-columns: 2;
 }
 
 .brandSearch {
@@ -789,41 +778,12 @@
   outline-color: var(--color-olive-dark);
 }
 
-/* Collapsed: one column. */
+/* One column, collapsed or not: «Показати всі» only makes the list longer (2026-12-02). */
 .brandOptions {
   display: flex;
   flex-direction: column;
   width: 100%;
   min-width: 0;
-}
-
-/* Expanded (or searching): columns as wide as the longest name needs (--brand-name-width,
-   from BrandFilter, kept between --brand-column-min and --brand-column-max), never more than
-   --brand-max-columns, and one column when even that does not fit (a 320 px phone). Longer
-   names wrap. */
-.brandOptions[data-expanded="true"] {
-  display: grid;
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(
-      max(
-        min(
-          100%,
-          clamp(
-            var(--brand-column-min),
-            var(--brand-name-width),
-            var(--brand-column-max)
-          )
-        ),
-        calc(
-          (100% - (var(--brand-max-columns) - 1) * var(--space-2)) /
-            var(--brand-max-columns)
-        )
-      ),
-      1fr
-    )
-  );
-  column-gap: var(--space-2);
 }
 
 /* The whole row is the label: 44px tall, a click anywhere toggles the brand. */
@@ -1149,15 +1109,19 @@
     animation: none;
   }
 
-  /* «Показати всі»: about twice as wide, OVER the grid (its column keeps its width, so the
-     products do not move), with a shadow. */
+  /* «Показати всі»: the same width, but no longer sticky and without its own scroll: the
+     panel grows down with the long brand list and the page itself scrolls. Its grid column
+     keeps --filter-panel-width, so the products beside it do not move. «Згорнути» brings the
+     sticky column with its own scroll back. The header is not stuck either (it would slide
+     under the buyer header). */
   .panel[data-layout="column"][data-expanded="true"] {
-    width: var(--filter-panel-width-expanded);
-    box-shadow: var(--shadow-lg);
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 
-  .brandList {
-    --brand-max-columns: 3;
+  .panel[data-layout="column"][data-expanded="true"] .panelHeader {
+    position: static;
   }
 }
 

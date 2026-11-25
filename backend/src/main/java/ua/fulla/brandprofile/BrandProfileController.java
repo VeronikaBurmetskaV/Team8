@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import ua.fulla.common.BrandName;
+import ua.fulla.common.DisplayName;
 import ua.fulla.common.HttpsUrl;
 import ua.fulla.common.WebsiteUrl;
 import ua.fulla.common.SessionAccount;
@@ -24,6 +25,9 @@ class BrandProfileController {
      * {@link BrandProfileService#save} ({@code 400 PROFILE_INVALID}, {@code fields.logo}).
      */
     record ProfileRequest(
+            // «Контактна особа»: null keeps the stored value (BrandProfileService#save)
+            @DisplayName(message = "VALIDATION_FAILED: contactName must be 1-50 characters without control characters")
+            String contactName,
             @BrandName String name,
             @WebsiteUrl String websiteUrl,
             @Size(max = 2048, message = "PROFILE_INVALID: feedUrl must be at most 2048 characters")
@@ -33,6 +37,7 @@ class BrandProfileController {
             Boolean consentGiven) {}
 
     record ProfileResponse(
+            String contactName,
             String name,
             String websiteUrl,
             UUID logoImageId,
@@ -52,6 +57,7 @@ class BrandProfileController {
                 ? "/api/images/" + profile.logoImageId()
                 : profile.logoUrl();
             return new ProfileResponse(
+                profile.contactName(),
                 profile.name(),
                 profile.websiteUrl(),
                 profile.logoImageId(),
@@ -83,7 +89,8 @@ class BrandProfileController {
     @PutMapping("/api/brand/profile")
     ProfileResponse save(@AuthenticationPrincipal SessionAccount brand, @Valid @RequestBody ProfileRequest request) {
         return ProfileResponse.of(
-            service.save(brand.accountId(), request.name(), request.websiteUrl(), request.feedUrl(),
+            service.save(brand.accountId(), request.contactName(), request.name(), request.websiteUrl(),
+                request.feedUrl(),
                 request.logoImageId(),
                 request.logoUrl(),
                 request.consentGiven()));

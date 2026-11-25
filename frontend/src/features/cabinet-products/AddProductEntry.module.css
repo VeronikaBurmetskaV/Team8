@@ -40,6 +40,25 @@
   font-size: var(--font-size-sm);
 }
 
+/* «Додати вручну» (/brand/products): the secondary button with a frame, the same size as the
+   green «Оновити з сайту»; on hover the frame and the text turn green. */
+.button.outline {
+  border-color: var(--color-text);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.button.outline:hover {
+  border-color: var(--color-green);
+  background-color: var(--color-surface);
+  color: var(--color-green);
+}
+
+.button.outline:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-green);
+  outline-offset: var(--focus-ring-width);
+}
+
 .hint.medium {
   padding: var(--space-2);
   font-size: var(--font-size-sm);

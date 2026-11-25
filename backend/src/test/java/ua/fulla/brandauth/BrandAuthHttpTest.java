@@ -35,7 +35,7 @@ class BrandAuthHttpTest {
     @Test
     void registerProfileLogoutOverRealHttp() throws Exception {
         String email = "brand-" + UUID.randomUUID() + "@example.com";
-        String credentials = "{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}";
+        String credentials = "{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"brandName\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}";
 
         // 1. GET /api/session hands out the CSRF cookie
         assertThat(send(request("/api/session").GET()).body())
@@ -71,9 +71,15 @@ class BrandAuthHttpTest {
         assertThat(afterLogout.statusCode()).isEqualTo(401);
         assertThat(afterLogout.body()).contains("\"code\":\"UNAUTHENTICATED\"");
 
-        // 6. login again with the same credentials
-        HttpResponse<String> loggedIn = send(withCsrf(request("/api/brand/login"))
+        // 6. login again: the old name no longer matches (renamed to «Lileya» in step 4) …
+        HttpResponse<String> oldName = send(withCsrf(request("/api/brand/login"))
             .POST(BodyPublishers.ofString(credentials)));
+        assertThat(oldName.statusCode()).isEqualTo(401);
+        assertThat(oldName.body()).contains("\"code\":\"BRAND_NAME_MISMATCH\"");
+        // … the current one does, in any case
+        HttpResponse<String> loggedIn = send(withCsrf(request("/api/brand/login"))
+            .POST(BodyPublishers.ofString(credentials.replace("\"brandName\":\"Test Brand\"",
+                "\"brandName\":\"lileya\""))));
         assertThat(loggedIn.statusCode()).isEqualTo(200);
         assertThat(loggedIn.body()).contains("\"profileState\":\"ACTIVE\"");
         assertThat(send(request("/api/brand/profile").GET()).statusCode()).isEqualTo(200);

@@ -7,6 +7,7 @@ import ua.fulla.common.SiteDomain;
 /** A row of {@code brand_profiles} (data-model.md §2.2). */
 public record BrandProfile(
         UUID brandId,
+        String contactName,
         String name,
         UUID logoImageId,
         String logoUrl,

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Link } from "react-router";
 import {
   FieldError,
   LiveMessage,
@@ -8,13 +9,13 @@ import {
   describedBy,
 } from "../../shared/auth/FormMessage";
 import { PasswordInput } from "../../shared/auth/PasswordInput";
-import { errorMessage } from "../../shared/errors";
-import { buyerAuthTexts as t } from "../../shared/messages.uk";
+import { buyerAuthTexts as t, loginTexts } from "../../shared/messages.uk";
 import {
   buyerLoginSchema,
   type BuyerLoginForm as BuyerLoginValues,
 } from "../../shared/validation";
 import { useBuyerLogin } from "./api";
+import { forgotPasswordPath, registerPath, showLoginError } from "./loginTabs";
 import styles from "../../shared/auth/AuthForm.module.css";
 
 /**
@@ -31,7 +32,7 @@ export function BuyerLoginForm() {
     formState: { errors, isSubmitting },
   } = useForm<BuyerLoginValues>({
     resolver: zodResolver(buyerLoginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { name: "", email: "", password: "" },
   });
 
   async function onSubmit(credentials: BuyerLoginValues) {
@@ -40,16 +41,31 @@ export function BuyerLoginForm() {
       const result = await login.mutateAsync(credentials);
       if (result.status === "soon") setNotice(t.loginSoon);
     } catch (error) {
-      // The entered email stays in the form (US-03 S2).
-      setError("root", { message: errorMessage(error) });
+      // The entered data stays in the form (US-03 S2); a wrong combination never says which
+      // field is wrong (US-03 CL).
+      // Under its field with the focus there (ADR-0018), once the endpoint exists.
+      showLoginError<keyof BuyerLoginValues>(error, "buyer", setError);
     }
   }
 
+  const nameError = errors.name?.message;
   const emailError = errors.email?.message;
   const passwordError = errors.password?.message;
 
   return (
     <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
+      <div className={styles.field}>
+        <label htmlFor="buyer-name">{loginTexts.buyerName}</label>
+        <input
+          id="buyer-name"
+          type="text"
+          autoComplete="given-name"
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={describedBy(nameError && "buyer-name-error")}
+          {...register("name")}
+        />
+        <FieldError id="buyer-name-error" message={nameError} />
+      </div>
       <div className={styles.field}>
         <label htmlFor="buyer-email">{t.email}</label>
         <input
@@ -61,7 +77,15 @@ export function BuyerLoginForm() {
           aria-describedby={describedBy(emailError && "buyer-email-error")}
           {...register("email")}
         />
-        <FieldError id="buyer-email-error" message={emailError} />
+        <FieldError
+          id="buyer-email-error"
+          message={emailError}
+          action={
+            errors.email?.type === "EMAIL_NOT_FOUND" && (
+              <Link to={registerPath("buyer")}>{loginTexts.registerLink}</Link>
+            )
+          }
+        />
       </div>
       <div className={styles.field}>
         <label htmlFor="buyer-password">{t.password}</label>
@@ -75,6 +99,11 @@ export function BuyerLoginForm() {
           {...register("password")}
         />
         <FieldError id="buyer-password-error" message={passwordError} />
+        <p className={styles.forgot}>
+          <Link to={forgotPasswordPath("buyer")} className={styles.forgotLink}>
+            {loginTexts.forgotPassword}
+          </Link>
+        </p>
       </div>
       <div className={styles.actions}>
         <SubmitButton

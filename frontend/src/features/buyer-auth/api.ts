@@ -123,17 +123,34 @@ export async function submitRegistration(
 export type BuyerLoginResult = { status: "soon" };
 
 /**
+ * The body of the future POST /api/buyer/login (api.md §2.3, 2026-12-02): «Ваше імʼя» trimmed,
+ * the email and the password, nothing else.
+ */
+export function buyerLoginBody(
+  credentials: BuyerCredentialsRequest,
+): BuyerCredentialsRequest {
+  return {
+    name: credentials.name.trim(),
+    email: credentials.email,
+    password: credentials.password,
+  };
+}
+
+/**
  * Buyer login (US-03). The backend has no POST /api/buyer/login yet, so nothing is sent:
- * the form shows «Вхід для покупців скоро запрацює…».
+ * the form shows «Вхід для покупців скоро запрацює…». The name is only checked by the form.
  *
- * TODO: підключити POST /api/buyer/login (US-03, api.md §2.3) — apiPost<BuyerSessionResponse>,
- * resetForNewSession, merge of «Вподобане» (ADR-0012); 401 INVALID_CREDENTIALS → one common
- * message. Only this function and useBuyerLogin need to change.
+ * TODO: підключити POST /api/buyer/login (US-03, api.md §2.3) —
+ * apiPost<BuyerSessionResponse>("/api/buyer/login", buyerLoginBody(credentials)) with the name
+ * (the server compares it with the account's display_name like the brand name), then
+ * resetForNewSession and the merge of «Вподобане» (ADR-0012). Errors (ADR-0018) are already
+ * handled by the form: 401 EMAIL_NOT_FOUND / WRONG_PASSWORD / NAME_MISMATCH under their field,
+ * 429 once for the form. Only this function and useBuyerLogin need to change.
  */
 export function loginBuyer(
   credentials: BuyerCredentialsRequest,
 ): Promise<BuyerLoginResult> {
-  void credentials;
+  void buyerLoginBody(credentials);
   return Promise.resolve({ status: "soon" });
 }
 

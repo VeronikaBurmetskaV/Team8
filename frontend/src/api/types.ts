@@ -7,6 +7,10 @@ export type ErrorCode =
   | "LOGIN_INVALID"
   | "PASSWORD_TOO_SHORT"
   | "INVALID_CREDENTIALS"
+  | "EMAIL_NOT_FOUND"
+  | "WRONG_PASSWORD"
+  | "BRAND_NAME_MISMATCH"
+  | "NAME_MISMATCH"
   | "UNAUTHENTICATED"
   | "FORBIDDEN"
   | "NOT_FOUND"
@@ -31,6 +35,7 @@ export type ErrorCode =
   | "NO_PRODUCTS_FOUND"
   | "IMPORT_TOO_FREQUENT"
   | "IMPORT_FAILED"
+  | "PRODUCT_NOT_ON_SITE"
   | "TOO_MANY_REQUESTS"
   | "SERVICE_UNAVAILABLE";
 
@@ -54,12 +59,21 @@ export interface SessionResponse {
 
 /** POST /api/brand/login. */
 export interface BrandCredentialsRequest {
+  /**
+   * «Назва бренду» (2026-12-02): must match the profile's name (trim, NFKC, any case, runs of
+   * spaces = one); a mismatch is the same 401 INVALID_CREDENTIALS as a wrong password.
+   */
+  brandName: string;
   email: string;
   password: string;
 }
 
-/** POST /api/brand/register (US-21): fields in form order; name and website go to the profile. */
+/**
+ * POST /api/brand/register (US-21): fields in form order; the contact person, name and website
+ * go to the profile. `contactName` («Ваше імʼя»): required, 1–50 characters after trimming.
+ */
 export interface BrandRegisterRequest {
+  contactName: string;
   name: string;
   websiteUrl: string;
   email: string;
@@ -75,6 +89,8 @@ export interface BrandSessionResponse {
 
 /** POST /api/buyer/register and POST /api/buyer/login (api.md §2.3). */
 export interface BuyerCredentialsRequest {
+  /** «Ваше імʼя» (2026-12-02): compared with the account's name like the brand name. */
+  name: string;
   email: string;
   password: string;
 }
@@ -112,7 +128,10 @@ export interface BuyerRegisterRequest {
   password: string;
 }
 
-/** PUT /api/brand/profile. */
+/**
+ * PUT /api/brand/profile. No `contactName` since 2026-12-02 (the profile page no longer edits it):
+ * the server keeps the stored value when the field is left out.
+ */
 export interface BrandProfileRequest {
   name: string;
   /** Optional in the profile; null clears it. https:// with a domain, ≤ 2048. */
@@ -126,6 +145,8 @@ export interface BrandProfileRequest {
 
 /** GET and PUT /api/brand/profile; `name` is null while the state is INCOMPLETE. */
 export interface BrandProfileResponse {
+  /** The contact person; null for brands registered before it was asked (2026-11-30). */
+  contactName: string | null;
   name: string | null;
   websiteUrl: string | null;
   logoImageId: string | null;
@@ -209,6 +230,11 @@ export type BrandCard = PublicCard & {
   sourceUrl?: string;
   /** Only on an imported card: the fields the brand changed by hand (imports keep them). */
   editedFields?: EditedField[];
+  /**
+   * «Немає на сайті» (ADR-0017): since when a complete sync no longer finds the card on the
+   * brand's site. Left out while the site lists it. Such a card is a DRAFT that can't be published.
+   */
+  notOnSiteSince?: string;
 };
 
 /** A field of an imported card that the brand edited by hand (api.md §2.1). */
@@ -218,6 +244,12 @@ export type EditedField = "name" | "priceUah" | "photo" | "productUrl";
 export type UpdateProductRequest = CreateProductRequest;
 
 /** POST /api/brand/products/publish (ADR-0017). */
+/** POST /api/brand/products/unpublish (US-31 CL): the IDs back to Draft and the rest. */
+export interface BulkUnpublishResponse {
+  unpublishedIds: string[];
+  skippedIds: string[];
+}
+
 export interface BulkPublishResponse {
   publishedIds: string[];
   skippedIds: string[];
@@ -237,6 +269,8 @@ export interface ImportStatus {
   startedAt: string | null;
   finishedAt: string | null;
   lastSuccessAt: string | null;
+  /** When the last successful sync finished («Оновлено: …»); the same moment as lastSuccessAt. */
+  lastSyncedAt: string | null;
   /** When the next import may start (10 min after the last start). */
   nextAllowedAt: string | null;
   found: number;

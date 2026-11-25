@@ -1,5 +1,7 @@
 /* A catalogue tile. Colours: the olive palette tokens from tokens.css. Minimal decor, lots of air. */
 .tile {
+  /* The positioning box of the «Відкрити картку» button over the whole tile. */
+  position: relative;
   container-type: inline-size;
   display: flex;
   flex-direction: column;
@@ -215,4 +217,38 @@
   .skeletonLine {
     animation: none;
   }
+}
+
+/* «Відкрити картку: …»: a transparent button over the whole tile (CatalogTile). It draws
+   nothing; only the keyboard focus shows a ring around the tile. The heart and the brand link
+   lie above it (z-index), so they keep their own clicks. index.css styles every <button> and
+   loads after the modules, hence the selectors with .tile. */
+.tile .open,
+.tile .open:hover:not(:disabled) {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  cursor: pointer;
+}
+
+.tile .open:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-olive-dark);
+  outline-offset: var(--focus-ring-width);
+}
+
+/* Above «Відкрити картку»: they keep their own clicks and focus. */
+.tile .heart {
+  z-index: 2;
+}
+
+.tile .brand {
+  position: relative;
+  z-index: 2;
 }

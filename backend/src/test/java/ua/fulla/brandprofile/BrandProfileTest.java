@@ -54,6 +54,7 @@ class BrandProfileTest {
         // US-21: name and website come from registration, so the profile is ACTIVE (domain-model §4.1)
         mvc.perform(get("/api/brand/profile").session(session))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contactName").value("Olena"))
             .andExpect(jsonPath("$.name").value("Test Brand"))
             .andExpect(jsonPath("$.websiteUrl").value("https://brand.example.com"))
             .andExpect(jsonPath("$.logoImageId").value((Object) null))
@@ -63,7 +64,54 @@ class BrandProfileTest {
             .andExpect(jsonPath("$.consentGivenAt").value((Object) null))
             .andExpect(jsonPath("$.consentText").value((Object) null))
             .andExpect(jsonPath("$.state").value("ACTIVE"))
-            .andExpect(jsonPath("$.length()").value(13));
+            .andExpect(jsonPath("$.length()").value(14));
+    }
+
+    @Test
+    void contactNameIsChangedByPutKeptWhenNullAndNeverBlank() throws Exception {
+        MockHttpSession session = registerBrand(uniqueEmail());
+
+        // changed («Контактна особа» on /brand/profile), trimmed
+        putProfile(session, "{\"contactName\":\" Марія \",\"name\":\"Test Brand\",\"logoImageId\":null,"
+                + "\"logoUrl\":null,\"consentGiven\":false}")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contactName").value("Марія"));
+
+        // not sent (the consent and feed saves): kept
+        putName(session, "\"Test Brand\"")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contactName").value("Марія"));
+
+        // blank or too long: 400 VALIDATION_FAILED on the field, nothing saved
+        for (String contactName : List.of("   ", "a".repeat(51))) {
+            putProfile(session, "{\"contactName\":\"" + contactName + "\",\"name\":\"Other\",\"logoImageId\":null,"
+                    + "\"logoUrl\":null,\"consentGiven\":false}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.error.fields.contactName").value("VALIDATION_FAILED"));
+        }
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(jsonPath("$.contactName").value("Марія"))
+            .andExpect(jsonPath("$.name").value("Test Brand"));
+    }
+
+    @Test
+    void brandRegisteredBeforeContactNamesHasNullAndCanStillSave() throws Exception {
+        String email = uniqueEmail();
+        MockHttpSession session = registerBrand(email);
+        jdbc.sql("""
+                UPDATE brand_profiles SET contact_name = NULL
+                WHERE brand_id = (SELECT id FROM brand_accounts WHERE email = :email)
+                """)
+            .param("email", email).update();
+
+        mvc.perform(get("/api/brand/profile").session(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contactName").value((Object) null));
+        putName(session, "\"Lileya\"")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contactName").value((Object) null))
+            .andExpect(jsonPath("$.name").value("Lileya"));
     }
 
     @Test
@@ -158,9 +206,9 @@ class BrandProfileTest {
         UUID brandId = UUID.randomUUID();
         jdbc.sql("INSERT INTO brand_accounts (id, email, password_hash) VALUES (:id, :email, 'x')")
             .param("id", brandId).param("email", uniqueEmail()).update();
-        profiles.create(brandId, "Goldi", null);
+        profiles.create(brandId, "Olena", "Goldi", null);
 
-        assertThatThrownBy(() -> profiles.save(brandId, "Goldi", "http://goldi.ua", null, null, null, false))
+        assertThatThrownBy(() -> profiles.save(brandId, null, "Goldi", "http://goldi.ua", null, null, null, false))
             .isInstanceOfSatisfying(ApiException.class, e -> {
                 assertThat(e.status()).isEqualTo(HttpStatus.BAD_REQUEST);
                 assertThat(e.code()).isEqualTo(ErrorCode.PROFILE_INVALID);
@@ -178,7 +226,7 @@ class BrandProfileTest {
             .andExpect(jsonPath("$.name").value("Lileya"))
             .andExpect(jsonPath("$.state").value("ACTIVE"))
             .andExpect(jsonPath("$.consentGiven").value(false))
-            .andExpect(jsonPath("$.length()").value(13));
+            .andExpect(jsonPath("$.length()").value(14));
 
         mvc.perform(get("/api/brand/profile").session(session))
             .andExpect(status().isOk())
@@ -193,7 +241,7 @@ class BrandProfileTest {
 
         mvc.perform(post("/api/brand/login").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\"}"))
+                .content("{\"brandName\":\"Lileya\",\"email\":\"" + email + "\",\"password\":\"secret-123\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.profileState").value("ACTIVE"));
     }
@@ -516,7 +564,7 @@ class BrandProfileTest {
     private MockHttpSession registerBrand(String email) throws Exception {
         return (MockHttpSession) mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
+                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isCreated())
             .andReturn().getRequest().getSession(false);
     }

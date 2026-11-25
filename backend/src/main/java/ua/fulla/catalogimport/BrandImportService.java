@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
@@ -43,11 +44,18 @@ class BrandImportService {
     private final BrandImportProperties properties;
     private final Executor executor;
     private final SiteVerificationPolicy verification;
+    /**
+     * {@code fulla.brands.source-logos} (only {@code application-dev.yml}): the site logo is
+     * only shown in dev, so only then is the home page read for it (one more polite request).
+     */
+    private final boolean siteLogos;
 
     BrandImportService(BrandImportRepository repository, BrandProfileService profiles, ProductService products,
             SiteFetcherFactory fetchers, BrandImportProperties properties, ExecutorService brandImportExecutor,
-            SiteVerificationPolicy verification) {
+            SiteVerificationPolicy verification,
+            @Value("${fulla.brands.source-logos:false}") boolean siteLogos) {
         this.verification = verification;
+        this.siteLogos = siteLogos;
         this.repository = repository;
         this.profiles = profiles;
         this.products = products;
@@ -108,11 +116,11 @@ class BrandImportService {
         return status(brandId);
     }
 
-    /** The daily refresh (ADR-0017): the same claim, the interval is the refresh interval. */
+    /** The automatic sync (ADR-0017): the same claim and import, every {@code sync-interval}. */
     void refreshDue() {
-        for (UUID brandId : repository.dueForRefresh(properties.refreshEvery(), REFRESH_BATCH,
+        for (UUID brandId : repository.dueForRefresh(properties.syncEvery(), REFRESH_BATCH,
                 verification.required())) {
-            if (repository.claim(brandId, properties.refreshEvery(), BrandImportProperties.STALE_RUN)) {
+            if (repository.claim(brandId, properties.syncEvery(), BrandImportProperties.STALE_RUN)) {
                 runClaimed(brandId);
             }
         }
@@ -163,14 +171,18 @@ class BrandImportService {
             return;
         }
         BrandImportState.Counts counts = apply(brandId, batch);
+        if (siteLogos) {
+            repository.saveSiteLogo(brandId, siteLogo(fetcher, brandId));
+        }
         repository.finish(brandId, true, batch.method(), counts, null);
         log.info("Brand import of {} done via {}: {}", brandId, batch.method(), counts);
     }
 
     /**
      * Stores a batch (ADR-0017): every item is created (as a Draft, only when in stock) or
-     * updated (hand-edited fields kept); sold-out items are hidden; after a complete listing, the
-     * brand's published imported cards the site no longer lists are hidden. Never deletes.
+     * updated (hand-edited fields kept; a «Немає на сайті» card listed again becomes a Draft);
+     * sold-out items are hidden; after a complete listing, the brand's imported cards the site
+     * no longer lists become «Немає на сайті» (Published ones are unpublished). Never deletes.
      */
     BrandImportState.Counts apply(UUID brandId, ImportBatch batch) {
         Set<String> seen = new LinkedHashSet<>();
@@ -197,10 +209,21 @@ class BrandImportService {
         }
         int hidden = products.hideBrandImported(brandId, soldOut);
         if (batch.complete()) {
-            hidden += products.hideMissingBrandImported(brandId, batch.listedIds());
+            // only now: an incomplete run never marks anything (like CatalogSyncService)
+            hidden += products.markMissingBrandImported(brandId, batch.listedIds());
         }
         int found = batch.items().size() + batch.skipped();
         return new BrandImportState.Counts(found, created, updated, skipped, hidden);
+    }
+
+    /** The site's logo URL from its home page (SiteLogo, like the demo import); null on any trouble. */
+    private static String siteLogo(PoliteFetcher fetcher, UUID brandId) {
+        try {
+            return SiteLogo.fetch(fetcher, fetcher.baseUrl());
+        } catch (SourceStoppedException | IOException e) {
+            log.info("Brand import of {}: no site logo: {}", brandId, e.getMessage());
+            return null;
+        }
     }
 
     private void fail(UUID brandId, String method, BrandImportState.Counts counts, ErrorCode code) {

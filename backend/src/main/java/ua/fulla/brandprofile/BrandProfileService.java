@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ua.fulla.common.ApiException;
 import ua.fulla.common.BrandNameValidator;
+import ua.fulla.common.DisplayName;
 import ua.fulla.common.ErrorCode;
 import ua.fulla.common.SiteDomain;
 import ua.fulla.common.WebsiteUrlValidator;
@@ -35,6 +36,7 @@ public class BrandProfileService {
 
     /** Constraint of brand_profiles (data-model.md) → the request field that is to blame. */
     private static final Map<String, String> CONSTRAINT_FIELDS = Map.of(
+        "brand_profiles_contact_name_length", "contactName",
         "brand_profiles_name_length", "name",
         "brand_profiles_consent_needs_name", "name",
         "brand_profiles_website_url_https", "websiteUrl",
@@ -54,14 +56,15 @@ public class BrandProfileService {
 
     /**
      * Called by brand registration inside its transaction (T-9): the profile starts with the name
-     * and website entered at registration (US-21), already checked by Bean Validation
-     * (@BrandName, @WebsiteUrl). With a name the state is ACTIVE (domain-model.md §4.1).
+     * and website entered at registration (US-21), and the contact person («Ваше імʼя»), already
+     * checked by Bean Validation (@DisplayName, @BrandName, @WebsiteUrl). With a name the state is
+     * ACTIVE (domain-model.md §4.1).
      */
     @Transactional
-    public BrandProfile create(UUID brandId, String rawName, String websiteUrl) {
+    public BrandProfile create(UUID brandId, String rawContactName, String rawName, String websiteUrl) {
         writing(() -> {
-            repository.insert(brandId, BrandNameValidator.normalize(rawName),
-                WebsiteUrlValidator.normalize(websiteUrl));
+            repository.insert(brandId, DisplayName.Validator.normalize(rawContactName),
+                BrandNameValidator.normalize(rawName), WebsiteUrlValidator.normalize(websiteUrl));
             return null;
         });
         return get(brandId);
@@ -83,10 +86,21 @@ public class BrandProfileService {
      * <p>The logo is not implemented yet (final-review №3): instead of answering 200 and silently
      * dropping it, any logo is refused with {@code 400 PROFILE_INVALID}, {@code fields.logo}, and
      * nothing is saved. Remove this check when the logo is stored.
+     *
+     * <p>The contact person ({@code contactName}, «Контактна особа»): {@code null} keeps the stored
+     * value, so callers that do not edit it (consent, feed) and old clients never clear it; a
+     * given value has the @DisplayName rules (checked on the request record), and a blank one
+     * is refused with {@code 400 VALIDATION_FAILED}, {@code fields.contactName}.
      */
     @Transactional
-    public BrandProfile save(UUID brandId, String rawName, String websiteUrl, String feedUrl, UUID logoImageId,
-            String logoUrl, Boolean consentGiven) {
+    public BrandProfile save(UUID brandId, String rawContactName, String rawName, String websiteUrl, String feedUrl,
+            UUID logoImageId, String logoUrl, Boolean consentGiven) {
+        String contactName = DisplayName.Validator.normalize(rawContactName);
+        if (rawContactName != null && contactName == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_FAILED,
+                "contactName must be 1-50 characters; send null to keep it",
+                Map.of("contactName", ErrorCode.VALIDATION_FAILED));
+        }
         // A rule across two fields: a logo is an uploaded image or an external URL, never both.
         if (logoImageId != null && logoUrl != null) {
             // Map.of has no order; the two fields carry the same code anyway.
@@ -114,8 +128,8 @@ public class BrandProfileService {
         }
         // The website and the feed are replaced like the name; null clears them (optional in the
         // profile). A website on another domain clears the site verification (ADR-0017).
-        return writing(() -> repository.updateNameAndConsent(brandId, name, website, feed, giveConsent,
-                CONSENT_TEXT))
+        return writing(() -> repository.updateNameAndConsent(brandId, contactName, name, website, feed,
+                giveConsent, CONSENT_TEXT))
             .orElseThrow(() -> missingProfile(brandId));
     }
 

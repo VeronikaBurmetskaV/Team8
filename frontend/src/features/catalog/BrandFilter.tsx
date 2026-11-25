@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { CheckIcon } from "../../shared/icons";
 import { catalogTexts as t } from "../../shared/messages.uk";
 import {
@@ -19,8 +19,9 @@ interface BrandFilterProps {
   /** A click on a brand applies at once: adds or removes it in the URL. */
   onToggle: (key: string) => void;
   /**
-   * «Показати всі» / «Згорнути». The panel owns this state: expanded, it widens (a laptop) or
-   * fills the screen (the drawer), and it starts collapsed again at the next opening.
+   * «Показати всі» / «Згорнути». The panel owns this state: expanded, the list just goes on
+   * down in the same column (on a laptop the panel then stops being sticky and grows with the
+   * page; in the drawer it scrolls inside), and it starts collapsed at the next opening.
    */
   expanded: boolean;
   onToggleExpanded: () => void;
@@ -28,7 +29,7 @@ interface BrandFilterProps {
 
 /**
  * Body of the «Бренд» group: a checkbox per brand with its product count. Collapsed: the
- * first BRAND_LIST_LIMIT and every chosen brand; expanded: all of them in 2–3 columns. With
+ * first BRAND_LIST_LIMIT and every chosen brand; expanded: all of them, still one column. With
  * more than BRAND_SEARCH_MIN brands a search field filters the list as you type.
  */
 export function BrandFilter(props: BrandFilterProps) {
@@ -60,11 +61,6 @@ export function BrandFilterView({
   const shown = visibleBrands(options, selected, { expanded, query });
   const listId = `${id}-list`;
   const searchId = `${id}-search`;
-  // Columns of the expanded list follow the longest name (CSS keeps them between
-  // --brand-column-min and --brand-column-max); with the checkbox and the count beside it,
-  // the longest name may wrap to a second line rather than force a single column.
-  const longest = Math.max(...options.map((option) => option.label.length), 0);
-  const columns = { "--brand-name-width": `${longest}ch` } as CSSProperties;
 
   return (
     <fieldset className={styles.brandList}>
@@ -91,12 +87,7 @@ export function BrandFilterView({
         </div>
       )}
 
-      <div
-        id={listId}
-        className={styles.brandOptions}
-        data-expanded={expanded || searching}
-        style={columns}
-      >
+      <div id={listId} className={styles.brandOptions}>
         {shown.map((option) => {
           const inputId = `${id}-${option.key}`;
           return (

@@ -24,4 +24,14 @@ record ProductCard(
         /** Where the brand-site import read the card (ADR-0017); null for a hand-made card. */
         String sourceUrl,
         /** Fields of an imported card the brand edited by hand (DB names); empty otherwise. */
-        List<String> editedFields) {}
+        List<String> editedFields,
+        /**
+         * Since when a complete import no longer lists the card («Немає на сайті», ADR-0017); null
+         * while the site lists it. Such a card is always a Draft and can't be published.
+         */
+        Instant missingSince) {
+
+    boolean notOnSite() {
+        return missingSince != null;
+    }
+}

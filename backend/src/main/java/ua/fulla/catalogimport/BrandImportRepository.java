@@ -72,6 +72,17 @@ class BrandImportRepository {
             .update();
     }
 
+    /**
+     * The logo of the brand's site found by the last successful import (ADR-0015); null when
+     * none was found. The row exists: every import claims it first.
+     */
+    void saveSiteLogo(UUID brandId, String siteLogoUrl) {
+        jdbc.sql("UPDATE brand_imports SET site_logo_url = CAST(:url AS varchar) WHERE brand_id = :brandId")
+            .param("url", siteLogoUrl)
+            .param("brandId", brandId)
+            .update();
+    }
+
     /** After a restart nothing is running any more. */
     int failInterrupted(String errorCode) {
         return jdbc.sql("""

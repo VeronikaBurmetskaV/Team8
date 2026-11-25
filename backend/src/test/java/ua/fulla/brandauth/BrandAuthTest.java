@@ -75,12 +75,71 @@ class BrandAuthTest {
     }
 
     @Test
+    void contactNameIsSavedTrimmedAndReturnedByTheProfile() throws Exception {
+        String email = uniqueEmail();
+        MvcResult result = mvc.perform(post("/api/brand/register").with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contactName\":\"  Олена Коваль \",\"name\":\"Lileya\",\"websiteUrl\":\"https://lileya.com.ua\","
+                    + "\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}"))
+            .andExpect(status().isCreated())
+            .andReturn();
+
+        mvc.perform(get("/api/brand/profile").session(sessionOf(result)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.contactName").value("Олена Коваль"));
+        String stored = jdbc.sql("""
+                SELECT p.contact_name FROM brand_profiles p
+                JOIN brand_accounts a ON a.id = p.brand_id WHERE a.email = :email
+                """)
+            .param("email", email).query(String.class).single();
+        assertThat(stored).isEqualTo("Олена Коваль");
+    }
+
+    @Test
+    void contactNameIsRequiredWithOneToFiftyCharactersAndNothingIsCreated() throws Exception {
+        String email = uniqueEmail();
+        for (String contactName : List.of("", "   ", " ", "a".repeat(51), "Ol\\u0007ena")) {
+            expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"contactName\":\"" + contactName + "\",\"name\":\"Lileya\","
+                        + "\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"" + email
+                        + "\",\"password\":\"" + PASSWORD + "\"}")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.error.fields.contactName").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.error.fields.length()").value(1));
+        }
+        // missing altogether
+        expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Lileya\",\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"" + email
+                    + "\",\"password\":\"" + PASSWORD + "\"}")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.fields.contactName").value("VALIDATION_FAILED"));
+        // exactly 1 and 50 characters are fine
+        register50And1();
+
+        Integer accounts = jdbc.sql("SELECT count(*) FROM brand_accounts WHERE email = :email")
+            .param("email", email).query(Integer.class).single();
+        assertThat(accounts).isZero();
+    }
+
+    private void register50And1() throws Exception {
+        for (String contactName : List.of("О", "я".repeat(50))) {
+            mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"contactName\":\"" + contactName + "\",\"name\":\"Lileya\","
+                        + "\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"" + uniqueEmail()
+                        + "\",\"password\":\"" + PASSWORD + "\"}"))
+                .andExpect(status().isCreated());
+        }
+    }
+
+    @Test
     void nameAndWebsiteHaveTheProfileRulesAndNothingIsCreated() throws Exception {
         String email = uniqueEmail();
         for (String body : List.of(
                 // name outside 2–50
-                "{\"name\":\"L\",\"websiteUrl\":\"https://lileya.com.ua\",",
-                "{\"name\":\"" + "a".repeat(51) + "\",\"websiteUrl\":\"https://lileya.com.ua\",")) {
+                "{\"contactName\":\"Olena\",\"name\":\"L\",\"websiteUrl\":\"https://lileya.com.ua\",",
+                "{\"contactName\":\"Olena\",\"name\":\"" + "a".repeat(51) + "\",\"websiteUrl\":\"https://lileya.com.ua\",")) {
             expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                     .content(body + "\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}")))
                 .andExpect(status().isBadRequest())
@@ -91,7 +150,7 @@ class BrandAuthTest {
         for (String websiteUrl : List.of("http://lileya.com.ua", "lileya.com.ua", "https://", "https://lileya",
                 "https://localhost:5173", "")) {
             expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"name\":\"Lileya\",\"websiteUrl\":\"" + websiteUrl + "\",\"email\":\"" + email
+                    .content("{\"contactName\":\"Olena\",\"name\":\"Lileya\",\"websiteUrl\":\"" + websiteUrl + "\",\"email\":\"" + email
                         + "\",\"password\":\"" + PASSWORD + "\"}")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
@@ -100,7 +159,7 @@ class BrandAuthTest {
         }
         // the website is required at registration
         expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Lileya\",\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}")))
+                .content("{\"contactName\":\"Olena\",\"name\":\"Lileya\",\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}")))
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.error.fields.websiteUrl").value("PROFILE_INVALID"));
 
@@ -202,16 +261,18 @@ class BrandAuthTest {
 
     @Test
     void registerWithoutFieldsReportsEveryFieldNameFirst() throws Exception {
-        // form order: name, website, email, password → the top code is the name's (api.md §3.1)
+        // form order: contact name, name, website, email, password → the top code is the contact
+        // name's (api.md §3.1)
         expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{}")))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.fields.contactName").value("VALIDATION_FAILED"))
             .andExpect(jsonPath("$.error.fields.name").value("PROFILE_INVALID"))
             .andExpect(jsonPath("$.error.fields.websiteUrl").value("PROFILE_INVALID"))
             .andExpect(jsonPath("$.error.fields.email").value("EMAIL_TAKEN_OR_INVALID"))
             .andExpect(jsonPath("$.error.fields.password").value("PASSWORD_TOO_SHORT"))
-            .andExpect(jsonPath("$.error.fields.length()").value(4));
+            .andExpect(jsonPath("$.error.fields.length()").value(5));
     }
 
     @Test
@@ -313,48 +374,114 @@ class BrandAuthTest {
         assertThat(sessionOf(result).getId()).isNotEqualTo(idBefore);
     }
 
+    // ---------- login with the brand name (2026-12-02) ----------
+
     @Test
-    void wrongPasswordAndUnknownEmailGiveTheSameAnswer() throws Exception {
+    void theBrandNameMatchesWhateverTheCaseSpacesAndUnicodeForm() throws Exception {
         String email = uniqueEmail();
-        register(email, PASSWORD).andExpect(status().isCreated());
+        register(email, PASSWORD).andExpect(status().isCreated()); // saved name: «Lileya»
 
-        MvcResult wrongPassword = expectEnvelope(login(email, "wrong-password"))
-            .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
-            .andExpect(jsonPath("$.error.fields").doesNotExist())
-            .andReturn();
-        MvcResult unknownEmail = login(uniqueEmail(), PASSWORD)
-            .andExpect(status().isUnauthorized())
-            .andReturn();
-
-        assertThat(unknownEmail.getResponse().getContentAsString())
-            .isEqualTo(wrongPassword.getResponse().getContentAsString());
-        // no login happened
-        assertThat(wrongPassword.getRequest().getSession(false)).isNull();
-    }
-
-    @Test
-    void loginWithAnEmailTheDatabaseRefusesIsTheSameInvalidCredentials() throws Exception {
-        String expected = login(uniqueEmail(), PASSWORD)
-            .andExpect(status().isUnauthorized())
-            .andReturn().getResponse().getContentAsString();
-
-        // U+0000 as a JSON escape, a non-breaking space inside, not an email at all
-        for (String email : List.of("a\\u0000b@example.com", "in\u00A0fo@example.com", "no-at-sign", "")) {
-            MvcResult result = login(email, PASSWORD)
-                .andExpect(status().isUnauthorized())
-                .andReturn();
-            assertThat(result.getResponse().getContentAsString()).isEqualTo(expected);
+        // other case, spaces around and a non-breaking space, a fullwidth «Ｌ» (NFKC → «L»)
+        for (String typed : List.of("lileya", "  LILEYA ", " Lileya ", "Ｌileya")) {
+            mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content(credentials(typed, email, PASSWORD)))
+                .andExpect(status().isOk());
         }
     }
 
     @Test
-    void loginWithoutFieldsIsInvalidCredentials() throws Exception {
-        expectEnvelope(mvc.perform(post("/api/brand/login").with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{}")))
-            .andExpect(status().isUnauthorized())
-            .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"))
-            .andExpect(jsonPath("$.error.fields").doesNotExist());
+    void repeatedSpacesInsideTheNameCountAsOne() throws Exception {
+        String email = uniqueEmail();
+        mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contactName\":\"Olena\",\"name\":\"Біла Сукня\",\"websiteUrl\":\"https://lileya.com.ua\","
+                    + "\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}"))
+            .andExpect(status().isCreated());
+
+        mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(credentials("біла    СУКНЯ", email, PASSWORD)))
+            .andExpect(status().isOk());
+    }
+
+    // ---------- what exactly is wrong (ADR-0018) ----------
+
+    @Test
+    void anUnknownEmailIsEmailNotFoundOnTheEmailField() throws Exception {
+        expectLoginError(login(uniqueEmail(), PASSWORD), "EMAIL_NOT_FOUND", "email");
+    }
+
+    @Test
+    void emailsThatCanNeverExistAreEmailNotFoundNeverAServerError() throws Exception {
+        // U+0000 as a JSON escape, a non-breaking space inside, not an email at all, empty
+        for (String email : List.of("a\\u0000b@example.com", "in\u00A0fo@example.com", "no-at-sign", "")) {
+            expectLoginError(login(email, PASSWORD), "EMAIL_NOT_FOUND", "email");
+        }
+        expectLoginError(mvc.perform(post("/api/brand/login").with(csrf())
+            .contentType(MediaType.APPLICATION_JSON).content("{}")), "EMAIL_NOT_FOUND", "email");
+    }
+
+    @Test
+    void aWrongOrMissingPasswordIsWrongPasswordOnThePasswordField() throws Exception {
+        String email = uniqueEmail();
+        register(email, PASSWORD).andExpect(status().isCreated());
+
+        expectLoginError(login(email, "wrong-password"), "WRONG_PASSWORD", "password");
+        expectLoginError(mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"brandName\":\"Lileya\",\"email\":\"" + email + "\"}")), "WRONG_PASSWORD", "password");
+        // longer than BCrypt's 72 bytes can never match
+        expectLoginError(login(email, "я".repeat(37)), "WRONG_PASSWORD", "password");
+    }
+
+    @Test
+    void aWrongBrandNameIsBrandNameMismatchOnlyAfterTheRightPassword() throws Exception {
+        String email = uniqueEmail();
+        register(email, PASSWORD).andExpect(status().isCreated());
+
+        // right email and password, another name (or none)
+        expectLoginError(mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(credentials("Other brand", email, PASSWORD))), "BRAND_NAME_MISMATCH", "brandName");
+        expectLoginError(mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content("{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}")),
+            "BRAND_NAME_MISMATCH", "brandName");
+        // a wrong name AND a wrong password: the password is reported, the name is not checked
+        expectLoginError(mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(credentials("Other brand", email, "wrong-password"))), "WRONG_PASSWORD", "password");
+        // an unknown email with a wrong name: the email is reported
+        expectLoginError(mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+            .content(credentials("Other brand", uniqueEmail(), PASSWORD))), "EMAIL_NOT_FOUND", "email");
+    }
+
+    @Test
+    void anOldAccountWithoutABrandNameLogsInByEmailAndPasswordAndTheNameIsNotSaved() throws Exception {
+        String email = uniqueEmail();
+        register(email, PASSWORD).andExpect(status().isCreated());
+        jdbc.sql("""
+                UPDATE brand_profiles SET name = NULL
+                WHERE brand_id = (SELECT id FROM brand_accounts WHERE email = :email)
+                """)
+            .param("email", email).update();
+
+        mvc.perform(post("/api/brand/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(credentials("Будь-яка назва", email, PASSWORD)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.profileState").value("INCOMPLETE"));
+        // still the password decides
+        login(email, "wrong-password").andExpect(status().isUnauthorized());
+
+        String name = jdbc.sql("""
+                SELECT p.name FROM brand_profiles p JOIN brand_accounts a ON a.id = p.brand_id
+                WHERE a.email = :email
+                """)
+            .param("email", email).query(String.class).list().get(0);
+        assertThat(name).as("the typed name is not saved").isNull();
+    }
+
+    @Test
+    void nameKeyNormalizesLikeTheContractSays() {
+        assertThat(BrandAuthService.nameKey("  Біла   СУКНЯ ")).isEqualTo("біла сукня");
+        assertThat(BrandAuthService.nameKey("Ｌileya")).isEqualTo("lileya");
+        assertThat(BrandAuthService.sameBrandName(null, null)).as("no saved name: not checked").isTrue();
+        assertThat(BrandAuthService.sameBrandName("Lileya", null)).isFalse();
+        assertThat(BrandAuthService.sameBrandName("Lileya", "")).isFalse();
     }
 
     @Test
@@ -398,6 +525,20 @@ class BrandAuthTest {
 
     // ---------- helpers ----------
 
+    /**
+     * A failed login (ADR-0018): 401, the single envelope, the code at the top and on exactly
+     * one field, and no session started.
+     */
+    private static void expectLoginError(ResultActions actions, String code, String field) throws Exception {
+        MvcResult result = expectEnvelope(actions)
+            .andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.error.code").value(code))
+            .andExpect(jsonPath("$.error.fields." + field).value(code))
+            .andExpect(jsonPath("$.error.fields.length()").value(1))
+            .andReturn();
+        assertThat(result.getRequest().getSession(false)).as("no login happened").isNull();
+    }
+
     private ResultActions register(String email, String password) throws Exception {
         return mvc.perform(post("/api/brand/register").with(csrf())
             .contentType(MediaType.APPLICATION_JSON).content(registration(email, password)));
@@ -425,12 +566,18 @@ class BrandAuthTest {
 
     /** A valid registration (US-21): name and website as the form sends them. */
     private static String registration(String email, String password) {
-        return "{\"name\":\"Lileya\",\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"" + email
+        return "{\"contactName\":\"Olena\",\"name\":\"Lileya\",\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"" + email
             + "\",\"password\":\"" + password + "\"}";
     }
 
+    /** Login (2026-12-02): the brand name of {@link #registration}, email and password. */
     private static String credentials(String email, String password) {
-        return "{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}";
+        return credentials("Lileya", email, password);
+    }
+
+    private static String credentials(String brandName, String email, String password) {
+        return "{\"brandName\":\"" + brandName + "\",\"email\":\"" + email + "\",\"password\":\""
+            + password + "\"}";
     }
 
     private static String uniqueEmail() {

@@ -62,6 +62,8 @@ class ProductController {
 
     record BulkPublishResponse(List<UUID> publishedIds, List<UUID> skippedIds) {}
 
+    record BulkUnpublishResponse(List<UUID> unpublishedIds, List<UUID> skippedIds) {}
+
     /**
      * Brand card = PublicCard + {@code photoImageId, status, publishedAt, createdAt} (api.md §2.1, §2.2),
      * plus {@code sourceUrl} only for a card imported from the brand's site (ADR-0017).
@@ -78,7 +80,9 @@ class ProductController {
             Instant publishedAt,
             Instant createdAt,
             @JsonInclude(JsonInclude.Include.NON_NULL) String sourceUrl,
-            @JsonInclude(JsonInclude.Include.NON_NULL) List<String> editedFields) {
+            @JsonInclude(JsonInclude.Include.NON_NULL) List<String> editedFields,
+            /** «Немає на сайті» since (ADR-0017); left out while the site lists the card. */
+            @JsonInclude(JsonInclude.Include.NON_NULL) Instant notOnSiteSince) {
 
         /** DB names of {@code products.edited_fields} → the JSON field names of the card. */
         private static final Map<String, String> EDITED_FIELD_NAMES = Map.of(
@@ -101,7 +105,8 @@ class ProductController {
                 card.sourceUrl(),
                 // Only an imported card has the list (ADR-0017); hand-made cards leave the key out.
                 card.sourceUrl() == null ? null
-                    : card.editedFields().stream().map(f -> EDITED_FIELD_NAMES.getOrDefault(f, f)).toList());
+                    : card.editedFields().stream().map(f -> EDITED_FIELD_NAMES.getOrDefault(f, f)).toList(),
+                card.missingSince());
         }
     }
 
@@ -147,10 +152,28 @@ class ProductController {
         return new BulkPublishResponse(result.publishedIds(), result.skippedIds());
     }
 
+    /** «Зняти вибрані з публікації» (US-31 CL): many Published cards back to Draft; the same 1…500 IDs. */
+    @PostMapping("/api/brand/products/unpublish")
+    BulkUnpublishResponse unpublishMany(@AuthenticationPrincipal SessionAccount brand,
+            @Valid @RequestBody BulkPublishRequest request) {
+        var result = service.unpublishMany(brand.accountId(), request.ids());
+        return new BulkUnpublishResponse(result.unpublishedIds(), result.skippedIds());
+    }
+
     /** US-31, api.md §4.2: no request body; 200 with the card, now {@code PUBLISHED}. */
     @PostMapping("/api/brand/products/{id}/publish")
     BrandCardResponse publish(@AuthenticationPrincipal SessionAccount brand, @PathVariable UUID id) {
         return BrandCardResponse.of(service.publish(brand.accountId(), id));
+    }
+
+    /**
+     * «Прибрати зі списку» (ADR-0017): hides a «Немає на сайті» card from the cabinet list; 204.
+     * 409 INVALID_STATE for a card the site still lists.
+     */
+    @PostMapping("/api/brand/products/{id}/remove-from-list")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void removeFromList(@AuthenticationPrincipal SessionAccount brand, @PathVariable UUID id) {
+        service.removeFromList(brand.accountId(), id);
     }
 
     /** US-31 CL: no request body; 200 with the card, back to {@code DRAFT}. */

@@ -13,6 +13,7 @@ import {
 } from "./profileForm";
 
 const activeProfile: BrandProfileResponse = {
+  contactName: "Олена",
   name: "Лляна",
   websiteUrl: "https://lileya.com.ua",
   logoImageId: null,
@@ -75,7 +76,10 @@ describe("toBrandProfileFormValues", () => {
 
 describe("brandProfileFormSchema", () => {
   it("«Сайт бренду» is optional here but must be a valid site when filled", () => {
-    const base = { name: "Лляна", consentGiven: false };
+    const base = {
+      name: "Лляна",
+      consentGiven: false,
+    };
     expect(
       brandProfileFormSchema.safeParse({ ...base, websiteUrl: "" }).success,
     ).toBe(true);
@@ -128,7 +132,11 @@ describe("toBrandProfileRequest", () => {
   it("sends the website, and null for an empty field (PUT replaces it)", () => {
     expect(
       toBrandProfileRequest(
-        { name: "Лляна", websiteUrl: "", consentGiven: false },
+        {
+          name: "Лляна",
+          websiteUrl: "",
+          consentGiven: false,
+        },
         activeProfile,
       ).websiteUrl,
     ).toBeNull();
@@ -286,5 +294,23 @@ describe("«Сайт бренду» in the profile form", () => {
     );
     expect(parse("http://goldi.ua").success).toBe(false);
     expect(parse(`https://goldi.ua/${"a".repeat(2048)}`).success).toBe(false);
+  });
+});
+
+describe("«Контактна особа» is not in the profile form any more (2026-12-02)", () => {
+  it("is neither a form value nor sent: the server keeps the stored one", () => {
+    expect(Object.keys(toBrandProfileFormValues(activeProfile))).not.toContain(
+      "contactName",
+    );
+    const request = toBrandProfileRequest(
+      brandProfileFormSchema.parse({
+        name: "Лляна",
+        websiteUrl: "",
+        consentGiven: false,
+      }),
+      activeProfile,
+    );
+    expect(request).not.toHaveProperty("contactName");
+    expect(profileFields).not.toHaveProperty("contactName");
   });
 });

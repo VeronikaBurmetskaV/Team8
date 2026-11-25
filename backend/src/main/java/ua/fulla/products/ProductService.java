@@ -18,8 +18,14 @@ import ua.fulla.images.ImageService;
 @Service
 public class ProductService {
 
+    /** «Немає на сайті» cards leave the cabinet list after this long (ADR-0017); rows stay. */
+    static final java.time.Duration KEEP_MISSING_IN_LIST = java.time.Duration.ofDays(30);
+
     /** Bulk publish result (api.md): the published IDs and the ones that were not (unknown, foreign, not a Draft). */
     record BulkPublishResult(List<UUID> publishedIds, List<UUID> skippedIds) {}
+
+    /** Bulk unpublish result (api.md): the IDs back to Draft and the ones that were not. */
+    record BulkUnpublishResult(List<UUID> unpublishedIds, List<UUID> skippedIds) {}
 
     private final ProductRepository repository;
     private final ImageService images;
@@ -32,7 +38,7 @@ public class ProductService {
     }
 
     List<ProductCard> listOwn(UUID brandId) {
-        return repository.listOwn(brandId);
+        return repository.listOwn(brandId, KEEP_MISSING_IN_LIST);
     }
 
     /**
@@ -76,8 +82,8 @@ public class ProductService {
     /**
      * Publishes many Drafts at once (ADR-0017, e.g. imported drafts) with the same gate as one
      * card (T-1): one conditional {@code UPDATE}. Nothing published and no consent →
-     * {@code 409 CONSENT_REQUIRED}; IDs that are unknown, foreign or not a Draft are returned in
-     * {@code skippedIds} (no 404, so nothing about other brands is revealed).
+     * {@code 409 CONSENT_REQUIRED}; IDs that are unknown, foreign, not a Draft or «Немає на сайті»
+     * are returned in {@code skippedIds} (no 404, so nothing about other brands is revealed).
      */
     @Transactional
     BulkPublishResult publishMany(UUID brandId, List<UUID> ids) {
@@ -96,8 +102,9 @@ public class ProductService {
     /**
      * Draft → Published (US-31, US-22.2). The rules are checked by the {@code UPDATE} itself (T-1).
      * When it changes nothing, the card is re-read only to choose the answer: unknown or another
-     * brand's card → 404 (Q-04); already Published → 409 INVALID_STATE; still a Draft → the only
-     * remaining condition is the consent → 409 CONSENT_REQUIRED.
+     * brand's card → 404 (Q-04); already Published → 409 INVALID_STATE; no longer on the brand's
+     * site → 409 PRODUCT_NOT_ON_SITE (ADR-0017); still a Draft → the only remaining condition is
+     * the consent → 409 CONSENT_REQUIRED.
      *
      * <p>{@code PUBLISH_FIELDS_MISSING} is never returned: the NOT NULL and CHECK constraints on
      * {@code products} make every Draft complete (US-31 S2 note, G-02).
@@ -109,10 +116,28 @@ public class ProductService {
             if (card.status() == ProductStatus.PUBLISHED) {
                 throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INVALID_STATE, "card is already published");
             }
+            if (card.notOnSite()) {
+                throw new ApiException(HttpStatus.CONFLICT, ErrorCode.PRODUCT_NOT_ON_SITE,
+                    "the brand's site no longer lists this card");
+            }
             throw new ApiException(HttpStatus.CONFLICT, ErrorCode.CONSENT_REQUIRED,
                 "Brand consent is required before publishing");
         }
         return findOwnOrNotFound(id, brandId);
+    }
+
+    /**
+     * Published → Draft for many cards at once (US-31 CL, T-4), «Зняти вибрані з публікації». IDs
+     * that are unknown, another brand's or already a Draft are returned in {@code skippedIds}
+     * (no 404, so nothing about other brands is revealed).
+     */
+    @Transactional
+    BulkUnpublishResult unpublishMany(UUID brandId, List<UUID> ids) {
+        Set<UUID> requested = new LinkedHashSet<>(ids);
+        Set<UUID> done = Set.copyOf(repository.unpublishMany(requested, brandId));
+        return new BulkUnpublishResult(
+            requested.stream().filter(done::contains).toList(),
+            requested.stream().filter(id -> !done.contains(id)).toList());
     }
 
     /** Published → Draft (US-31 CL), T-4. Consent is not needed to hide a card. */
@@ -123,6 +148,18 @@ public class ProductService {
             throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INVALID_STATE, "card is already a draft");
         }
         return findOwnOrNotFound(id, brandId);
+    }
+
+    /**
+     * «Прибрати зі списку» (ADR-0017): only a «Немає на сайті» card; repeating it is fine. Another
+     * brand's or unknown card → 404; a card the site lists → 409 INVALID_STATE.
+     */
+    @Transactional
+    void removeFromList(UUID brandId, UUID id) {
+        if (repository.removeFromList(id, brandId) == 0 && !findOwnOrNotFound(id, brandId).notOnSite()) {
+            throw new ApiException(HttpStatus.CONFLICT, ErrorCode.INVALID_STATE,
+                "only a card that is no longer on the brand's site can be removed from the list");
+        }
     }
 
     private ProductCard findOwnOrNotFound(UUID id, UUID brandId) {
@@ -167,11 +204,12 @@ public class ProductService {
     }
 
     /**
-     * ADR-0017, like T-16: after a complete listing of the site, the brand's Published imported
-     * cards that the site no longer lists go to Draft. Never deletes.
+     * ADR-0017, like T-16: after a complete listing of the site, the brand's imported cards that
+     * the site no longer lists become «Немає на сайті»; Published ones go to Draft (out of the
+     * feed) in the same statement. Never deletes. Returns how many were Published.
      */
-    public int hideMissingBrandImported(UUID brandId, Collection<String> listedExternalIds) {
-        return repository.hideMissingBrandImported(brandId, listedExternalIds);
+    public int markMissingBrandImported(UUID brandId, Collection<String> listedExternalIds) {
+        return repository.markMissingBrandImported(brandId, listedExternalIds);
     }
 
     /**

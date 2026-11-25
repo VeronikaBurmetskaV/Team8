@@ -23,6 +23,7 @@ const idleStatus: ImportStatus = {
   startedAt: null,
   finishedAt: null,
   lastSuccessAt: null,
+  lastSyncedAt: null,
   nextAllowedAt: null,
   found: 0,
   created: 0,

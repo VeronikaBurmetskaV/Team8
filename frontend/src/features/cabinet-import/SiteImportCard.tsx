@@ -1,6 +1,5 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "react-router";
-import { useQueryClient } from "@tanstack/react-query";
 import type {
   BrandProfileResponse,
   ErrorCode,
@@ -9,19 +8,21 @@ import type {
 import { formatConsentDate } from "../../shared/consentDate";
 import { errorCodeOf } from "../../shared/errors";
 import { messages, siteImportTexts as t } from "../../shared/messages.uk";
-import { brandProductsKey } from "../cabinet-products/queries";
 import {
+  useClockUntil,
   useImportStatus,
+  useReloadProductsAfterRun,
   useSaveFeedUrl,
   useStartImport,
   useVerifySite,
 } from "./api";
 import {
-  formatDateTime,
+  formatSyncedAt,
   formatTime,
   importStep,
   isFeedUrlOnSite,
   isRunning,
+  lastSyncedAt,
   VERIFICATION_FILE_NAME,
   verificationFileText,
   verificationMetaTag,
@@ -239,10 +240,7 @@ function ImportProgress({ status }: { status: ImportStatus | null }) {
           {status.hidden > 0 && (
             <p className={styles.small}>{t.hidden(status.hidden)}</p>
           )}
-          <Link
-            className={styles.secondaryLink}
-            to="/brand/products?filter=imported"
-          >
+          <Link className={styles.secondaryLink} to="/brand/products">
             {t.viewDrafts}
           </Link>
         </>
@@ -276,7 +274,12 @@ function ImportStep({
   feed: SiteImportViewProps["feed"];
 }) {
   const running = isRunning(status);
-  const next = waitUntil(status, now);
+  // The 10-minute limit: the button is disabled, only its title says until when.
+  const blockedUntil = running ? null : waitUntil(status, now);
+  const hint =
+    blockedUntil === null ? undefined : t.syncAgainAt(formatTime(blockedUntil));
+  // After the first successful import the same button is «Оновити з сайту зараз».
+  const synced = lastSyncedAt(status);
   return (
     <>
       {demo && <p className={styles.demoNote}>{t.demoNote}</p>}
@@ -293,14 +296,16 @@ function ImportStep({
         <button
           type="button"
           className={styles.primary}
-          disabled={running || start.pending}
+          disabled={running || start.pending || blockedUntil !== null}
+          title={hint}
           onClick={start.onStart}
         >
-          {start.pending ? t.importStarting : t.importFrom(domain)}
+          {start.pending
+            ? t.importStarting
+            : synced !== null
+              ? t.syncNow
+              : t.importFrom(domain)}
         </button>
-        {next !== null && (
-          <p className={styles.small}>{t.nextAllowed(formatTime(next))}</p>
-        )}
       </div>
       {start.error !== null && (
         <p className={styles.error} role="alert">
@@ -308,9 +313,9 @@ function ImportStep({
         </p>
       )}
       <ImportProgress status={status} />
-      {status?.lastSuccessAt && (
+      {synced !== null && (
         <p className={styles.small}>
-          {t.lastImport(formatDateTime(status.lastSuccessAt))}
+          {t.syncedAt(formatSyncedAt(synced, now))}
         </p>
       )}
       <p className={styles.small}>{t.autoRefresh}</p>
@@ -382,22 +387,14 @@ export function SiteImportCard({ profile }: { profile: BrandProfileResponse }) {
   const startImport = useStartImport();
   const verifySite = useVerifySite();
   const saveFeed = useSaveFeedUrl();
-  const queryClient = useQueryClient();
   const status = statusQuery.data ?? null;
+  const clock = useClockUntil(status?.nextAllowedAt);
   const required = verificationRequired(
     statusQuery.data,
     statusQuery.isPending && statusQuery.fetchStatus !== "idle",
   );
 
-  // When a run ends, the product list has new drafts: reload it once.
-  const wasRunning = useRef(false);
-  const running = isRunning(status);
-  useEffect(() => {
-    if (wasRunning.current && !running) {
-      void queryClient.invalidateQueries({ queryKey: brandProductsKey });
-    }
-    wasRunning.current = running;
-  }, [running, queryClient]);
+  useReloadProductsAfterRun(status);
 
   return (
     <SiteImportView
@@ -405,7 +402,7 @@ export function SiteImportCard({ profile }: { profile: BrandProfileResponse }) {
       status={status}
       required={required}
       // When the status was read: «next import at …» is shown if that time was still ahead.
-      now={statusQuery.dataUpdatedAt}
+      now={clock}
       verify={{
         pending: verifySite.isPending,
         error: errorOf(verifySite.error),

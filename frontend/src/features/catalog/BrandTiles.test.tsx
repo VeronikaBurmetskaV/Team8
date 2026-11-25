@@ -70,10 +70,54 @@ describe("brand tile", () => {
     const link = elements(tree).find((element) => element.type === Link);
     expect(link?.props.to).toBe("/?brand=lucky+humanoid");
     expect(link?.props["aria-label"]).toBe("Бренд Lucky Humanoid, 2 товари");
-    expect(link?.props.title).toBe("Lucky Humanoid");
+    // no native title: it was drawn next to the pointer, over the neighbouring tile
+    expect(link?.props.title).toBeUndefined();
     (link?.props.onClick as () => void)();
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
     vi.unstubAllGlobals();
+  });
+
+  it("a name that fits: no tooltip at all (it would only repeat the visible name)", () => {
+    const [option] = brandOptions([{ brandName: "MAGNETIC" }]);
+    if (!option) throw new Error("no option");
+    const markup = renderToString(
+      <MemoryRouter>
+        <BrandTileView option={option} logoUrl={null} onLogoError={() => {}} />
+      </MemoryRouter>,
+    );
+    expect(markup).not.toContain("title=");
+    expect(markup).not.toContain("_tooltip");
+  });
+
+  it("a cut-off name: the full name inside the same tile's box, not a neighbour's", () => {
+    const options = brandOptions([
+      { brandName: "MAGNETIC Studio of Very Long Names" },
+      { brandName: "J. Cook" },
+    ]);
+    const markup = renderToString(
+      <MemoryRouter>
+        {options.map((option) => (
+          <BrandTileView
+            key={option.key}
+            option={option}
+            logoUrl={null}
+            onLogoError={() => {}}
+            truncated={option.label.length > 10}
+          />
+        ))}
+      </MemoryRouter>,
+    );
+    const wraps = markup
+      .split(/(?=<div class="[^"]*_tileWrap)/)
+      .filter((part) => part !== "");
+    expect(wraps).toHaveLength(2);
+    const [cookWrap, magneticWrap] = wraps;
+    // one wrapper per tile: the link and, only for the long name, its tooltip right after it
+    expect(magneticWrap).toMatch(
+      /^<div class="[^"]*_tileWrap[^"]*"><a[^>]*aria-label="Бренд MAGNETIC Studio of Very Long Names, 1 товар".*<\/a><span class="[^"]*_tooltip[^"]*" aria-hidden="true">MAGNETIC Studio of Very Long Names<\/span><\/div>$/s,
+    );
+    expect(cookWrap).not.toContain("_tooltip");
+    expect(cookWrap).not.toContain("MAGNETIC");
   });
 
   it("renders the monogram, the name and the count", () => {
@@ -277,5 +321,56 @@ describe("brand logo on a tile (GET /api/brands)", () => {
       (element) => element.type === BrandTile,
     );
     expect(tiles.map((tile) => tile.props.logoUrl)).toEqual([null, LOGO]);
+  });
+});
+
+describe("which brands get a tile (published cards only)", () => {
+  // The tiles come from GET /api/feed, which has only Published cards (INV-01): a brand with
+  // 0 published cards is not in it, and the count is its published cards.
+  it("a brand with 0 published cards has no tile; with 1 it has one with «1 товар»", () => {
+    expect(page("/", [card("x1", "MINT")])).not.toContain("Бренд Gunia");
+    const markup = page("/", [card("x1", "MINT"), card("g1", "Gunia")]);
+    expect(markup).toContain('aria-label="Бренд Gunia, 1 товар"');
+    expect(markup).toContain('aria-label="Бренд MINT, 1 товар"');
+  });
+
+  it("a registered and a demo brand of the same name are one tile with both counts", () => {
+    const options = brandOptions([
+      { brandName: "BEVZA (demo)" },
+      { brandName: "BEVZA (demo)" },
+      { brandName: "Bevza  (Demo)" },
+    ]);
+    expect(options).toEqual([
+      { key: "bevza (demo)", label: "BEVZA (demo)", count: 3 },
+    ]);
+  });
+
+  it("logo: the URL from /api/brands when there is one, else the monogram", () => {
+    const logos = logosByKey([
+      {
+        key: "bevza (demo)",
+        name: "BEVZA (demo)",
+        logoUrl: "https://bevza.com/logo.png",
+        productCount: 2,
+      },
+      { key: "mint", name: "MINT", logoUrl: null, productCount: 1 },
+    ]);
+    const tile = (name: string) =>
+      renderToString(
+        <MemoryRouter>
+          <BrandTileView
+            option={brandOptions([{ brandName: name }])[0]!}
+            logoUrl={
+              logos.get(brandOptions([{ brandName: name }])[0]!.key) ?? null
+            }
+            onLogoError={() => {}}
+          />
+        </MemoryRouter>,
+      );
+    expect(tile("BEVZA (demo)")).toMatch(
+      /<img[^>]*src="https:\/\/bevza.com\/logo.png"/,
+    );
+    expect(tile("MINT")).not.toContain("<img");
+    expect(tile("MINT")).toMatch(/class="[^"]*_monogram/);
   });
 });

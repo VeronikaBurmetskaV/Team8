@@ -13,6 +13,12 @@ describe("publishGate", () => {
     expect(publishGate(card("PUBLISHED"), null)).toEqual({ kind: "hidden" });
   });
 
+  it("disables a «Немає на сайті» card whatever the profile (ADR-0017)", () => {
+    const gone = { ...card("DRAFT"), notOnSiteSince: "2026-11-30T10:00:00Z" };
+    expect(publishGate(gone, "CONSENTED")).toEqual({ kind: "notOnSite" });
+    expect(publishGate(gone, null)).toEqual({ kind: "notOnSite" });
+  });
+
   it("waits while the profile is not loaded", () => {
     expect(publishGate(card("DRAFT"), null)).toEqual({ kind: "loading" });
   });

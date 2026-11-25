@@ -1,4 +1,5 @@
 import type { BrandProfileResponse, ImportStatus } from "../../api/types";
+import { siteImportTexts as t } from "../../shared/messages.uk";
 
 /** Which step of «Імпорт з сайту» the brand is on (ADR-0017). */
 export type ImportStep = "no-website" | "loading" | "verify" | "ready";
@@ -112,4 +113,32 @@ export function waitUntil(
   const next = status?.nextAllowedAt;
   if (!next || isRunning(status)) return null;
   return new Date(next).getTime() > now ? next : null;
+}
+
+const kyivDay = new Intl.DateTimeFormat("uk-UA", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Europe/Kyiv",
+});
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * «сьогодні о 14:32», «вчора о 09:05» or «20.11.2026 о 14:32», in Kyiv time; `now` is the
+ * moment to compare with (ms).
+ */
+export function formatSyncedAt(iso: string, now: number): string {
+  const day = kyivDay.format(new Date(iso));
+  const at = formatTime(iso);
+  if (day === kyivDay.format(new Date(now))) return t.today(at);
+  if (day === kyivDay.format(new Date(now - DAY_MS))) return t.yesterday(at);
+  return t.onDate(day, at);
+}
+
+/** When the last successful sync finished; an older backend only sends lastSuccessAt. */
+export function lastSyncedAt(
+  status: ImportStatus | null | undefined,
+): string | null {
+  return status?.lastSyncedAt ?? status?.lastSuccessAt ?? null;
 }

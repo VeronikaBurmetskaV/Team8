@@ -159,7 +159,7 @@ class PublishAcceptanceTest {
         MockHttpSession brand = (MockHttpSession) mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\","
-                    + "\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
+                    + "\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isCreated())
             .andReturn().getRequest().getSession(false);
         saveProfile(brand, name, consentGiven);
