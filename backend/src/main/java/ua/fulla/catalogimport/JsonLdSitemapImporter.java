@@ -1,5 +1,12 @@
 package ua.fulla.catalogimport;
 
+import static ua.fulla.catalogimport.JsonLdProducts.additionalProperties;
+import static ua.fulla.catalogimport.JsonLdProducts.findProduct;
+import static ua.fulla.catalogimport.JsonLdProducts.first;
+import static ua.fulla.catalogimport.JsonLdProducts.imageUrl;
+import static ua.fulla.catalogimport.JsonLdProducts.isAvailable;
+import static ua.fulla.catalogimport.JsonLdProducts.text;
+
 import java.io.IOException;
 import java.io.StringReader;
 import java.net.URI;
@@ -21,16 +28,14 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.json.JsonReadFeature;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 import ua.fulla.products.ProductColor;
 import ua.fulla.products.ProductSize;
 
 /**
- * Shops without a feed: {@code sitemap.xml} → product pages → JSON-LD {@code Product} (name,
- * image, price, availability, description) plus sizes, colour and material from the HTML (Jsoup).
+ * Demo shops without a feed (ADR-0014): {@code sitemap.xml} → product pages → JSON-LD
+ * {@code Product} (name, image, price, availability, description; read by the shared
+ * {@link JsonLdProducts}) plus sizes, colour and material from the shop's HTML (Jsoup).
  * The newest pages of the sitemap ({@code lastmod}) are read first. {@code external_id} is the
  * product URL path.
  */
@@ -49,14 +54,6 @@ class JsonLdSitemapImporter implements CatalogImporter {
         /** Laravel: product URLs start with {@code /product/}; the sitemap also lists thousands of category pages. */
         CHER17
     }
-
-    /** Some pages put raw line breaks inside JSON strings (Cher'17 descriptions); browsers accept that. */
-    private static final JsonMapper LENIENT_JSON = JsonMapper.builder()
-        .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
-        .enable(JsonReadFeature.ALLOW_TRAILING_COMMA)
-        .build();
-
-    private static final Set<String> NOT_AVAILABLE = Set.of("outofstock", "soldout", "discontinued");
 
     private final String code;
     private final URI baseUrl;
@@ -232,115 +229,6 @@ class JsonLdSitemapImporter implements CatalogImporter {
             ImportText.plainText(text(product.get("description")), ImportText.DESCRIPTION_MAX)));
     }
 
-    // ---------- JSON-LD ----------
-
-    private static JsonNode findProduct(Document doc) {
-        for (Element script : doc.select("script[type=application/ld+json]")) {
-            JsonNode root;
-            try {
-                root = LENIENT_JSON.readTree(script.data());
-            } catch (JacksonException e) {
-                continue; // a broken block of another type must not hide the Product block
-            }
-            JsonNode product = findProduct(root);
-            if (product != null) {
-                return product;
-            }
-        }
-        return null;
-    }
-
-    private static JsonNode findProduct(JsonNode node) {
-        if (node == null) {
-            return null;
-        }
-        if (node.isArray()) {
-            for (JsonNode child : node) {
-                JsonNode found = findProduct(child);
-                if (found != null) {
-                    return found;
-                }
-            }
-            return null;
-        }
-        if (!node.isObject()) {
-            return null;
-        }
-        JsonNode type = node.get("@type");
-        if (type != null && (isProductType(type) || (type.isArray() && hasProductType(type)))) {
-            return node;
-        }
-        return findProduct(node.get("@graph"));
-    }
-
-    private static boolean hasProductType(JsonNode types) {
-        for (JsonNode type : types) {
-            if (isProductType(type)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean isProductType(JsonNode type) {
-        return type.isString() && type.asString().equals("Product");
-    }
-
-    /** A string, an array of strings or an {@code ImageObject}: the first {@code https://} URL. */
-    private static String imageUrl(JsonNode image) {
-        JsonNode first = first(image);
-        if (first == null) {
-            return null;
-        }
-        String url = first.isObject() ? text(first.get("url")) : text(first);
-        return ImportText.clean(url);
-    }
-
-    private static boolean isAvailable(String availability) {
-        if (availability == null) {
-            return true;
-        }
-        String value = availability.substring(availability.lastIndexOf('/') + 1).toLowerCase(Locale.ROOT);
-        return !NOT_AVAILABLE.contains(value);
-    }
-
-    /**
-     * {@code additionalProperty} as label → value. Cher'17 swaps the fields
-     * ({@code "name": "поліестер-100%", "value": "Матріал"}), so both orders are accepted.
-     */
-    private static Map<String, String> additionalProperties(JsonNode properties) {
-        Map<String, String> result = new LinkedHashMap<>();
-        if (properties == null || !properties.isArray()) {
-            return result;
-        }
-        for (JsonNode property : properties) {
-            String name = ImportText.clean(text(property.get("name")));
-            String value = ImportText.clean(text(property.get("value")));
-            String label = propertyLabel(value);
-            if (label != null && name != null) {
-                result.putIfAbsent(label, name);
-            } else if (propertyLabel(name) != null && value != null) {
-                result.putIfAbsent(propertyLabel(name), value);
-            }
-        }
-        return result;
-    }
-
-    private static String propertyLabel(String text) {
-        if (text == null) {
-            return null;
-        }
-        String lower = text.toLowerCase(Locale.ROOT);
-        if (lower.equals("колір") || lower.equals("color") || lower.equals("colour")) {
-            return "колір";
-        }
-        if (lower.startsWith("матеріал") || lower.startsWith("матріал") || lower.equals("склад")
-                || lower.equals("material")) {
-            return "матеріал";
-        }
-        return null;
-    }
-
     // ---------- HTML ----------
 
     /** One By One: {@code <label class="product-size__item [sold]"><input …><big>M <small>(…)</small></big>}. */
@@ -461,23 +349,6 @@ class JsonLdSitemapImporter implements CatalogImporter {
         List<ProductSize> result = new ArrayList<>();
         sizes.forEach((label, available) -> result.add(new ProductSize(label, available)));
         return result;
-    }
-
-    private static JsonNode first(JsonNode node) {
-        if (node == null || node.isNull()) {
-            return null;
-        }
-        if (node.isArray()) {
-            return node.isEmpty() ? null : node.get(0);
-        }
-        return node;
-    }
-
-    private static String text(JsonNode node) {
-        if (node == null || node.isNull() || node.isContainer()) {
-            return null;
-        }
-        return node.asString();
     }
 
     private static String firstNonBlank(String a, String b) {

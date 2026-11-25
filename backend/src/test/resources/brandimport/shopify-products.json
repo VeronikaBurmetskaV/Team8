@@ -1,0 +1,42 @@
+{
+  "products": [
+    {
+      "id": 101,
+      "title": "Сукня-сорочка з льону",
+      "handle": "linen-shirt-dress",
+      "body_html": "<p>Вільний крій.</p><p>Льон 100%</p>",
+      "product_type": "Сукні",
+      "options": [
+        { "name": "Розмір", "position": 1, "values": ["XS", "S", "M"] },
+        { "name": "Колір", "position": 2, "values": ["білий"] }
+      ],
+      "variants": [
+        { "id": 1, "option1": "XS", "option2": "білий", "price": "3200.00", "available": false },
+        { "id": 2, "option1": "S", "option2": "білий", "price": "3200.00", "available": true },
+        { "id": 3, "option1": "M", "option2": "білий", "price": "3100.00", "available": true }
+      ],
+      "images": [ { "src": "//cdn.shopify.com/s/files/dress.jpg" } ]
+    },
+    {
+      "id": 102,
+      "title": "Худі оверсайз",
+      "handle": "oversize-hoodie",
+      "body_html": "",
+      "product_type": "Худі",
+      "options": [ { "name": "Size", "position": 1, "values": ["M", "L"] } ],
+      "variants": [
+        { "id": 4, "option1": "M", "price": "1900.00", "available": false },
+        { "id": 5, "option1": "L", "price": "1900.00", "available": false }
+      ],
+      "images": [ { "src": "https://cdn.shopify.com/s/files/hoodie.jpg" } ]
+    },
+    {
+      "id": 103,
+      "title": "Подарунковий сертифікат",
+      "handle": "gift-card",
+      "product_type": "Сертифікат",
+      "variants": [ { "id": 6, "price": "1000.00", "available": true } ],
+      "images": [ { "src": "https://cdn.shopify.com/s/files/gift.jpg" } ]
+    }
+  ]
+}

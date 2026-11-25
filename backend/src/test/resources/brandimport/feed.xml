@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
+  <channel>
+    <title>Brand feed</title>
+    <item>
+      <g:id>D1-S</g:id>
+      <g:item_group_id>D1</g:item_group_id>
+      <g:title>Лляна сукня міді</g:title>
+      <g:description>&lt;p&gt;Сукня з льону.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Склад: льон 100%&lt;/li&gt;&lt;/ul&gt;</g:description>
+      <g:link>https://brand.ua/products/linen-dress?variant=11&amp;utm_source=feed</g:link>
+      <g:image_link>https://cdn.brand.ua/dress.jpg</g:image_link>
+      <g:price>2400.00 UAH</g:price>
+      <g:availability>in stock</g:availability>
+      <g:size>S</g:size>
+      <g:color>бежевий</g:color>
+      <g:product_type>Сукні</g:product_type>
+    </item>
+    <item>
+      <g:id>D1-M</g:id>
+      <g:item_group_id>D1</g:item_group_id>
+      <g:title>Лляна сукня міді</g:title>
+      <g:link>https://brand.ua/products/linen-dress?variant=12</g:link>
+      <g:image_link>https://cdn.brand.ua/dress.jpg</g:image_link>
+      <g:price>2400.00 UAH</g:price>
+      <g:availability>out of stock</g:availability>
+      <g:size>M</g:size>
+      <g:color>бежевий</g:color>
+      <g:product_type>Сукні</g:product_type>
+    </item>
+    <item>
+      <g:id>J1</g:id>
+      <g:title>Куртка вовняна</g:title>
+      <g:link>https://brand.ua/products/wool-jacket</g:link>
+      <g:image_link>https://cdn.brand.ua/jacket.jpg</g:image_link>
+      <g:price>3900 UAH</g:price>
+      <g:sale_price>3500 UAH</g:sale_price>
+      <g:availability>in stock</g:availability>
+    </item>
+    <item>
+      <g:id>T1</g:id>
+      <g:title>Футболка базова</g:title>
+      <g:link>https://brand.ua/products/basic-tee</g:link>
+      <g:image_link>https://cdn.brand.ua/tee.jpg</g:image_link>
+      <g:price>29.00 USD</g:price>
+      <g:availability>in stock</g:availability>
+    </item>
+    <item>
+      <g:id>M1</g:id>
+      <g:title>Керамічна чашка</g:title>
+      <g:link>https://brand.ua/products/mug</g:link>
+      <g:image_link>https://cdn.brand.ua/mug.jpg</g:image_link>
+      <g:price>450 UAH</g:price>
+      <g:availability>in stock</g:availability>
+    </item>
+  </channel>
+</rss>

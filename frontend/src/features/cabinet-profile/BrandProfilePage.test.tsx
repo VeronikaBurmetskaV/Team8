@@ -17,6 +17,10 @@ const activeProfile: BrandProfileResponse = {
   consentGivenAt: null,
   consentText: null,
   state: "ACTIVE",
+  feedUrl: null,
+  siteDomain: null,
+  siteVerifiedAt: null,
+  verificationToken: null,
 };
 
 const consentedProfile: BrandProfileResponse = {

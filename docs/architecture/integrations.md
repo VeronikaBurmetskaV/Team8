@@ -2,7 +2,11 @@
 
 The MVP has **no API integrations with third parties**. Every external dependency is either a plain link/URL rendered for the buyer, or infrastructure (DB, hosting).
 Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites** for anything brand-facing: brand-entered product URLs, image URLs and logos are never fetched, checked or proxied.
-**Only exception (ADR-0014, Proposed): the dev-profile demo importer** reads three fixed sources (Всі. Свої XML feed, One By One, Cher'17) to fill the local demo feed. It runs only with `@Profile("dev")` and `fulla.import.enabled=true`, never in `ops`/`prod`/tests, and the demo with imported data is never published. See §7.
+**Exceptions:**
+1. **Brand site import (ADR-0017, Proposed), all profiles:** the server fetches the website of a brand **whose ownership of that site is verified**, only when that brand starts an import (`POST /api/brand/site/verify`, `POST /api/brand/import`) or for the daily refresh of an import it started. Only the verified domain and its subdomains, through the hardened `PoliteFetcher` (https/443, public IPs only, checked again on every redirect). Product, image and logo URLs entered by brands are still never fetched. See §8.
+2. **The dev-profile demo importer (ADR-0014, Proposed)** reads three fixed sources (Всі. Свої XML feed, One By One, Cher'17) to fill the local demo feed. It runs only with `@Profile("dev")` and `fulla.import.enabled=true`, never in `ops`/`prod`/tests, and the demo with imported data is never published. See §7.
+
+Still forbidden: any request to a URL whose owner is not verified, any endpoint that fetches a URL given in the request, and fetching images.
 
 ## Overview
 
@@ -10,6 +14,7 @@ Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites
 |---|---|---|---|---|
 | Brand product pages | Link only | Nothing. We store the URL and add `utm_source=fulla` | Buyer's browser (new tab) | US-19, US-26, US-32 |
 | Demo import sources: vsisvoi.ua, onebyone.ua, cher17.com | Server fetch, **dev profile only** (ADR-0014) | robots.txt, XML feed / sitemap, product pages (JSON-LD + HTML sizes); ≤ 50 items per source; images not copied | `ua.fulla.catalogimport` (`@Scheduled`, ≤ 1 run / 6 h) | Local demo only (§7) |
+| Brand's own website (verified owner) | Server fetch, all profiles (ADR-0017) | robots.txt, home page / `fulla-verification.txt` (ownership), brand feed, Shopify `/products.json`, sitemap + JSON-LD pages; ≤ 50 items, ≤ 100 requests per import | `ua.fulla.catalogimport` (brand request; daily refresh) | US-23/24/27–30 as drafts (§8) |
 | Brand-hosted image URLs | Link only (`<img src>`) | The image bytes, loaded by the browser | Buyer's / brand's browser | US-22.1, US-25.1 (URL variant) |
 | Image storage | Internal (Postgres) | — | Our API | US-22.1, US-25.1 (upload variant) |
 | Database | Infrastructure | Data storage | Our API | Always |
@@ -84,7 +89,19 @@ Rule (A-15, ADR-0009): **the FULLA server never makes requests to brand websites
 - **Not published:** while imported data is in the DB, the demo runs on the laptop / same Wi-Fi only; no Render deploy and no `cloudflared` link (brand content without consent).
 - **Data:** `data-model.md` §5 (source brands without accounts, import columns on `products`).
 
+## 8. Brand site import (ADR-0017, Proposed, all profiles)
+
+- **What:** a brand imports the products of its **own** website into its cabinet as Draft cards and publishes them through the normal gate (consent, T-1).
+- **Demo mode (profile `dev` only):** `fulla.brand-import.require-site-verification=false` skips the ownership check, like the ADR-0014 demo import (local only, never published); `prod`/`ops` always require it. The fetcher's limits stay.
+- **Ownership first** (`POST /api/brand/site/verify`): meta tag `<meta name="fulla-verification" content="<token>">` on the home page, or `https://<host>/fulla-verification.txt` with the token, or the brand's email domain = site domain (not for public mail services; email is not verified in the MVP, see the ADR). Changing `websiteUrl` to another domain clears the verification.
+- **Read, first that works:** the brand's feed (`feedUrl`, Google/Facebook XML, same domain) → Shopify `/products.json` → `sitemap.xml` (+ index) → product pages with JSON-LD `Product`. Clothing only, UAH only, ≤ 50 products per import.
+- **Limits (`PoliteFetcher`):** `https`, port 443; host = verified domain or a subdomain; every resolved address must be public, checked again on every redirect (max 3); 15 s timeout; body caps; allowed content types; User-Agent `FULLA-bot/1.0 (+<bot page>)`; robots.txt (`FULLA-bot`); ≥ 2 s between requests; ≤ 100 requests per import; stop on 403/429/challenge; one import per brand per 10 min; automatic refresh once a day for brands with a verified site and imported cards.
+- **Images:** never downloaded; cards keep the site's `https://` image URL.
+- **If unavailable:** the import ends `FAILED` with `SITE_UNREACHABLE` (or `SITE_ROBOTS_DISALLOWED`, `NO_PRODUCTS_FOUND`); existing cards stay as they are and nothing is hidden. Items are hidden only after a complete listing of the site.
+
 ## Future integration (Out of Scope): automatic import from brand sites
+
+> Partly superseded by ADR-0017 (§8): feeds, Shopify and JSON-LD import for verified brands. Still open: YML feeds, platform APIs with credentials.
 
 US-23, US-24, US-27–US-30 (connect a site, import products, sync availability and prices, auto-remove sold-out items) are **Post-MVP**. They are listed here only to show what the MVP design must not block. The dev-only demo importer (§7, ADR-0014) does **not** implement them: it has no brand settings, no consent and no production use, but its adapters and SSRF limits are a starting point.
 

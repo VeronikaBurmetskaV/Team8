@@ -19,6 +19,10 @@ const activeProfile: BrandProfileResponse = {
   consentGivenAt: null,
   consentText: null,
   state: "ACTIVE",
+  feedUrl: null,
+  siteDomain: null,
+  siteVerifiedAt: null,
+  verificationToken: null,
 };
 
 const consentedProfile: BrandProfileResponse = {
@@ -111,6 +115,7 @@ describe("toConsentRequest", () => {
       name: "Лляна",
       // the saved website goes back unchanged: the consent save must not clear it
       websiteUrl: "https://lileya.com.ua",
+      feedUrl: null,
       logoImageId: null,
       logoUrl: "https://cdn.brand-site.ua/logo.png",
       consentGiven: true,

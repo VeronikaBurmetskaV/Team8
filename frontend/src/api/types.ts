@@ -22,6 +22,15 @@ export type ErrorCode =
   | "PUBLISH_FIELDS_MISSING"
   | "INVALID_STATE"
   | "FAVORITES_LIMIT_REACHED"
+  // Brand site import (ADR-0017)
+  | "SITE_NOT_SET"
+  | "SITE_VERIFICATION_FAILED"
+  | "SITE_NOT_VERIFIED"
+  | "SITE_UNREACHABLE"
+  | "SITE_ROBOTS_DISALLOWED"
+  | "NO_PRODUCTS_FOUND"
+  | "IMPORT_TOO_FREQUENT"
+  | "IMPORT_FAILED"
   | "TOO_MANY_REQUESTS"
   | "SERVICE_UNAVAILABLE";
 
@@ -108,6 +117,8 @@ export interface BrandProfileRequest {
   name: string;
   /** Optional in the profile; null clears it. https:// with a domain, ≤ 2048. */
   websiteUrl: string | null;
+  /** The brand's product feed (ADR-0017): https://, on the website's domain; null clears it. */
+  feedUrl: string | null;
   logoImageId: string | null;
   logoUrl: string | null;
   consentGiven: boolean;
@@ -124,6 +135,13 @@ export interface BrandProfileResponse {
   consentGivenAt: string | null;
   consentText: string | null;
   state: ProfileState;
+  /** ADR-0017: the product feed, or null. */
+  feedUrl: string | null;
+  /** The verified domain of `websiteUrl` (e.g. «goldi.ua»); null while it is not verified. */
+  siteDomain: string | null;
+  siteVerifiedAt: string | null;
+  /** For the meta tag or the fulla-verification.txt file; null from an older backend. */
+  verificationToken: string | null;
 }
 
 /** Card as buyers see it (api.md §2.2). */
@@ -187,7 +205,51 @@ export type BrandCard = PublicCard & {
   status: "DRAFT" | "PUBLISHED";
   publishedAt: string | null;
   createdAt: string;
+  /** Only on a card imported from the brand's site (ADR-0017): where it was read. */
+  sourceUrl?: string;
+  /** Only on an imported card: the fields the brand changed by hand (imports keep them). */
+  editedFields?: EditedField[];
 };
+
+/** A field of an imported card that the brand edited by hand (api.md §2.1). */
+export type EditedField = "name" | "priceUah" | "photo" | "productUrl";
+
+/** PUT /api/brand/products/{id}: the same body as create (only a Draft can be edited). */
+export type UpdateProductRequest = CreateProductRequest;
+
+/** POST /api/brand/products/publish (ADR-0017). */
+export interface BulkPublishResponse {
+  publishedIds: string[];
+  skippedIds: string[];
+}
+
+/** POST /api/brand/site/verify (ADR-0017). */
+export interface SiteVerifyResponse {
+  siteDomain: string;
+  siteVerifiedAt: string;
+  method: "META_TAG" | "FILE" | "EMAIL_DOMAIN";
+}
+
+/** GET /api/brand/import/status and POST /api/brand/import (ADR-0017, api.md §2.1). */
+export interface ImportStatus {
+  status: "IDLE" | "RUNNING" | "DONE" | "FAILED";
+  method: "FEED" | "SHOPIFY" | "SITEMAP" | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  lastSuccessAt: string | null;
+  /** When the next import may start (10 min after the last start). */
+  nextAllowedAt: string | null;
+  found: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  hidden: number;
+  errorCode: ErrorCode | null;
+  /** False only in demo mode (profile dev): no ownership check, no verification step. */
+  verificationRequired: boolean;
+  /** `!verificationRequired`. */
+  demoMode: boolean;
+}
 
 /** POST /api/brand/products — exactly one of photoImageId / photoUrl is set (api.md §4.1). */
 export interface CreateProductRequest {

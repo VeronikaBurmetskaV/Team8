@@ -345,26 +345,34 @@ export function isValidPrice(value: string): boolean {
   return price > 0 && price <= PRICE_MAX_UAH;
 }
 
-/** Exactly one of: an uploaded file or an https:// image URL (api.md §4.1). */
-const photoSchema = z
-  .object({
-    file: z.custom<File>((value) => value instanceof File).nullable(),
-    url: z.string().trim(),
-  })
-  .refine(
-    ({ file, url }) => {
-      if (file !== null && url !== "") return false;
-      if (file !== null) {
-        return (
-          IMAGE_MIME_TYPES.includes(file.type) &&
-          file.size > 0 &&
-          file.size <= IMAGE_MAX_BYTES
-        );
-      }
-      return isHttpsUrl(url);
-    },
-    { message: PRICE_OR_PHOTO },
-  );
+const photoObject = z.object({
+  file: z.custom<File>((value) => value instanceof File).nullable(),
+  url: z.string().trim(),
+});
+
+/**
+ * Exactly one of: an uploaded file or an https:// image URL (api.md §4.1). When editing a card
+ * whose photo is an uploaded image, neither may be given: the current image stays.
+ */
+function isValidPhoto(
+  { file, url }: z.infer<typeof photoObject>,
+  keepsUploadedPhoto: boolean,
+): boolean {
+  if (file !== null && url !== "") return false;
+  if (file !== null) {
+    return (
+      IMAGE_MIME_TYPES.includes(file.type) &&
+      file.size > 0 &&
+      file.size <= IMAGE_MAX_BYTES
+    );
+  }
+  if (url === "") return keepsUploadedPhoto;
+  return isHttpsUrl(url);
+}
+
+const photoSchema = photoObject.refine((photo) => isValidPhoto(photo, false), {
+  message: PRICE_OR_PHOTO,
+});
 
 /** The card form (US-25.1, US-26), fields in the order of the form. */
 export const cardFormSchema = z.object({
@@ -384,3 +392,16 @@ export const cardFormSchema = z.object({
 });
 
 export type CardFormValues = z.infer<typeof cardFormSchema>;
+
+/**
+ * The card form when editing (US-26 S1): the same rules, but a card whose photo is an uploaded
+ * image may keep it (no new file, no URL).
+ */
+export function editCardFormSchema(keepsUploadedPhoto: boolean) {
+  return cardFormSchema.extend({
+    photo: photoObject.refine(
+      (photo) => isValidPhoto(photo, keepsUploadedPhoto),
+      { message: PRICE_OR_PHOTO },
+    ),
+  });
+}

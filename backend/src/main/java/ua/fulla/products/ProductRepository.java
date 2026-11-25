@@ -22,7 +22,8 @@ class ProductRepository {
 
     private static final String SELECT_CARD = """
         SELECT p.id, p.brand_id, p.name, bp.name AS brand_name, p.price_uah, p.photo_image_id, p.photo_url,
-               p.product_url, p.status, p.published_at, p.created_at, p.updated_at
+               p.product_url, p.status, p.published_at, p.created_at, p.updated_at, p.source_url,
+               array_to_string(p.edited_fields, ',') AS edited_fields
         FROM products p
         JOIN brand_profiles bp ON bp.brand_id = p.brand_id
         """;
@@ -93,6 +94,172 @@ class ProductRepository {
                 """)
             .param("id", id)
             .param("brandId", brandId)
+            .update();
+    }
+
+    /**
+     * T-3: edits the brand's own Draft in one statement; a Published card is not changed
+     * (INV-10). For a card imported from the brand's site (ADR-0017) every field whose value
+     * changes is added to {@code edited_fields}, so a re-import never overwrites it. {@code old}
+     * is the row as it was before this statement. Returns 1 or 0.
+     */
+    int updateDraft(UUID id, UUID brandId, ProductDraft draft) {
+        return jdbc.sql("""
+                UPDATE products p SET
+                    name = :name,
+                    price_uah = :priceUah,
+                    photo_image_id = CAST(:photoImageId AS uuid),
+                    photo_url = CAST(:photoUrl AS varchar),
+                    product_url = :productUrl,
+                    updated_at = now(),
+                    edited_fields = CASE WHEN old.external_id IS NULL THEN old.edited_fields ELSE ARRAY(
+                        SELECT DISTINCT f FROM unnest(old.edited_fields || array_remove(ARRAY[
+                            CASE WHEN old.name IS DISTINCT FROM :name THEN 'name' END,
+                            CASE WHEN old.price_uah IS DISTINCT FROM :priceUah THEN 'price_uah' END,
+                            CASE WHEN old.photo_url IS DISTINCT FROM CAST(:photoUrl AS varchar)
+                                   OR old.photo_image_id IS DISTINCT FROM CAST(:photoImageId AS uuid)
+                                 THEN 'photo' END,
+                            CASE WHEN old.product_url IS DISTINCT FROM :productUrl THEN 'product_url' END
+                        ]::text[], NULL)) AS f ORDER BY f) END
+                FROM products old
+                WHERE p.id = old.id AND p.id = :id AND p.brand_id = :brandId AND p.status = 'draft'
+                """)
+            .param("id", id)
+            .param("brandId", brandId)
+            .param("name", draft.name())
+            .param("priceUah", draft.priceUah())
+            .param("photoImageId", draft.photoImageId())
+            .param("photoUrl", draft.photoUrl())
+            .param("productUrl", draft.productUrl())
+            .update();
+    }
+
+    /**
+     * T-1 for many cards at once: the brand's own Drafts among {@code ids} are published in one
+     * statement, only if the brand has given consent. Returns the IDs that were published.
+     */
+    List<UUID> publishMany(Collection<UUID> ids, UUID brandId) {
+        return jdbc.sql("""
+                UPDATE products SET status = 'published', published_at = now(), updated_at = now()
+                WHERE id IN (:ids) AND brand_id = :brandId AND status = 'draft'
+                  AND EXISTS (SELECT 1 FROM brand_profiles
+                              WHERE brand_id = :brandId AND consent_given_at IS NOT NULL)
+                RETURNING id
+                """)
+            .param("ids", List.copyOf(ids))
+            .param("brandId", brandId)
+            .query(UUID.class)
+            .list();
+    }
+
+    // ---------- brand site import (ADR-0017) ----------
+
+    /**
+     * Updates the brand's imported card of {@code externalId}. Fields in {@code edited_fields}
+     * keep the brand's values; sizes, colours, material and description always follow the site.
+     * Works on Published cards too (the ADR-0017 exception to INV-10). Empty when the brand has
+     * no such card; otherwise whether any stored value changed.
+     */
+    Optional<Boolean> updateBrandImported(BrandImportedCard card) {
+        return jdbc.sql("""
+                UPDATE products p SET
+                    name = CASE WHEN 'name' = ANY(old.edited_fields) THEN old.name ELSE :name END,
+                    price_uah = CASE WHEN 'price_uah' = ANY(old.edited_fields) THEN old.price_uah ELSE :priceUah END,
+                    photo_url = CASE WHEN 'photo' = ANY(old.edited_fields) THEN old.photo_url ELSE :photoUrl END,
+                    photo_image_id = CASE WHEN 'photo' = ANY(old.edited_fields) THEN old.photo_image_id END,
+                    product_url = CASE WHEN 'product_url' = ANY(old.edited_fields) THEN old.product_url
+                                       ELSE :productUrl END,
+                    sizes = CAST(:sizes AS jsonb),
+                    colors = CAST(:colors AS jsonb),
+                    material = CAST(:material AS varchar),
+                    description = CAST(:description AS text),
+                    source_url = :sourceUrl,
+                    last_synced_at = now(),
+                    updated_at = now()
+                FROM products old
+                WHERE p.id = old.id AND p.brand_id = :brandId AND p.external_id = :externalId
+                RETURNING (p.name, p.price_uah, p.photo_url, p.product_url, p.sizes, p.colors, p.material,
+                           p.description)
+                          IS DISTINCT FROM
+                          (old.name, old.price_uah, old.photo_url, old.product_url, old.sizes, old.colors,
+                           old.material, old.description) AS changed
+                """)
+            .param("brandId", card.brandId())
+            .param("externalId", card.externalId())
+            .param("name", card.name())
+            .param("priceUah", card.priceUah())
+            .param("photoUrl", card.photoUrl())
+            .param("productUrl", card.productUrl())
+            .param("sizes", toJson(card.sizes()))
+            .param("colors", toJson(card.colors()))
+            .param("material", card.material())
+            .param("description", card.description())
+            .param("sourceUrl", card.sourceUrl())
+            .query(Boolean.class)
+            .optional();
+    }
+
+    /**
+     * A new Draft from the brand's site. T-2 in the same statement: only when the brand name is
+     * saved. Empty when the name is missing or the card already exists (a parallel import).
+     */
+    Optional<UUID> insertBrandImported(BrandImportedCard card) {
+        return jdbc.sql("""
+                INSERT INTO products (brand_id, external_id, source_url, last_synced_at, name, price_uah, photo_url,
+                                      product_url, sizes, colors, material, description, status)
+                SELECT brand_id, :externalId, :sourceUrl, now(), :name, :priceUah, :photoUrl,
+                       :productUrl, CAST(:sizes AS jsonb), CAST(:colors AS jsonb), CAST(:material AS varchar),
+                       CAST(:description AS text), 'draft'
+                FROM brand_profiles
+                WHERE brand_id = :brandId AND name IS NOT NULL
+                ON CONFLICT (brand_id, external_id) DO NOTHING
+                RETURNING id
+                """)
+            .param("brandId", card.brandId())
+            .param("externalId", card.externalId())
+            .param("sourceUrl", card.sourceUrl())
+            .param("name", card.name())
+            .param("priceUah", card.priceUah())
+            .param("photoUrl", card.photoUrl())
+            .param("productUrl", card.productUrl())
+            .param("sizes", toJson(card.sizes()))
+            .param("colors", toJson(card.colors()))
+            .param("material", card.material())
+            .param("description", card.description())
+            .query(UUID.class)
+            .optional();
+    }
+
+    /** Published imported cards of the brand among {@code externalIds} go to Draft. Returns how many. */
+    int hideBrandImported(UUID brandId, Collection<String> externalIds) {
+        if (externalIds.isEmpty()) {
+            return 0;
+        }
+        return jdbc.sql("""
+                UPDATE products SET status = 'draft', published_at = NULL, updated_at = now()
+                WHERE brand_id = :brandId AND status = 'published' AND external_id IN (:ids)
+                """)
+            .param("brandId", brandId)
+            .param("ids", List.copyOf(externalIds))
+            .update();
+    }
+
+    /**
+     * After a complete listing of the site: the brand's Published imported cards that the site
+     * no longer lists go to Draft. Never deletes; hand-made cards ({@code external_id IS NULL})
+     * are never touched. An empty listing hides nothing.
+     */
+    int hideMissingBrandImported(UUID brandId, Collection<String> listedExternalIds) {
+        if (listedExternalIds.isEmpty()) {
+            return 0;
+        }
+        return jdbc.sql("""
+                UPDATE products SET status = 'draft', published_at = NULL, updated_at = now()
+                WHERE brand_id = :brandId AND status = 'published' AND external_id IS NOT NULL
+                  AND external_id NOT IN (:listed)
+                """)
+            .param("brandId", brandId)
+            .param("listed", List.copyOf(listedExternalIds))
             .update();
     }
 
@@ -191,6 +358,12 @@ class ProductRepository {
             ProductStatus.fromColumn(rs.getString("status")),
             Timestamps.instant(rs, "published_at"),
             Timestamps.instant(rs, "created_at"),
-            Timestamps.instant(rs, "updated_at"));
+            Timestamps.instant(rs, "updated_at"),
+            rs.getString("source_url"),
+            editedFields(rs.getString("edited_fields")));
+    }
+
+    private static List<String> editedFields(String joined) {
+        return joined == null || joined.isEmpty() ? List.of() : List.of(joined.split(","));
     }
 }

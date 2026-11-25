@@ -24,6 +24,54 @@ fulla:
     # Demo catalogue import (ADR-0014): off by default, so tests and other profiles never touch
     # the network. Profile dev turns it on in application-dev.yml.
     enabled: false
+  brand-import:
+    # Brand site import (ADR-0017), every profile. Hard limits in BrandImportProperties:
+    # >= 2 s between requests, <= 50 products and <= 100 requests per import, >= 10 min between
+    # two imports of one brand. The bot page must describe FULLA-bot (frontend route, see ADR-0017).
+    bot-info-url: https://fulla.example/bot
+    delay-between-requests: 2s
+    max-products: 50
+    max-requests: 100
+    min-interval: 10m
+    # Daily refresh of brands with a verified site and imported cards.
+    auto-refresh: true
+    refresh-interval: 24h
+    refresh-check-initial-delay: 5m
+    refresh-check-interval: 1h
+    # Ownership by the email domain trusts an unverified email (ADR-0017): switch off before
+    # anything is published.
+    email-domain-verification: true
+    # The brand must prove it owns the site before an import (ADR-0017). Only application-dev.yml
+    # turns this off (demo mode); profiles prod and ops always require it, whatever is set.
+    require-site-verification: true
+    verify-min-interval: 30s
+    # Public mail services: their domain never verifies a site.
+    public-email-domains:
+      - gmail.com
+      - googlemail.com
+      - ukr.net
+      - i.ua
+      - meta.ua
+      - bigmir.net
+      - email.ua
+      - online.ua
+      - outlook.com
+      - hotmail.com
+      - live.com
+      - msn.com
+      - yahoo.com
+      - icloud.com
+      - me.com
+      - mail.com
+      - gmx.com
+      - gmx.net
+      - proton.me
+      - protonmail.com
+      - aol.com
+      - zoho.com
+      - yandex.ru
+      - yandex.ua
+      - mail.ru
 
 server:
   port: 8080

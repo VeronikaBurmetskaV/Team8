@@ -12,6 +12,7 @@ import {
   buyerLoginSchema,
   buyerRegisterSchema,
   cardFormSchema,
+  editCardFormSchema,
   isWebsiteUrl,
   withHttps,
   cleanWebsiteUrl,
@@ -527,5 +528,31 @@ describe("normalizeWebsiteUrl: the same examples as WebsiteUrlValidator.normaliz
     expect(cleanWebsiteUrl("https://goldi.ua/?lang=uk&utm_source=x")).toBe(
       "https://goldi.ua/?lang=uk",
     );
+  });
+});
+
+describe("editCardFormSchema", () => {
+  const values = {
+    name: "Сукня",
+    priceUah: "2400",
+    photo: { file: null, url: "" },
+    productUrl: "https://goldi.ua/a",
+  };
+
+  it("keeps an uploaded photo when neither a file nor a URL is given", () => {
+    expect(editCardFormSchema(true).safeParse(values).success).toBe(true);
+    expect(editCardFormSchema(false).safeParse(values).success).toBe(false);
+    expect(cardFormSchema.safeParse(values).success).toBe(false);
+  });
+
+  it("checks a new photo URL and the other fields as on create", () => {
+    const schema = editCardFormSchema(true);
+    expect(
+      schema.safeParse({
+        ...values,
+        photo: { file: null, url: "http://x.ua/a.jpg" },
+      }).success,
+    ).toBe(false);
+    expect(schema.safeParse({ ...values, priceUah: "0" }).success).toBe(false);
   });
 });

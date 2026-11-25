@@ -26,3 +26,8 @@ fulla:
       vsisvoi: https://vsisvoi.ua
       onebyone: https://onebyone.ua
       cher17: https://cher17.com
+  brand-import:
+    # Demo mode (ADR-0017, like the ADR-0014 demo import): a brand imports from the website in
+    # its profile without proving ownership. Local development only; the fetcher's safety limits
+    # (https, public addresses, robots.txt, pauses, caps) still apply. Ignored with prod/ops.
+    require-site-verification: false

@@ -2,7 +2,12 @@ import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router";
-import type { BrandCard, BrandProfileResponse } from "../../api/types";
+import type {
+  BrandCard,
+  BrandProfileResponse,
+  ImportStatus,
+} from "../../api/types";
+import { importStatusKey } from "../cabinet-import/api";
 import {
   brandProfileQueryKey,
   toBrandProfile,
@@ -21,6 +26,10 @@ const consentedProfile: BrandProfileResponse = {
   consentGivenAt: "2026-11-24T10:00:00Z",
   consentText: "Згода",
   state: "CONSENTED",
+  feedUrl: null,
+  siteDomain: null,
+  siteVerifiedAt: null,
+  verificationToken: null,
 };
 
 const activeProfile: BrandProfileResponse = {
@@ -45,8 +54,10 @@ function card(id: string, status: BrandCard["status"]): BrandCard {
 function render(
   profile: BrandProfileResponse | undefined,
   products: BrandCard[] | undefined,
+  importStatus?: ImportStatus,
 ): string {
   const client = new QueryClient();
+  if (importStatus) client.setQueryData(importStatusKey, importStatus);
   if (profile) client.setQueryData(brandProfileQueryKey, profile);
   if (products) client.setQueryData(brandProductsKey, products);
   return renderToString(
@@ -263,5 +274,66 @@ describe("/brand with a profile answer that has no websiteUrl (a backend from be
       expect(html).toMatch(/<h2[^>]*>Тестовий бренд<\/h2>/);
       expect(html).not.toContain('target="_blank"');
     }
+  });
+});
+
+const importStatus: ImportStatus = {
+  status: "IDLE",
+  method: null,
+  startedAt: null,
+  finishedAt: null,
+  lastSuccessAt: null,
+  nextAllowedAt: null,
+  found: 0,
+  created: 0,
+  updated: 0,
+  skipped: 0,
+  hidden: 0,
+  errorCode: null,
+  verificationRequired: true,
+  demoMode: false,
+};
+
+describe("/brand: «Імпорт з сайту» (ADR-0017)", () => {
+  it("is a card under the profile header for a brand with a name", () => {
+    const html = render(
+      { ...consentedProfile, verificationToken: "0".repeat(32) },
+      [],
+      importStatus,
+    );
+    expect(html).toMatch(/<h2[^>]*>Імпорт з сайту<\/h2>/);
+    expect(html.indexOf("Імпорт з сайту")).toBeGreaterThan(
+      html.indexOf("Тестовий бренд"),
+    );
+    expect(html).toContain("Крок 1. Підтвердіть, що сайт ваш");
+    expect(html).toContain("lileya.com.ua");
+  });
+
+  it("offers the import once the site is verified", () => {
+    const html = render(
+      {
+        ...consentedProfile,
+        siteDomain: "lileya.com.ua",
+        siteVerifiedAt: "2026-11-24T10:00:00Z",
+      },
+      [],
+      importStatus,
+    );
+    expect(html).toContain("Імпортувати товари з lileya.com.ua");
+  });
+
+  it("in demo mode offers the import at once, with the demo note", () => {
+    const html = render(consentedProfile, [], {
+      ...importStatus,
+      verificationRequired: false,
+      demoMode: true,
+    });
+    expect(html).not.toContain("Підтвердіть, що сайт ваш");
+    expect(html).toContain("Демо-режим");
+    expect(html).toContain("Імпортувати товари з lileya.com.ua");
+  });
+
+  it("is not shown before the brand name is saved", () => {
+    expect(render(incompleteProfile, [])).not.toContain("Імпорт з сайту");
   });
 });

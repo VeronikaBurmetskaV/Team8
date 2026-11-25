@@ -1,6 +1,9 @@
 package ua.fulla.brandprofile;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ua.fulla.common.ApiException;
 import ua.fulla.common.BrandNameValidator;
 import ua.fulla.common.ErrorCode;
+import ua.fulla.common.SiteDomain;
 import ua.fulla.common.WebsiteUrlValidator;
 
 @Service
@@ -34,6 +38,7 @@ public class BrandProfileService {
         "brand_profiles_name_length", "name",
         "brand_profiles_consent_needs_name", "name",
         "brand_profiles_website_url_https", "websiteUrl",
+        "brand_profiles_feed_url_https", "feedUrl",
         "brand_profiles_logo_url_https", "logo",
         "brand_profiles_one_logo_source", "logo",
         "brand_profiles_logo_image_fk", "logo",
@@ -80,8 +85,8 @@ public class BrandProfileService {
      * nothing is saved. Remove this check when the logo is stored.
      */
     @Transactional
-    public BrandProfile save(UUID brandId, String rawName, String websiteUrl, UUID logoImageId, String logoUrl,
-            Boolean consentGiven) {
+    public BrandProfile save(UUID brandId, String rawName, String websiteUrl, String feedUrl, UUID logoImageId,
+            String logoUrl, Boolean consentGiven) {
         // A rule across two fields: a logo is an uploaded image or an external URL, never both.
         if (logoImageId != null && logoUrl != null) {
             // Map.of has no order; the two fields carry the same code anyway.
@@ -100,10 +105,35 @@ public class BrandProfileService {
         }
         String name = BrandNameValidator.normalize(rawName);
         boolean giveConsent = Boolean.TRUE.equals(consentGiven);
-        // The website is replaced like the name; null clears it (optional in the profile).
-        return writing(() -> repository.updateNameAndConsent(brandId, name,
-                WebsiteUrlValidator.normalize(websiteUrl), giveConsent, CONSENT_TEXT))
+        String website = WebsiteUrlValidator.normalize(websiteUrl);
+        String feed = feedUrl == null || feedUrl.isBlank() ? null : feedUrl.strip();
+        // ADR-0017: the feed is read only from the brand's own (verified) domain.
+        if (feed != null && (website == null || !SiteDomain.covers(SiteDomain.of(website), hostOf(feed)))) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.PROFILE_INVALID,
+                "feedUrl must be on the domain of websiteUrl", Map.of("feedUrl", ErrorCode.PROFILE_INVALID));
+        }
+        // The website and the feed are replaced like the name; null clears them (optional in the
+        // profile). A website on another domain clears the site verification (ADR-0017).
+        return writing(() -> repository.updateNameAndConsent(brandId, name, website, feed, giveConsent,
+                CONSENT_TEXT))
             .orElseThrow(() -> missingProfile(brandId));
+    }
+
+    /**
+     * ADR-0017: stores a successful ownership check of {@code websiteUrl} (the value that was
+     * checked). Empty when the brand changed its website while the check was running.
+     */
+    @Transactional
+    public Optional<BrandProfile> markSiteVerified(UUID brandId, String websiteUrl) {
+        return repository.markSiteVerified(brandId, websiteUrl, SiteDomain.of(websiteUrl));
+    }
+
+    private static String hostOf(String url) {
+        try {
+            return new URI(url).getHost();
+        } catch (URISyntaxException e) {
+            return null;
+        }
     }
 
     /**

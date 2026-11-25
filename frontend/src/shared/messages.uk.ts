@@ -54,6 +54,19 @@ export const messages: Record<ErrorCode, string> = {
   CARD_NOT_EDITABLE:
     "Опубліковану картку не можна редагувати. Спочатку зніміть її з публікації",
   INVALID_STATE: "Стан картки вже змінився. Оновіть сторінку",
+  // Brand site import (ADR-0017). PROVISIONAL: no story gives these texts (Q-08).
+  SITE_NOT_SET: "Спочатку вкажіть сайт бренду в профілі",
+  SITE_VERIFICATION_FAILED:
+    "Не вдалося підтвердити сайт: мета-тег або файл з кодом не знайдено на головній сторінці. Перевірте, що зміни опубліковані, і спробуйте ще раз",
+  SITE_NOT_VERIFIED: "Спочатку підтвердьте, що сайт належить вашому бренду",
+  SITE_UNREACHABLE:
+    "Не вдалося відкрити ваш сайт. Перевірте, що він працює, і спробуйте пізніше",
+  SITE_ROBOTS_DISALLOWED:
+    "Файл robots.txt вашого сайту забороняє FULLA-bot читати сторінки товарів",
+  NO_PRODUCTS_FOUND:
+    "На сайті не знайдено одягу: немає товарного фіду, Shopify-каталогу чи розмітки товарів. Додайте посилання на товарний фід",
+  IMPORT_TOO_FREQUENT: "Імпорт можна запускати не частіше ніж раз на 10 хвилин",
+  IMPORT_FAILED: "Імпорт перервався. Спробуйте запустити його ще раз",
   // From the task text (ADR-0012 limits), no story yet.
   FAVORITES_LIMIT_REACHED:
     "Вподобане заповнене (100 з 100). Видаліть кілька товарів, щоб додати нові.",
@@ -473,4 +486,101 @@ export const confirmTexts = {
   consentNeedsName: "Спочатку збережіть назву бренду, потім надайте згоду",
   logoutQuestion: "Ви точно хочете вийти з профілю?",
   logoutConfirm: "Вийти",
+} as const;
+
+/** «Імпорт з сайту» on the cabinet home page (ADR-0017). PROVISIONAL texts. */
+export const siteImportTexts = {
+  title: "Імпорт з сайту",
+  intro:
+    "Перенесіть товари зі свого сайту в кабінет: вони з'являться як чернетки, і ви вирішите, що публікувати.",
+  addWebsite: "Додайте сайт бренду в профілі",
+  loading: "Завантаження…",
+  /** Demo mode (profile dev, ADR-0017): no ownership check. */
+  demoNote:
+    "Демо-режим: товари імпортуються лише локально для розробки і не публікуються для покупців",
+  stepVerify: "Крок 1. Підтвердіть, що сайт ваш",
+  verifyIntro: (domain: string) =>
+    `Оберіть один зі способів для ${domain}, потім натисніть «Перевірити».`,
+  methodMeta: "Мета-тег на головній сторінці",
+  methodMetaHint:
+    "Додайте цей рядок у <head> головної сторінки сайту (у Shopify — Theme → Edit code → theme.liquid, у Horoshop і Prom — поле для коду в налаштуваннях сайту).",
+  copy: "Скопіювати мета-тег",
+  copied: "Скопійовано",
+  copyFailed: "Не вдалося скопіювати — виділіть рядок і скопіюйте вручну",
+  methodFile: "Файл fulla-verification.txt",
+  methodFileHint: (domain: string) =>
+    `Завантажте файл і розмістіть його так, щоб він відкривався за адресою https://${domain}/fulla-verification.txt.`,
+  downloadFile: "Завантажити файл fulla-verification.txt",
+  methodEmail: "Автоматично через пошту",
+  methodEmailHint: (domain: string) =>
+    `Якщо ви увійшли з адреси на домені ${domain} (наприклад info@${domain}), нічого додавати не треба — просто натисніть «Перевірити». Gmail, ukr.net, i.ua та інші публічні пошти не підходять.`,
+  verify: "Перевірити",
+  verifying: "Перевіряємо сайт…",
+  verifiedOn: (domain: string, date: string) =>
+    `Сайт ${domain} підтверджено ${date}`,
+  importFrom: (domain: string) => `Імпортувати товари з ${domain}`,
+  importStarting: "Запускаємо імпорт…",
+  running:
+    "Імпорт триває: читаємо товари з вашого сайту. Сторінкою можна користуватися далі.",
+  summary: (s: {
+    found: number;
+    created: number;
+    updated: number;
+    skipped: number;
+  }) =>
+    `Знайдено ${s.found}, додано ${s.created} як чернетки, оновлено ${s.updated}, пропущено ${s.skipped} (не одяг або немає в наявності)`,
+  hidden: (count: number) =>
+    `Знято з публікації ${count} (розпродано або зникли з сайту)`,
+  failed: "Імпорт не вдався",
+  viewDrafts: "Переглянути чернетки",
+  lastImport: (dateTime: string) => `Останній імпорт: ${dateTime}`,
+  autoRefresh:
+    "Ціни, розміри й наявність оновлюються автоматично раз на добу. Нові товари з'являються як чернетки.",
+  nextAllowed: (time: string) => `Наступний імпорт можна запустити о ${time}`,
+  feedLabel: "Посилання на товарний фід (необов'язково)",
+  feedHint:
+    "Товарний фід — це XML-файл з усіма товарами для Google Merchant або Facebook. Він дає найточніші дані. Де взяти: Horoshop — «Маркетинг → Експорт → Google Merchant»; Prom — «Налаштування → Експорт товарів → XML для Google»; Shopify — застосунок Google & YouTube (або залиште поле порожнім: Shopify-каталог ми знайдемо самі). Посилання має бути на домені вашого сайту.",
+  feedInvalid: (domain: string) =>
+    `Вкажіть посилання https:// на домені ${domain}`,
+  saveFeed: "Зберегти посилання на фід",
+  savingFeed: "Зберігаємо…",
+  feedSaved: "Посилання на фід збережено",
+} as const;
+
+/** The brand's product list (/brand/products) and the card editor (ADR-0017 additions). */
+export const brandProductsTexts = {
+  title: "Товари бренду",
+  filterLabel: "Показати",
+  filterAll: "Усі товари",
+  filterImportedDrafts: "Чернетки з сайту",
+  fromSite: "з сайту",
+  editedByHand: "змінено вручну",
+  selectAll: "Вибрати всі чернетки на сторінці",
+  select: (name: string) => `Вибрати «${name}»`,
+  publishSelected: (count: number) => `Опублікувати вибрані (${count})`,
+  publishAll: (count: number) => `Опублікувати всі чернетки (${count})`,
+  publishing: "Публікуємо…",
+  published: (count: number) => `Опубліковано товарів: ${count}`,
+  skipped: (count: number) =>
+    `Не опубліковано: ${count} (вже опубліковані або змінилися — оновіть список)`,
+  consentNeeded:
+    "Публікація недоступна: спершу підтвердіть згоду на показ матеріалів бренду.",
+  consentLink: "Підтвердити згоду",
+  emptyFilter: "Чернеток з сайту немає",
+  edit: (name: string) => `Редагувати «${name}»`,
+  editShort: "Редагувати",
+} as const;
+
+/** The card editor (/brand/products/:id). */
+export const editProductTexts = {
+  title: "Редагування товару",
+  notFound: "Товар не знайдено. Можливо, його вже немає у вашому списку.",
+  publishedReadOnly:
+    "Опубліковану картку не можна редагувати. Спочатку зніміть її з публікації.",
+  editedField: "змінено вручну, не оновлюється з сайту",
+  importedNote:
+    "Цей товар імпортовано з вашого сайту. Поля, які ви зміните тут, більше не оновлюватимуться з сайту; розміри й наявність оновлюються як і раніше.",
+  keepPhoto: "Поточне фото залишиться, якщо не вибрати нове",
+  save: "Зберегти зміни",
+  saving: "Зберігаємо…",
 } as const;

@@ -1,0 +1,258 @@
+/* «Імпорт з сайту» on /brand (ADR-0017): desktop-first (ADR-0002), works down to 320 px. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-h2);
+}
+
+.text,
+.summary {
+  margin: 0;
+}
+
+.summary {
+  font-weight: var(--font-weight-semibold);
+}
+
+.small {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.small:empty {
+  display: none;
+}
+
+.error {
+  margin: 0;
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- Step 1: verification ---------- */
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stepTitle {
+  margin: 0;
+  font-size: var(--font-size-h3);
+}
+
+.methods {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.method {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-background);
+}
+
+.methodTitle {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+/* The tag wraps anywhere: no horizontal scroll from 320 px. */
+.code {
+  display: block;
+  max-width: 100%;
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--color-border);
+  background-color: var(--color-surface);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.inlineAction {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* ---------- Buttons ---------- */
+.primary,
+.secondary,
+.secondaryLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-primary);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  align-self: flex-start;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.secondary,
+.secondaryLink {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.secondaryLink {
+  align-self: flex-start;
+}
+
+.primary:disabled,
+.secondary:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+  cursor: progress;
+}
+
+/* ---------- Step 2: import ---------- */
+.verified {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-success);
+  font-weight: var(--font-weight-medium);
+}
+
+.check {
+  font-weight: var(--font-weight-bold);
+}
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.label {
+  font-weight: var(--font-weight-medium);
+}
+
+.feedRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.feedRow input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  min-height: var(--control-height);
+  padding-inline: var(--space-1);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+}
+
+.feedRow input[aria-invalid="true"] {
+  border-color: var(--color-error);
+}
+
+.importRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.progress:empty {
+  display: none;
+}
+
+/* An indeterminate bar: the server reports no percentage. */
+.bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-background);
+}
+
+.bar::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  border-radius: inherit;
+  background-color: var(--color-accent);
+  content: "";
+  animation: slide 1.4s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(340%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar::after {
+    width: 100%;
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+/* Desktop: the three methods side by side. */
+@media (min-width: 1024px) {
+  .methods {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Demo mode (profile dev): a small grey note above the feed field and the import button. */
+.demoNote {
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
