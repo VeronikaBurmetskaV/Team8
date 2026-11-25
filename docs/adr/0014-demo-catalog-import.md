@@ -1,7 +1,7 @@
 # ADR-0014: Demo catalogue import from three brand/shop sites (dev profile only)
 
 ## Status
-Proposed — 2026-11-17; revised 2026-11-25 (source site logo URL, see «Images» and ADR-0015). Partially overrides A-15 ("the server never fetches brand URLs"), **only** for the local demo (profile `dev`). For every other profile and for the brand-facing product, A-15, ADR-0009 and the Out-of-Scope list (US-23, US-24, US-27…US-30) stay as they are. Needs the team lead's decision: it changes scope, adds a dependency and a second interface besides `ImageStore`.
+Proposed — 2026-11-17; revised 2026-11-25 (source site logo URL, see «Images» and ADR-0015). Note 2026-11-25: in profile `dev` the brand site import of ADR-0017 also runs without the ownership check (demo mode, same «local only, never published» rule as here); in `prod`/`ops` that check is always required. Partially overrides A-15 ("the server never fetches brand URLs"), **only** for the local demo (profile `dev`). For every other profile and for the brand-facing product, A-15, ADR-0009 and the Out-of-Scope list (US-23, US-24, US-27…US-30) stay as they are. Needs the team lead's decision: it changes scope, adds a dependency and a second interface besides `ImageStore`.
 
 ## Context
 The demo feed needs realistic cards from real Ukrainian brands. Without them it runs on the dev seeder (≥ 4 fake brands, ~30 cards). The research in `parsing-research.md` (17.11.2026, not in git) checked six sites. Three are cheap and predictable to read:

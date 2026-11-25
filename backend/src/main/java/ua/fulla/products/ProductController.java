@@ -1,5 +1,6 @@
 package ua.fulla.products;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
@@ -9,12 +10,14 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -51,7 +54,18 @@ class ProductController {
             @HttpUrl(message = URL + "productUrl must be an absolute http:// or https:// URL")
             String productUrl) {}
 
-    /** Brand card = PublicCard + {@code photoImageId, status, publishedAt, createdAt} (api.md §2.1, §2.2). */
+    /** Bulk publish (ADR-0017): 1…500 card IDs. */
+    record BulkPublishRequest(
+            @NotNull(message = "VALIDATION_FAILED: ids is required")
+            @Size(min = 1, max = 500, message = "VALIDATION_FAILED: ids must have 1 to 500 items")
+            List<@NotNull UUID> ids) {}
+
+    record BulkPublishResponse(List<UUID> publishedIds, List<UUID> skippedIds) {}
+
+    /**
+     * Brand card = PublicCard + {@code photoImageId, status, publishedAt, createdAt} (api.md §2.1, §2.2),
+     * plus {@code sourceUrl} only for a card imported from the brand's site (ADR-0017).
+     */
     record BrandCardResponse(
             UUID id,
             String name,
@@ -62,7 +76,13 @@ class ProductController {
             UUID photoImageId,
             ProductStatus status,
             Instant publishedAt,
-            Instant createdAt) {
+            Instant createdAt,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String sourceUrl,
+            @JsonInclude(JsonInclude.Include.NON_NULL) List<String> editedFields) {
+
+        /** DB names of {@code products.edited_fields} → the JSON field names of the card. */
+        private static final Map<String, String> EDITED_FIELD_NAMES = Map.of(
+            "name", "name", "price_uah", "priceUah", "photo", "photo", "product_url", "productUrl");
 
         static BrandCardResponse of(ProductCard card) {
             // photoUrl is what an <img> loads: the uploaded image or the brand's https:// URL.
@@ -77,7 +97,11 @@ class ProductController {
                 card.photoImageId(),
                 card.status(),
                 card.publishedAt(),
-                card.createdAt());
+                card.createdAt(),
+                card.sourceUrl(),
+                // Only an imported card has the list (ADR-0017); hand-made cards leave the key out.
+                card.sourceUrl() == null ? null
+                    : card.editedFields().stream().map(f -> EDITED_FIELD_NAMES.getOrDefault(f, f)).toList());
         }
     }
 
@@ -96,13 +120,31 @@ class ProductController {
     @PostMapping("/api/brand/products")
     @ResponseStatus(HttpStatus.CREATED)
     BrandCardResponse create(@AuthenticationPrincipal SessionAccount brand, @Valid @RequestBody CardRequest request) {
-        var draft = new ProductDraft(
+        return BrandCardResponse.of(service.createDraft(brand.accountId(), toDraft(request)));
+    }
+
+    private static ProductDraft toDraft(CardRequest request) {
+        return new ProductDraft(
             request.name(),
             request.priceUah().intValueExact(),
             request.photoImageId(),
             request.photoUrl(),
             request.productUrl());
-        return BrandCardResponse.of(service.createDraft(brand.accountId(), draft));
+    }
+
+    /** US-26 S1: edits a Draft; 409 CARD_NOT_EDITABLE for a Published card. */
+    @PutMapping("/api/brand/products/{id}")
+    BrandCardResponse update(@AuthenticationPrincipal SessionAccount brand, @PathVariable UUID id,
+            @Valid @RequestBody CardRequest request) {
+        return BrandCardResponse.of(service.updateDraft(brand.accountId(), id, toDraft(request)));
+    }
+
+    /** ADR-0017: publishes many Drafts at once with the same consent gate as one card. */
+    @PostMapping("/api/brand/products/publish")
+    BulkPublishResponse publishMany(@AuthenticationPrincipal SessionAccount brand,
+            @Valid @RequestBody BulkPublishRequest request) {
+        var result = service.publishMany(brand.accountId(), request.ids());
+        return new BulkPublishResponse(result.publishedIds(), result.skippedIds());
     }
 
     /** US-31, api.md §4.2: no request body; 200 with the card, now {@code PUBLISHED}. */

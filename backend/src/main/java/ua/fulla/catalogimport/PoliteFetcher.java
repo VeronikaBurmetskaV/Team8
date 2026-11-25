@@ -3,7 +3,9 @@ package ua.fulla.catalogimport;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -14,15 +16,50 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * The only way the importer touches the network (ADR-0014). One instance per source and run:
- * one request at a time, at least {@code delay} between requests, honest User-Agent, robots.txt
- * respected, {@code https} and the source host only (also after redirects, max 3), body size
- * caps, a hard cap on requests, and a stop on 403/429/bot challenge. No retries.
+ * The only way the server touches a brand's or a source's site (ADR-0014, ADR-0017). One
+ * instance per source/brand and run: one request at a time, at least {@code delay} between
+ * requests, honest User-Agent, robots.txt respected, a hard cap on requests, body size caps, and
+ * a stop on 403/429/bot challenge. No retries.
+ *
+ * <p>SSRF guards, checked for the first URL <b>and again for every redirect</b> (max 3), before
+ * anything is sent: {@code https} only, port 443, no user info, the host must be the allowed
+ * domain (or a subdomain, when the {@link Policy} allows it), and every address the host
+ * resolves to must be public ({@link AddressGuard}). The JDK caches a positive DNS answer for
+ * 30 s, so the {@code HttpClient}'s own lookup right after ours gets the same addresses.
+ * Optionally only listed {@code Content-Type}s are read.
  */
 class PoliteFetcher {
 
     static final String USER_AGENT = "FULLA-demo-importer/0.1";
     static final String AGENT_TOKEN = "FULLA-demo-importer";
+
+    /** Resolves a host name; {@code InetAddress::getAllByName} outside tests. */
+    @FunctionalInterface
+    interface Resolver {
+        InetAddress[] resolve(String host) throws UnknownHostException;
+    }
+
+    /**
+     * Who we say we are and where we may go.
+     *
+     * @param domain       the allowed host (e.g. {@code brand.ua})
+     * @param subdomains   also allow {@code www.brand.ua}, {@code shop.brand.ua}, …
+     * @param contentTypes allowed media types of a 2xx body (lower case, no parameters); null = any
+     */
+    record Policy(String userAgent, String agentToken, String domain, boolean subdomains, Set<String> contentTypes,
+            Resolver resolver) {
+
+        /** ADR-0014 demo sources: exactly the source host, any content type. */
+        static Policy demo(URI baseUrl) {
+            return new Policy(USER_AGENT, AGENT_TOKEN, baseUrl.getHost(), false, null, InetAddress::getAllByName);
+        }
+
+        boolean allowsHost(String host) {
+            String h = host.toLowerCase(Locale.ROOT);
+            String d = domain.toLowerCase(Locale.ROOT);
+            return h.equals(d) || (subdomains && h.endsWith("." + d));
+        }
+    }
     static final Duration TIMEOUT = Duration.ofSeconds(15);
     static final long ROBOTS_MAX_BYTES = 512 * 1024;
     private static final int MAX_REDIRECTS = 3;
@@ -35,20 +72,26 @@ class PoliteFetcher {
     }
 
     private final HttpClient client;
-    private final String host;
     private final URI baseUrl;
     private final Duration delay;
     private final int maxRequests;
+    private final Policy policy;
     private RobotsRules robots;
     private int requests;
+    private int robotsBlocked;
     private long lastRequestNanos;
 
+    /** A demo source of ADR-0014. */
     PoliteFetcher(HttpClient client, URI baseUrl, Duration delay, int maxRequests) {
+        this(client, baseUrl, delay, maxRequests, Policy.demo(baseUrl));
+    }
+
+    PoliteFetcher(HttpClient client, URI baseUrl, Duration delay, int maxRequests, Policy policy) {
         this.client = client;
         this.baseUrl = baseUrl;
-        this.host = baseUrl.getHost().toLowerCase(Locale.ROOT);
         this.delay = delay;
         this.maxRequests = maxRequests;
+        this.policy = policy;
     }
 
     /**
@@ -59,7 +102,7 @@ class PoliteFetcher {
         try {
             String text = get(baseUrl.resolve("/robots.txt"), ROBOTS_MAX_BYTES, false,
                 body -> new String(body.readAllBytes(), StandardCharsets.UTF_8));
-            robots = text == null ? RobotsRules.allowAll() : RobotsRules.parse(text, AGENT_TOKEN);
+            robots = text == null ? RobotsRules.allowAll() : RobotsRules.parse(text, policy.agentToken());
         } catch (IOException e) {
             throw new SourceStoppedException("robots.txt can't be read: " + e.getMessage(), e);
         }
@@ -71,6 +114,15 @@ class PoliteFetcher {
 
     int requestsMade() {
         return requests;
+    }
+
+    /** How many URLs robots.txt did not let us read in this run. */
+    int robotsBlocked() {
+        return robotsBlocked;
+    }
+
+    URI baseUrl() {
+        return baseUrl;
     }
 
     /** UTF-8 text of the page, or null when robots.txt disallows it or it is gone (404/410). */
@@ -85,13 +137,14 @@ class PoliteFetcher {
         }
         URI uri = checkedUri(url);
         if (!robots.isAllowed(pathAndQuery(uri))) {
+            robotsBlocked++;
             return null; // skipped, never retried another way
         }
         return get(uri, maxBytes, true, reader);
     }
 
     private <T> T get(URI start, long maxBytes, boolean checkRobots, BodyReader<T> reader) throws IOException {
-        URI uri = start;
+        URI uri = checkedUri(start.toString());
         for (int hop = 0; ; hop++) {
             HttpResponse<InputStream> response = send(uri);
             int status = response.statusCode();
@@ -110,8 +163,10 @@ class PoliteFetcher {
                 }
                 String location = response.headers().firstValue("location")
                     .orElseThrow(() -> new IOException("Redirect without Location from " + response.uri()));
+                // The same SSRF checks (scheme, port, domain, public address) for every hop.
                 uri = checkedUri(response.uri().resolve(location).toString());
                 if (checkRobots && !robots.isAllowed(pathAndQuery(uri))) {
+                    robotsBlocked++;
                     return null;
                 }
                 continue;
@@ -123,6 +178,13 @@ class PoliteFetcher {
             if (status < 200 || status > 299) {
                 close(response);
                 throw new IOException("HTTP " + status + " on " + uri);
+            }
+            if (policy.contentTypes() != null) {
+                String type = mediaType(response.headers().firstValue("content-type").orElse(""));
+                if (!policy.contentTypes().contains(type)) {
+                    close(response);
+                    throw new IOException("Content-Type '" + type + "' is not allowed on " + uri);
+                }
             }
             try (InputStream body = new CappedInputStream(response.body(), maxBytes)) {
                 return reader.read(body);
@@ -138,7 +200,7 @@ class PoliteFetcher {
         requests++;
         HttpRequest request = HttpRequest.newBuilder(uri)
             .timeout(TIMEOUT)
-            .header("User-Agent", USER_AGENT)
+            .header("User-Agent", policy.userAgent())
             .GET()
             .build();
         try {
@@ -168,14 +230,44 @@ class PoliteFetcher {
         }
     }
 
-    /** SSRF guard: only {@code https} and exactly the source host. */
+    /**
+     * SSRF guard: {@code https}, port 443 (or none), no user info, an allowed host, and only
+     * public addresses behind it. Nothing is sent for a refused URL.
+     */
     private URI checkedUri(String url) throws IOException {
         URI uri = ImportText.parse(url);
         if (uri == null || !"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null
-                || !uri.getHost().toLowerCase(Locale.ROOT).equals(host)) {
-            throw new IOException("Not an https URL of " + host + ": " + url);
+                || !policy.allowsHost(uri.getHost())) {
+            throw new UnsafeUrlException("Not an https URL of " + policy.domain() + ": " + url);
+        }
+        if (uri.getPort() != -1 && uri.getPort() != 443) {
+            throw new UnsafeUrlException("Only port 443 is allowed: " + url);
+        }
+        if (uri.getRawUserInfo() != null) {
+            throw new UnsafeUrlException("User info is not allowed in " + url);
+        }
+        InetAddress[] addresses;
+        try {
+            addresses = policy.resolver().resolve(uri.getHost());
+        } catch (UnknownHostException e) {
+            throw new IOException("Unknown host " + uri.getHost(), e);
+        }
+        if (addresses == null || addresses.length == 0) {
+            throw new IOException("Unknown host " + uri.getHost());
+        }
+        for (InetAddress address : addresses) {
+            if (!AddressGuard.isPublic(address)) {
+                throw new UnsafeUrlException(uri.getHost() + " resolves to a non-public address");
+            }
         }
         return uri;
+    }
+
+    /** {@code "text/html; charset=utf-8"} → {@code text/html}. */
+    private static String mediaType(String contentType) {
+        int semicolon = contentType.indexOf(';');
+        String type = semicolon < 0 ? contentType : contentType.substring(0, semicolon);
+        return type.strip().toLowerCase(Locale.ROOT);
     }
 
     private static String pathAndQuery(URI uri) {

@@ -6,6 +6,7 @@ import { formatConsentDate } from "../../shared/consentDate";
 import { cabinetHomeTexts as t } from "../../shared/messages.uk";
 import { brandKey } from "../catalog/catalog";
 import { monogram, monogramStyle } from "../catalog/brandGrid";
+import { SiteImportCard } from "../cabinet-import/SiteImportCard";
 import { LoadError } from "../cabinet-products/LoadError";
 import { useBrandProducts } from "../cabinet-products/queries";
 import {
@@ -170,6 +171,11 @@ export function BrandHomePage() {
           text={t.consentNoticeText}
           action={{ to: "/brand/profile#consent", label: t.confirmConsent }}
         />
+      )}
+
+      {/* Brand site import (ADR-0017): needs a saved name, like every card. */}
+      {profile.isSuccess && profile.data.name !== null && (
+        <SiteImportCard profile={profile.data} />
       )}
 
       <section className={styles.products} aria-labelledby="home-products">

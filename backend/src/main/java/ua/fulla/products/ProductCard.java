@@ -1,6 +1,7 @@
 package ua.fulla.products;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -19,4 +20,8 @@ record ProductCard(
         ProductStatus status,
         Instant publishedAt,
         Instant createdAt,
-        Instant updatedAt) {}
+        Instant updatedAt,
+        /** Where the brand-site import read the card (ADR-0017); null for a hand-made card. */
+        String sourceUrl,
+        /** Fields of an imported card the brand edited by hand (DB names); empty otherwise. */
+        List<String> editedFields) {}

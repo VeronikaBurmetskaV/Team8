@@ -32,13 +32,6 @@
   font-size: var(--font-size-sm);
 }
 
-/* «Опублікувати у стрічку». Disabled: light fill, so the muted text keeps 4.9:1. */
-.publish:disabled {
-  border-color: var(--color-border);
-  background-color: var(--color-background);
-  color: var(--color-text-muted);
-}
-
 /* The list is one <table>. On a phone every row is drawn as a card, one under another;
    from --bp-tablet it is a real table across the whole container. */
 .table {
@@ -100,12 +93,12 @@
 
   .table tr {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: auto auto minmax(0, 1fr);
     grid-template-areas:
-      "photo name"
-      "photo price"
-      "photo status"
-      "actions actions";
+      "select photo name"
+      "select photo price"
+      "select photo status"
+      "actions actions actions";
     grid-template-rows: auto auto 1fr auto;
     column-gap: var(--space-2);
     row-gap: var(--space-half);
@@ -138,6 +131,10 @@
   .status {
     grid-area: status;
     color: var(--color-text-muted);
+  }
+
+  .selectCell {
+    grid-area: select;
   }
 
   .actions {
@@ -188,9 +185,9 @@
     border-top: var(--border-width) solid var(--color-border);
   }
 
-  /* The photo, price, status and action columns take only what they need; the name gets
-     the rest. */
-  .table th:not(:nth-child(2)),
+  /* Every column but the name takes only what it needs; the name gets the rest. */
+  .table th:not(:nth-child(3)),
+  .selectCell,
   .photo,
   .price,
   .status,
@@ -202,4 +199,137 @@
   .publish {
     white-space: nowrap;
   }
+
+  /* «Редагувати» and «Опублікувати у стрічку» side by side in the narrow column. */
+  .actions .rowActions {
+    flex-wrap: nowrap;
+  }
+}
+
+/* ---------- Filter, bulk publish, badges (ADR-0017) ---------- */
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-half);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.filter select {
+  min-height: var(--control-height);
+  padding-inline: var(--space-1);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-md);
+}
+
+.publishBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.publishButton,
+.publishAllButton {
+  min-height: var(--control-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-primary);
+  border-radius: var(--radius-md);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+}
+
+.publishButton {
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.publishAllButton {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.publishButton:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+/* Disabled: light fill, so the muted text keeps 4.9:1. */
+.publishButton:disabled,
+.publishAllButton:disabled,
+.publish:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* A draft's row actions: «Редагувати» + «Опублікувати у стрічку» (US-26, US-31). */
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.publishError {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+}
+
+.outcome:empty {
+  display: none;
+}
+
+.outcome {
+  margin: 0;
+  color: var(--color-success);
+  font-size: var(--font-size-sm);
+}
+
+.badge,
+.editedBadge {
+  display: inline-block;
+  margin-inline-start: var(--space-1);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+.badge {
+  background-color: var(--color-beige);
+  color: var(--color-black);
+}
+
+.editedBadge {
+  border: var(--border-width) solid var(--color-olive-light);
+  color: var(--color-olive-dark);
+}
+
+.selectCell input {
+  width: 1.25rem;
+  height: 1.25rem;
 }

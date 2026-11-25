@@ -5,8 +5,13 @@ import {
   apiPost,
   apiPut,
   createBrandProduct,
+  getBrandImportStatus,
   publishBrandProduct,
+  publishBrandProducts,
+  startBrandImport,
+  updateBrandProduct,
   uploadImage,
+  verifyBrandSite,
 } from "./client";
 
 function stubFetch(status: number, body: unknown) {
@@ -293,6 +298,73 @@ describe("brand product helpers", () => {
       status: 401,
     });
     expect(assign).toHaveBeenCalledWith("/login?tab=brand");
+  });
+});
+
+describe("brand site import and bulk publish (ADR-0017)", () => {
+  function lastCall(): [string, RequestInit] {
+    const call = vi.mocked(fetch).mock.calls.at(-1);
+    if (!call) throw new Error("fetch was not called");
+    return [String(call[0]), call[1] ?? {}];
+  }
+
+  it("publishes many drafts with { ids } and the CSRF header", async () => {
+    stubBrowser("XSRF-TOKEN=t1");
+    stubFetch(200, { publishedIds: ["a"], skippedIds: ["b"] });
+    await expect(publishBrandProducts(["a", "b"])).resolves.toEqual({
+      publishedIds: ["a"],
+      skippedIds: ["b"],
+    });
+    const [path, init] = lastCall();
+    expect(path).toBe("/api/brand/products/publish");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(String(init.body))).toEqual({ ids: ["a", "b"] });
+    expect((init.headers as Record<string, string>)["X-XSRF-TOKEN"]).toBe("t1");
+  });
+
+  it("turns 409 CONSENT_REQUIRED into an ApiError", async () => {
+    stubBrowser("XSRF-TOKEN=t1");
+    stubFetch(409, { error: { code: "CONSENT_REQUIRED", message: "x" } });
+    await expect(publishBrandProducts(["a"])).rejects.toMatchObject({
+      status: 409,
+      code: "CONSENT_REQUIRED",
+    });
+  });
+
+  it("verifies the site, starts the import and reads its status", async () => {
+    stubBrowser("XSRF-TOKEN=t1");
+    stubFetch(200, {});
+    await verifyBrandSite();
+    expect(lastCall()[0]).toBe("/api/brand/site/verify");
+    expect(lastCall()[1].method).toBe("POST");
+    await startBrandImport();
+    expect(lastCall()[0]).toBe("/api/brand/import");
+    expect(lastCall()[1].method).toBe("POST");
+    await getBrandImportStatus();
+    expect(lastCall()[0]).toBe("/api/brand/import/status");
+    expect(lastCall()[1].method).toBe("GET");
+  });
+
+  it("keeps IMPORT_TOO_FREQUENT as its code", async () => {
+    stubBrowser("XSRF-TOKEN=t1");
+    stubFetch(429, { error: { code: "IMPORT_TOO_FREQUENT", message: "x" } });
+    await expect(startBrandImport()).rejects.toMatchObject({
+      code: "IMPORT_TOO_FREQUENT",
+    });
+  });
+
+  it("edits a card with PUT /api/brand/products/{id}", async () => {
+    stubBrowser("XSRF-TOKEN=t1");
+    stubFetch(200, {});
+    await updateBrandProduct("a b", {
+      name: "Сукня",
+      priceUah: 100,
+      photoImageId: "img",
+      photoUrl: null,
+      productUrl: "https://goldi.ua/a",
+    });
+    expect(lastCall()[0]).toBe("/api/brand/products/a%20b");
+    expect(lastCall()[1].method).toBe("PUT");
   });
 });
 

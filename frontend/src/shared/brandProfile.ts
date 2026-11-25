@@ -45,6 +45,10 @@ export function toBrandProfile(raw: unknown): BrandProfileResponse {
     logoDisplayUrl: text(data.logoDisplayUrl),
     consentGivenAt,
     consentText: text(data.consentText),
+    feedUrl: text(data.feedUrl),
+    siteDomain: text(data.siteDomain),
+    siteVerifiedAt: text(data.siteVerifiedAt),
+    verificationToken: text(data.verificationToken),
     // Derived like the server does (domain-model.md §4.1) when the answer has no state.
     state:
       state ??

@@ -22,6 +22,10 @@ const activeProfile: BrandProfileResponse = {
   consentGivenAt: null,
   consentText: null,
   state: "ACTIVE",
+  feedUrl: null,
+  siteDomain: null,
+  siteVerifiedAt: null,
+  verificationToken: null,
 };
 
 const consentedProfile: BrandProfileResponse = {
@@ -143,10 +147,24 @@ describe("toBrandProfileRequest", () => {
     ).toEqual({
       name: "Лляна",
       websiteUrl: "https://lileya.com.ua",
+      feedUrl: null,
       logoImageId: null,
       logoUrl: null,
       consentGiven: true,
     });
+  });
+
+  it("sends the feed URL back as loaded, so a profile save keeps it (ADR-0017)", () => {
+    expect(
+      toBrandProfileRequest(
+        {
+          name: "Лляна",
+          websiteUrl: "https://lileya.com.ua",
+          consentGiven: false,
+        },
+        { ...activeProfile, feedUrl: "https://lileya.com.ua/feed.xml" },
+      ).feedUrl,
+    ).toBe("https://lileya.com.ua/feed.xml");
   });
 
   it("sends no consent when the box was not ticked", () => {

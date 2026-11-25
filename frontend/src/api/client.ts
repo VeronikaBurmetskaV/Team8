@@ -1,6 +1,10 @@
 import type {
   ApiErrorBody,
   BrandCard,
+  BulkPublishResponse,
+  ImportStatus,
+  SiteVerifyResponse,
+  UpdateProductRequest,
   BrandSummary,
   CreateProductRequest,
   ErrorCode,
@@ -134,11 +138,43 @@ export function createBrandProduct(
   return apiPost<BrandCard>("/api/brand/products", body);
 }
 
+/** PUT /api/brand/products/{id}: only a Draft (409 CARD_NOT_EDITABLE otherwise). */
+export function updateBrandProduct(
+  id: string,
+  body: UpdateProductRequest,
+): Promise<BrandCard> {
+  return apiPut<BrandCard>(
+    `/api/brand/products/${encodeURIComponent(id)}`,
+    body,
+  );
+}
+
 /** Draft → Published (US-31, api.md §4.2); no body. 409 CONSENT_REQUIRED without consent. */
 export function publishBrandProduct(id: string): Promise<BrandCard> {
   return apiPost<BrandCard>(
     `/api/brand/products/${encodeURIComponent(id)}/publish`,
   );
+}
+
+/** POST /api/brand/products/publish: many drafts with the consent gate (ADR-0017). */
+export function publishBrandProducts(
+  ids: string[],
+): Promise<BulkPublishResponse> {
+  return apiPost<BulkPublishResponse>("/api/brand/products/publish", { ids });
+}
+
+/** POST /api/brand/site/verify (ADR-0017). */
+export function verifyBrandSite(): Promise<SiteVerifyResponse> {
+  return apiPost<SiteVerifyResponse>("/api/brand/site/verify");
+}
+
+/** POST /api/brand/import: starts the import in the background (202, RUNNING). */
+export function startBrandImport(): Promise<ImportStatus> {
+  return apiPost<ImportStatus>("/api/brand/import");
+}
+
+export function getBrandImportStatus(): Promise<ImportStatus> {
+  return apiGet<ImportStatus>("/api/brand/import/status");
 }
 
 /** The multipart field name `file` is an assumption: api.md does not name it. */

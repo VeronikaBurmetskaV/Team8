@@ -1,6 +1,7 @@
 package ua.fulla.brandprofile;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,6 +26,8 @@ class BrandProfileController {
     record ProfileRequest(
             @BrandName String name,
             @WebsiteUrl String websiteUrl,
+            @Size(max = 2048, message = "PROFILE_INVALID: feedUrl must be at most 2048 characters")
+            @HttpsUrl(message = "PROFILE_INVALID: feedUrl must be an https:// URL") String feedUrl,
             UUID logoImageId,
             @HttpsUrl(message = "PROFILE_INVALID: logoUrl must be an https:// URL") String logoUrl,
             Boolean consentGiven) {}
@@ -38,7 +41,11 @@ class BrandProfileController {
             String logoDisplayUrl,
             Instant consentGivenAt,
             String consentText,
-            ProfileState state) {
+            ProfileState state,
+            String feedUrl,
+            String siteDomain,
+            Instant siteVerifiedAt,
+            String verificationToken) {
 
         static ProfileResponse of(BrandProfile profile) {
             String logoDisplayUrl = profile.logoImageId() != null
@@ -53,7 +60,12 @@ class BrandProfileController {
                 logoDisplayUrl,
                 profile.consentGivenAt(),
                 profile.consentText(),
-                profile.state());
+                profile.state(),
+                profile.feedUrl(),
+                // ADR-0017: verified only while the website is on the verified domain.
+                profile.siteVerified() ? profile.siteDomain() : null,
+                profile.siteVerified() ? profile.siteVerifiedAt() : null,
+                profile.verificationToken());
         }
     }
 
@@ -71,7 +83,8 @@ class BrandProfileController {
     @PutMapping("/api/brand/profile")
     ProfileResponse save(@AuthenticationPrincipal SessionAccount brand, @Valid @RequestBody ProfileRequest request) {
         return ProfileResponse.of(
-            service.save(brand.accountId(), request.name(), request.websiteUrl(), request.logoImageId(),
+            service.save(brand.accountId(), request.name(), request.websiteUrl(), request.feedUrl(),
+                request.logoImageId(),
                 request.logoUrl(),
                 request.consentGiven()));
     }

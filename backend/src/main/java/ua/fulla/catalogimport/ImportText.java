@@ -63,7 +63,8 @@ final class ImportText {
     private static final Set<String> NOT_A_COLOR = Set.of("one color", "one colour", "");
 
     private static final Pattern NUMBER = Pattern.compile("\\d[\\d\\s\\u00A0]*(?:[.,]\\d+)?");
-    private static final Pattern SPACES = Pattern.compile("[\\s\\u00A0]+");
+    private static final Pattern CURRENCY = Pattern.compile("\\b[A-Z]{3}\\b");
+    private static final Pattern SPACES =Pattern.compile("[\\s\\u00A0]+");
     private static final Pattern BLOCK_END = Pattern.compile("(?i)<br\\s*/?>|</p>|</li>|</div>|</h\\d>|</tr>");
 
     private ImportText() {}
@@ -126,6 +127,23 @@ final class ImportText {
             return null;
         }
         return value.intValueExact();
+    }
+
+    /**
+     * False when the price names another currency ("49.00 USD", "45 EUR"); true for UAH, «грн»
+     * or no currency at all. FULLA shows prices in UAH only (ADR-0017).
+     */
+    static boolean isUahPrice(String raw) {
+        if (raw == null) {
+            return true;
+        }
+        Matcher m = CURRENCY.matcher(raw);
+        while (m.find()) {
+            if (!m.group().equals("UAH")) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** "білий, чорний" → two colours, in order, without duplicates and placeholders like "One color". */

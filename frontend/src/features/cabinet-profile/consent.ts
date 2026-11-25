@@ -70,6 +70,7 @@ export function toConsentRequest(
   return {
     name: profile.name ?? "",
     websiteUrl: profile.websiteUrl,
+    feedUrl: profile.feedUrl,
     logoImageId: profile.logoImageId,
     logoUrl: profile.logoUrl,
     consentGiven: true,

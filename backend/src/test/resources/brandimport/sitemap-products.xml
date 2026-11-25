@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://brand.ua/product/knit-cardigan</loc>
+    <image:image><image:loc>https://cdn.brand.ua/cardigan.jpg</image:loc></image:image>
+  </url>
+  <url><loc>https://brand.ua/product/silk-skirt/</loc></url>
+  <url><loc>https://brand.ua/product/candle</loc></url>
+  <url><loc>https://brand.ua/product/removed</loc></url>
+  <url><loc>https://other-shop.ua/product/foreign</loc></url>
+</urlset>

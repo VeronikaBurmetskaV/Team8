@@ -58,6 +58,8 @@ export function toBrandProfileRequest(
     name: values.name,
     // PUT replaces the profile: an empty field clears the website.
     websiteUrl: values.websiteUrl === "" ? null : values.websiteUrl,
+    // Edited on /brand (site import); sent back as loaded so a profile save keeps it.
+    feedUrl: profile.feedUrl,
     logoImageId: profile.logoImageId,
     logoUrl: profile.logoUrl,
     consentGiven: profile.consentGiven || values.consentGiven,

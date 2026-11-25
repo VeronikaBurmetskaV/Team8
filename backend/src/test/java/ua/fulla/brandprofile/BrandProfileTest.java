@@ -63,7 +63,7 @@ class BrandProfileTest {
             .andExpect(jsonPath("$.consentGivenAt").value((Object) null))
             .andExpect(jsonPath("$.consentText").value((Object) null))
             .andExpect(jsonPath("$.state").value("ACTIVE"))
-            .andExpect(jsonPath("$.length()").value(9));
+            .andExpect(jsonPath("$.length()").value(13));
     }
 
     @Test
@@ -160,7 +160,7 @@ class BrandProfileTest {
             .param("id", brandId).param("email", uniqueEmail()).update();
         profiles.create(brandId, "Goldi", null);
 
-        assertThatThrownBy(() -> profiles.save(brandId, "Goldi", "http://goldi.ua", null, null, false))
+        assertThatThrownBy(() -> profiles.save(brandId, "Goldi", "http://goldi.ua", null, null, null, false))
             .isInstanceOfSatisfying(ApiException.class, e -> {
                 assertThat(e.status()).isEqualTo(HttpStatus.BAD_REQUEST);
                 assertThat(e.code()).isEqualTo(ErrorCode.PROFILE_INVALID);
@@ -178,7 +178,7 @@ class BrandProfileTest {
             .andExpect(jsonPath("$.name").value("Lileya"))
             .andExpect(jsonPath("$.state").value("ACTIVE"))
             .andExpect(jsonPath("$.consentGiven").value(false))
-            .andExpect(jsonPath("$.length()").value(9));
+            .andExpect(jsonPath("$.length()").value(13));
 
         mvc.perform(get("/api/brand/profile").session(session))
             .andExpect(status().isOk())
