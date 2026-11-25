@@ -22,6 +22,23 @@
   color: var(--color-text-muted);
 }
 
+/* «Для показу товарів…» + the way to the profile, once above the list (US-31 S2). */
+.consentHint {
+  margin: 0;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
+/* «Опублікувати у стрічку». Disabled: light fill, so the muted text keeps 4.9:1. */
+.publish:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+}
+
 /* The list is one <table>. On a phone every row is drawn as a card, one under another;
    from --bp-tablet it is a real table across the whole container. */
 .table {
@@ -87,8 +104,9 @@
     grid-template-areas:
       "photo name"
       "photo price"
-      "photo status";
-    grid-template-rows: auto auto 1fr;
+      "photo status"
+      "actions actions";
+    grid-template-rows: auto auto 1fr auto;
     column-gap: var(--space-2);
     row-gap: var(--space-half);
     padding: var(--space-2);
@@ -120,6 +138,20 @@
   .status {
     grid-area: status;
     color: var(--color-text-muted);
+  }
+
+  .actions {
+    grid-area: actions;
+  }
+
+  /* An empty cell (Published card) adds no gap under the card. */
+  .actions:empty {
+    display: none;
+  }
+
+  /* Full width of the card: the long upper-case text fits from 320 px. */
+  .publish {
+    width: 100%;
   }
 }
 
@@ -156,15 +188,18 @@
     border-top: var(--border-width) solid var(--color-border);
   }
 
-  /* The photo, price and status columns take only what they need; the name gets the rest. */
+  /* The photo, price, status and action columns take only what they need; the name gets
+     the rest. */
   .table th:not(:nth-child(2)),
   .photo,
   .price,
-  .status {
+  .status,
+  .actions {
     width: 1%;
   }
 
-  .status {
+  .status,
+  .publish {
     white-space: nowrap;
   }
 }

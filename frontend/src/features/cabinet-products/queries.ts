@@ -1,10 +1,19 @@
 import { useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useMutationState,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   createBrandProduct,
   getBrandProducts,
+  publishBrandProduct,
   uploadImage,
 } from "../../api/client";
+import type { BrandCard } from "../../api/types";
+import { brandProfileQueryKey } from "../../shared/brandProfile";
+import { errorCodeOf } from "../../shared/errors";
 import type { CardFormValues } from "../../shared/validation";
 import { toCreateProductRequest } from "./cardForm";
 
@@ -36,5 +45,48 @@ export function useCreateBrandProduct() {
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: brandProductsKey }),
+  });
+}
+
+const publishKey = ["brand", "products", "publish"] as const;
+
+/**
+ * Draft → Published (US-31 S1). The server is the only gate (ADR-0009); the disabled button
+ * while a request runs is UX only.
+ */
+export function usePublishBrandProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: publishKey,
+    mutationFn: (id: string) => publishBrandProduct(id),
+    onSuccess: (published) => {
+      // Same place in the list; the refetch then updates the counters on /brand too.
+      queryClient.setQueryData<BrandCard[]>(brandProductsKey, (cards) =>
+        cards?.map((card) => (card.id === published.id ? published : card)),
+      );
+      return queryClient.invalidateQueries({ queryKey: brandProductsKey });
+    },
+    onError: (error) => {
+      const code = errorCodeOf(error);
+      // The card or the consent changed elsewhere: read them again (api.md §3.2).
+      if (
+        code === "INVALID_STATE" ||
+        code === "NOT_FOUND" ||
+        code === "CONSENT_REQUIRED"
+      ) {
+        void queryClient.invalidateQueries({ queryKey: brandProductsKey });
+      }
+      if (code === "CONSENT_REQUIRED") {
+        void queryClient.invalidateQueries({ queryKey: brandProfileQueryKey });
+      }
+    },
+  });
+}
+
+/** IDs of the cards whose publish request is still running (one row may wait, others not). */
+export function usePublishingIds(): string[] {
+  return useMutationState({
+    filters: { mutationKey: publishKey, status: "pending" },
+    select: (mutation) => mutation.state.variables as string,
   });
 }

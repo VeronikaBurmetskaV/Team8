@@ -128,6 +128,13 @@ export function createBrandProduct(
   return apiPost<BrandCard>("/api/brand/products", body);
 }
 
+/** Draft → Published (US-31, api.md §4.2); no body. 409 CONSENT_REQUIRED without consent. */
+export function publishBrandProduct(id: string): Promise<BrandCard> {
+  return apiPost<BrandCard>(
+    `/api/brand/products/${encodeURIComponent(id)}/publish`,
+  );
+}
+
 /** The multipart field name `file` is an assumption: api.md does not name it. */
 export function uploadImage(file: File): Promise<ImageUploadResponse> {
   const form = new FormData();

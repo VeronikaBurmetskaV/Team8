@@ -301,6 +301,14 @@ export const cabinetHomeTexts = {
   retry: "Спробувати ще раз",
 } as const;
 
+/** Publishing a card from the product list /brand/products (US-31, US-22.2). */
+export const publishTexts = {
+  publish: "Опублікувати у стрічку", // US-31 CL, exact
+  // PROVISIONAL: no story gives these texts.
+  actions: "Дії",
+  toProfile: "Надати згоду в профілі",
+} as const;
+
 /** Confirmation dialogs of the brand cabinet (shared/ConfirmDialog). */
 export const confirmTexts = {
   cancel: "Скасувати",
