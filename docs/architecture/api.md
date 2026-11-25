@@ -31,7 +31,7 @@ Endpoints marked ✚ are not in ADR-0005's list. They are proposed here, with th
 
 | Method & path | Story | Access | Success | Errors |
 |---|---|---|---|---|
-| `POST /api/brand/register` | US-21 | Public | `201` brand session started; body `{ brandId, email, profileState: "INCOMPLETE" }` | 400 `EMAIL_TAKEN_OR_INVALID` (format), 400 `PASSWORD_TOO_SHORT`, 409 `EMAIL_TAKEN_OR_INVALID` (taken), 429 |
+| `POST /api/brand/register` | US-21 | Public | `201` brand session started; body `{ brandId, email, profileState: "ACTIVE" }` (the name is saved at registration) | 400 `PROFILE_INVALID` (`fields.name` / `fields.websiteUrl`), 400 `EMAIL_TAKEN_OR_INVALID` (format), 400 `PASSWORD_TOO_SHORT`, 409 `EMAIL_TAKEN_OR_INVALID` (taken), 429 |
 | `POST /api/brand/login` | US-21.1 | Public | `200` `{ brandId, email, profileState }` | 401 `INVALID_CREDENTIALS`, 429 |
 | `POST /api/brand/logout` | US-21.1 | Brand | `204` | 401 |
 | `GET /api/brand/profile` | US-22.1, US-22.2, US-21.1 | Brand | `200` profile | 401, 403 |
@@ -45,7 +45,8 @@ Endpoints marked ✚ are not in ADR-0005's list. They are proposed here, with th
 | `POST /api/images` | US-22.1, US-25.1 | **Brand** (Q-03; ADR-0006 currently implies Public) | `201` `{ id, url: "/api/images/{id}" }` | 400 `IMAGE_INVALID` (type by magic bytes, or > 5 MB), 401, 403 |
 
 Shapes:
-- **Profile** request `{ name, logoImageId | null, logoUrl | null, consentGiven }`; response adds `logoDisplayUrl`, `consentGivenAt`, `consentText`, `state: "INCOMPLETE" | "ACTIVE" | "CONSENTED"`. `consentGiven: true` from Active records consent; `false` after it was given → `CONSENT_LOCKED`.
+- **Register** request `{ name, websiteUrl, email, password }` (2026-11-26), fields in form order, so the top-level code is the first wrong one (§3.1). `name` has the profile rule (2–50 characters after trimming, no control characters); `websiteUrl` is **required**: lowercase `https://`, a domain host (`name.tld`, not `localhost` or an IP), ≤ 2048 characters, surrounding spaces trimmed. Both wrong → `400 PROFILE_INVALID` with `fields.name` / `fields.websiteUrl` (the same code as in the profile, no new codes). Name and website are written to the profile in the same transaction as the account (T-9), so the profile starts `ACTIVE` (domain-model.md §4.1). The server **never** requests the website (A-15): no reachability check.
+- **Profile** request `{ name, websiteUrl | null, logoImageId | null, logoUrl | null, consentGiven }`; response adds `logoDisplayUrl`, `consentGivenAt`, `consentText`, `state: "INCOMPLETE" | "ACTIVE" | "CONSENTED"` and returns `websiteUrl`. In the profile `websiteUrl` is optional (same rule when given); PUT replaces it, so `null` or a missing field clears it. `consentGiven: true` from Active records consent; `false` after it was given → `CONSENT_LOCKED`.
 - **Brand card** = `PublicCard` + `{ photoImageId, status: "DRAFT" | "PUBLISHED", publishedAt, createdAt }` (example in §4.1).
 - `profileState` in login/register responses tells the SPA where to go: `INCOMPLETE` → `/brand/profile`, otherwise `/brand/products` (US-21 CL, US-21.1 CL).
 
@@ -55,12 +56,15 @@ Shapes:
 |---|---|---|---|---|
 | `GET /api/feed` | US-01.2, US-08.1, US-08.2, US-09, US-10 | Public | `200` `{ items: FeedCard[] }`, only Published, brands and import sources mixed (see «Feed order» below); empty list is valid (US-08.1 CL) | 503 |
 | `GET /api/products?ids=a,b,…` | US-16, US-19, US-32 | Public | `200` `{ items: PublicCard & { available } [] }`; unknown IDs omitted; unpublished cards included with `available: false` | 400 `VALIDATION_FAILED` (> 500 IDs or a non-UUID) |
+| `GET /api/brands` | US-08.2, ADR-0015 | Public | `200` `BrandSummary[]` sorted by name: every brand (account brand or source brand) that has Published cards; brands whose names give the same key are one entry; empty list is valid | 503 |
 | `GET /api/images/{id}` | US-08.2, US-16, US-22.1, US-25.2 | Public | `200` bytes, stored `Content-Type`, `nosniff`, `Cache-Control: immutable` | 404 (client shows the placeholder) |
 | ✚ `GET /api/session` | US-16 CL, US-21.1 CL | Public | `200` `{ accountType: "BRAND" \| "BUYER" \| null, email \| null }`; sets `XSRF-TOKEN` | — |
 
 **Feed order** (team lead decision for the demo, 17.11.2026; ADR-0014): imported cards are shown mixed across import sources and brands, not in blocks of one source. The server orders the Published cards round by round: each brand (account brand or source brand) gives its next card per round, its own cards in `publishedAt, id` order; inside a round the brands are ordered by a hash of the brand ID. The order is deterministic, so the client keeps showing the first card that is in neither `viewedIds` nor `favoriteIds`. The client does not reorder the list.
 
-`PublicCard` = `{ id, name, brandName, priceUah, photoUrl, productUrl }`. `photoUrl` is either `/api/images/{id}` or the brand's `https://` URL (imported cards always use the source's `https://` URL; images are never copied, ADR-0014). `brandName` comes from the brand profile or, for imported cards, from the source brand. The brand logo is **never** included (US-08.2 CL).
+`PublicCard` = `{ id, name, brandName, priceUah, photoUrl, productUrl }`. `photoUrl` is either `/api/images/{id}` or the brand's `https://` URL (imported cards always use the source's `https://` URL; images are never copied, ADR-0014). `brandName` comes from the brand profile or, for imported cards, from the source brand. The brand logo is **never** included in a card (US-08.2 CL); since ADR-0015 it is served only by `GET /api/brands`, and only with the brand's consent.
+
+`BrandSummary` = `{ key, name, logoUrl | null, productCount }` (ADR-0015). `key` is the catalogue's brand key (the same rules as `brandKey` on the client: apostrophes unified, NFKC, spaces collapsed, Ukrainian lower case); the client matches it with the brands of `GET /api/feed`. `productCount` counts Published cards. `logoUrl` is the profile's `logoDisplayUrl` (`/api/images/{id}` or the brand's `https://` URL) **only** for a brand in state `CONSENTED`, otherwise `null`. For an imported brand (ADR-0014) it is the `https://` logo URL found on the source site, only for a single-brand source and only in profile `dev` (`fulla.brands.source-logos`); `null` in every other profile. Logos are hot-linked, never copied. The client shows the monogram when `logoUrl` is `null` or the image fails to load.
 
 `FeedCard` = `PublicCard` + optional `{ sizes, colors, material, description }`. Only imported cards (ADR-0014) have them; a key is **left out** when the card has no value (brand-made cards never have them), never sent as `null` or `[]`.
 
@@ -102,13 +106,17 @@ Shapes:
 
 | Method & path | Story | Access | Success | Errors |
 |---|---|---|---|---|
-| `POST /api/buyer/register` | US-02 | Public | `201` buyer session started; `{ email }` | 400 `EMAIL_TAKEN_OR_INVALID` (format), 400 `PASSWORD_TOO_SHORT`, 409 `EMAIL_TAKEN_OR_INVALID` (taken), 429 |
+| `POST /api/buyer/register` | US-02 | Public | `201` buyer session started; `{ email \| null, phone \| null, name }` | 400 `VALIDATION_FAILED` (`fields.name`: missing, blank or > 50), 400 `LOGIN_INVALID` (`fields.login`), 400 `PASSWORD_TOO_SHORT`, 409 `EMAIL_TAKEN_OR_INVALID` (email or phone taken, `fields.login`), 429 |
 | `POST /api/buyer/login` | US-03 | Public | `200` `{ email }` | 401 `INVALID_CREDENTIALS`, 429 |
 | `POST /api/buyer/logout` | US-03 | Buyer | `204` | 401 |
 | `GET /api/me/favorites` | US-03, US-16 | Buyer | `200` `{ productIds: uuid[] }`, oldest like first | 401, 403 |
-| `POST /api/me/favorites` | US-02, US-03, US-09 | Buyer | `200` `{ productIds }` = the full set after union | 400 `VALIDATION_FAILED` (> 500 IDs), 401, 403 |
+| `POST /api/me/favorites` | US-02, US-03, US-09 | Buyer | `200` `{ productIds, skippedIds }` = the full set after union (≤ 100) and the new IDs that did not fit | 400 `VALIDATION_FAILED` (> 500 IDs), 409 `FAVORITES_LIMIT_REACHED` (new IDs, none fitted), 401, 403 |
+
+**Buyer register body (2026-11-27, ADR-0016; name required since 2026-11-28):** `{ name, login, password }`, in form order. `login` is «Email або номер телефону» as typed, one field: with «@» it is an email (strict email rule, trimmed, lower-cased), otherwise a phone — digits, spaces, brackets, hyphens and a leading «+»; Ukrainian `0XXXXXXXXX`, `380XXXXXXXXX`, `+380XXXXXXXXX` → `+380XXXXXXXXX`; other countries only with «+» and 8–15 digits; stored in E.164. Neither → `400 LOGIN_INVALID`. A taken email **or** phone → the same neutral `409 EMAIL_TAKEN_OR_INVALID` with `fields.login` (it never says which). `name` is **required**: 1–50 characters after trimming, not only spaces, no control characters; missing, blank or longer → `400 VALIDATION_FAILED` with `fields.name` (the name is the first field, so its code is the top-level one). The phone is not verified. The session principal carries the login, so `GET /api/session` returns the phone in `email` for a phone account.
 
 `POST /api/me/favorites` is the **only** write for favourites: the same call does the merge after register/login (US-02 S1, US-03 S1), a single like (US-09) and a retry. It is idempotent; unknown product IDs are ignored (ADR-0012).
+
+**Limits (2026-11-26, ADR-0012):** a registered buyer keeps at most **100** products, a guest at most **25** in the browser (the client checks it; nothing is stored on the server for guests). The server adds the IDs that are new (known products not saved yet) **in request order** until the buyer has 100; the new IDs that did not fit come back in `skippedIds` (unknown or already saved IDs are not "skipped", they are ignored). If there were new IDs but none fitted → `409 FAVORITES_LIMIT_REACHED` and nothing changes. Already saved IDs never hit the limit (a retry at 100 is `200`). The buyer's account row is locked for the write (`SELECT … FOR UPDATE`), so parallel writes cannot pass 100 together (ADR-0009).
 
 ---
 
@@ -153,7 +161,7 @@ Ukrainian texts are copied from the stories and live **only** in `frontend/src/s
 | 401 | `UNAUTHENTICATED` | No session on a Brand/Buyer endpoint; client redirects to the right login page | — (redirect, no text) | US-21.1 CL, ADR-0008 |
 | 403 | `FORBIDDEN` | Session of the other account type; missing/invalid CSRF token | — | ADR-0006 |
 | 404 | `NOT_FOUND` | Unknown ID, another brand's card or image | — | INV-07, Q-04 |
-| 400 | `PROFILE_INVALID` | Brand name empty or not 2–50; logo of an unsupported type; both upload and URL; logo URL not `https://` | «Вкажіть назву бренду та завантажте зображення у форматі JPG, PNG або WEBP» | US-22.1 S2 |
+| 400 | `PROFILE_INVALID` | Brand name empty or not 2–50; website not `https://` with a domain or > 2048 (`fields.websiteUrl`, register and profile); logo of an unsupported type; both upload and URL; logo URL not `https://` | «Вкажіть назву бренду та завантажте зображення у форматі JPG, PNG або WEBP» | US-22.1 S2 |
 | 409 | `CONSENT_LOCKED` | Request sets `consentGiven: false` after consent was given | — (checkbox is disabled in the UI) | A-08 |
 | 409 | `PROFILE_INCOMPLETE` | Card create/edit while the brand name is not saved | — (the «Додати товар» entry is hidden) | US-22.1 CL, US-25.1 CL |
 | 400 | `IMAGE_INVALID` | Upload not PNG/JPG/WEBP by magic bytes, or > 5 MB | — (form-dependent, Q-08) | US-22.1 S2, US-25.1 CL, ADR-0007 |
@@ -169,6 +177,8 @@ Outside the 400–409 range, same envelope:
 
 | HTTP | Code | When | Source |
 |---|---|---|---|
+| 400 | `LOGIN_INVALID` | Buyer registration: `login` is neither a valid email nor a valid phone number (ADR-0016) | «Введіть email або номер телефону у форматі +380…» | ADR-0016 |
+| 409 | `FAVORITES_LIMIT_REACHED` | `POST /api/me/favorites`: the buyer already has 100 favourites and every new ID was refused | «Вподобане заповнене (100 з 100). Видаліть кілька товарів, щоб додати нові.» | ADR-0012 (limits) |
 | 429 | `TOO_MANY_REQUESTS` | > ~10 login/register attempts per minute per IP | ADR-0006, Q-13 |
 | 503 | `SERVICE_UNAVAILABLE` | DB unreachable; feed/«Вподобане» show retry, local favourites kept | `integrations.md` §4 |
 

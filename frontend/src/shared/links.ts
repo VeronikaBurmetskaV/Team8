@@ -1,9 +1,12 @@
 /**
  * The only builder of outbound links to brand sites (US-32, CLAUDE.md §5.3).
  * Adds `utm_source=fulla` before any `#fragment`; keeps an existing `utm_source` unchanged.
- * Returns null for anything that is not an http(s) URL, so the caller renders no link.
+ * Returns null for null, undefined, "" and anything that is not an http(s) URL, so the caller
+ * renders no link.
  */
-export function withUtm(productUrl: string): string | null {
+export function withUtm(productUrl: string | null | undefined): string | null {
+  // An old or broken answer may have no URL at all: no link, never an exception.
+  if (typeof productUrl !== "string") return null;
   const trimmed = productUrl.trim();
   if (!/^https?:\/\//i.test(trimmed)) return null;
 

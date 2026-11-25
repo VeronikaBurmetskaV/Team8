@@ -1,19 +1,29 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
-import { toFormErrors } from "../../shared/errors";
-import { messages } from "../../shared/messages.uk";
+import {
+  FieldError,
+  LiveMessage,
+  SubmitButton,
+  describedBy,
+} from "../../shared/auth/FormMessage";
+import { PasswordInput } from "../../shared/auth/PasswordInput";
+import { brandRegisterTexts as t } from "../../shared/messages.uk";
 import {
   brandRegisterSchema,
+  cleanWebsiteUrl,
   type BrandRegisterForm,
 } from "../../shared/validation";
 import { useRegisterBrand } from "./api";
 import { pathAfterLogin } from "./pathAfterLogin";
-import styles from "./BrandRegisterPage.module.css";
+import { brandRegisterErrors, REGISTER_FIELDS } from "./registerErrors";
+import styles from "../../shared/auth/AuthForm.module.css";
 
-/** Request field of POST /api/brand/register → the input that shows its error (US-21 S2). */
-const registerFields = { email: "email", password: "password" } as const;
-
+/**
+ * /brand/register (US-21): brand name, website, email and password. The name and website go
+ * straight to the profile, so the new brand is ACTIVE (domain-model.md §4.1). The website is
+ * only stored: the server never requests it (A-15).
+ */
 export function BrandRegisterPage() {
   const navigate = useNavigate();
   const registerBrand = useRegisterBrand();
@@ -21,84 +31,129 @@ export function BrandRegisterPage() {
     register,
     handleSubmit,
     setError,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<BrandRegisterForm>({
     resolver: zodResolver(brandRegisterSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { name: "", websiteUrl: "", email: "", password: "" },
   });
 
-  async function onSubmit(credentials: BrandRegisterForm) {
+  async function onSubmit(values: BrandRegisterForm) {
     try {
-      await registerBrand.mutateAsync(credentials);
-      // The cabinet home page; a new brand has no name yet, so it shows the way to the profile (US-21 CL).
+      await registerBrand.mutateAsync(values);
+      // The cabinet home page (US-21 CL).
       navigate(pathAfterLogin());
     } catch (error) {
-      // The entered data stays in the form on any error (US-21 S2).
-      showError(error);
+      // The entered data stays in the form on any error (US-21 S2); focus on the first wrong field.
+      const { fields, form } = brandRegisterErrors(error);
+      const first = REGISTER_FIELDS.find(
+        (field) => fields[field] !== undefined,
+      );
+      for (const field of REGISTER_FIELDS) {
+        const message = fields[field];
+        if (message !== undefined) {
+          setError(field, { message }, { shouldFocus: field === first });
+        }
+      }
+      if (form !== null) setError("root", { message: form });
     }
   }
 
-  function showError(error: unknown) {
-    const { fields, form } = toFormErrors(error, registerFields);
-    if (fields.email) setError("email", { message: messages[fields.email] });
-    if (fields.password) {
-      setError("password", { message: messages[fields.password] });
-    }
-    if (form) setError("root", { message: messages[form] });
-  }
+  const websiteField = register("websiteUrl", {
+    // On blur: «brand.com.ua» → «https://brand.com.ua», and tracking parameters
+    // (srsltid, utm_*, fbclid, gclid) are removed, so the field shows what is saved.
+    onBlur: (event: { target: { value: string } }) => {
+      const value = cleanWebsiteUrl(event.target.value);
+      if (value !== event.target.value) {
+        setValue("websiteUrl", value, { shouldDirty: true });
+      }
+    },
+  });
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>Реєстрація бренду</h1>
-      <form
-        className={styles.card}
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-      >
-        <div className={styles.field}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            autoComplete="email"
-            aria-invalid={errors.email ? true : undefined}
-            aria-describedby={errors.email ? "email-error" : undefined}
-            {...register("email")}
-          />
-          {errors.email && (
-            <p id="email-error" className={styles.fieldError} role="alert">
-              {errors.email.message}
-            </p>
-          )}
-        </div>
-        <div className={styles.field}>
-          <label htmlFor="password">Пароль</label>
-          <input
-            id="password"
-            type="password"
-            autoComplete="new-password"
-            aria-invalid={errors.password ? true : undefined}
-            aria-describedby={errors.password ? "password-error" : undefined}
-            {...register("password")}
-          />
-          {errors.password && (
-            <p id="password-error" className={styles.fieldError} role="alert">
-              {errors.password.message}
-            </p>
-          )}
-        </div>
-        <button className={styles.submit} type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Реєструємо…" : "Зареєструвати бренд"}
-        </button>
-        {errors.root && (
-          <p className={styles.error} role="alert">
-            {errors.root.message}
-          </p>
-        )}
-      </form>
-      <p className={styles.switch}>
-        Вже маєте кабінет? <Link to="/login?tab=brand">Увійти</Link>
-      </p>
+      <h1 className={`${styles.title} ${styles.titleCentered}`}>{t.title}</h1>
+      <div className={styles.card}>
+        <form
+          className={styles.form}
+          onSubmit={handleSubmit(onSubmit)}
+          noValidate
+        >
+          <div className={styles.field}>
+            <label htmlFor="brand-name">{t.name}</label>
+            <input
+              id="brand-name"
+              type="text"
+              autoComplete="organization"
+              aria-invalid={errors.name ? true : undefined}
+              aria-describedby={describedBy(errors.name && "brand-name-error")}
+              {...register("name")}
+            />
+            <FieldError id="brand-name-error" message={errors.name?.message} />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="brand-website">{t.website}</label>
+            <input
+              id="brand-website"
+              type="url"
+              inputMode="url"
+              autoComplete="url"
+              placeholder={t.websitePlaceholder}
+              aria-invalid={errors.websiteUrl ? true : undefined}
+              aria-describedby={describedBy(
+                errors.websiteUrl && "brand-website-error",
+              )}
+              {...websiteField}
+            />
+            <FieldError
+              id="brand-website-error"
+              message={errors.websiteUrl?.message}
+            />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="email">{t.email}</label>
+            <input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              aria-invalid={errors.email ? true : undefined}
+              aria-describedby={describedBy(errors.email && "email-error")}
+              {...register("email")}
+            />
+            <FieldError id="email-error" message={errors.email?.message} />
+          </div>
+          <div className={styles.field}>
+            <label htmlFor="password">{t.password}</label>
+            <PasswordInput
+              id="password"
+              autoComplete="new-password"
+              aria-invalid={errors.password ? true : undefined}
+              aria-describedby={describedBy(
+                errors.password && "password-error",
+              )}
+              {...register("password")}
+            />
+            <FieldError
+              id="password-error"
+              message={errors.password?.message}
+            />
+          </div>
+          <div className={styles.actions}>
+            <SubmitButton
+              busy={isSubmitting}
+              label={t.submit}
+              busyLabel={t.submitting}
+            />
+            <LiveMessage role="alert" className={styles.error}>
+              {errors.root?.message ?? null}
+            </LiveMessage>
+          </div>
+        </form>
+        <p className={styles.footer}>
+          {t.haveCabinet} <Link to="/login?tab=brand">{t.login}</Link>
+        </p>
+      </div>
     </div>
   );
 }

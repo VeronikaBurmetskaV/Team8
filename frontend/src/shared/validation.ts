@@ -1,6 +1,12 @@
 import { z } from "zod";
 import type { ErrorCode } from "../api/types";
-import { brandNameInvalidMessage, messages } from "./messages.uk";
+import { parseLoginId } from "./loginId";
+import {
+  brandNameInvalidMessage,
+  buyerAuthTexts,
+  messages,
+  websiteUrlInvalidMessage,
+} from "./messages.uk";
 
 // Form schemas that repeat the backend rules for instant feedback (ADR-0008, R-T17).
 // The API stays the authority: its error `fields` are shown on the form as well.
@@ -12,7 +18,8 @@ import { brandNameInvalidMessage, messages } from "./messages.uk";
 const EMAIL =
   /^[^@\s\p{Cc}\p{Z}]+@[^@\s\p{Cc}\p{Z}.]+(\.[^@\s\p{Cc}\p{Z}.]+)+$/u;
 const EMAIL_MAX = 254;
-const PASSWORD_MIN = 8;
+/** Same as PasswordLengthValidator.MIN_CHARACTERS on the backend (api.md §2.3). */
+export const PASSWORD_MIN = 8;
 /** BCrypt limit, counted in UTF-8 bytes like the backend does (Q-11). */
 const PASSWORD_MAX_BYTES = 72;
 const NAME_MIN = 2;
@@ -27,22 +34,41 @@ function codePointLength(value: string): number {
   return [...value].length;
 }
 
-/** Brand registration (US-21). The email is trimmed and lower-cased like on the server. */
+/** Email of a new account: trimmed and lower-cased like on the server, @StrictEmail rules. */
+const newAccountEmail = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .max(EMAIL_MAX, messages.EMAIL_TAKEN_OR_INVALID)
+  .regex(EMAIL, messages.EMAIL_TAKEN_OR_INVALID);
+
+/** Password of a new account, @PasswordLength rules. Not trimmed: spaces are part of it. */
+const newAccountPassword = z
+  .string()
+  .min(PASSWORD_MIN, messages.PASSWORD_TOO_SHORT)
+  .refine(
+    (password) => utf8Length(password) <= PASSWORD_MAX_BYTES,
+    messages.PASSWORD_TOO_SHORT,
+  );
+
+/** Brand name: 2–50 characters after trimming, no control characters (US-22.1 CL, @BrandName). */
+const brandName = z
+  .string()
+  .trim()
+  .refine((name) => {
+    const length = codePointLength(name);
+    return length >= NAME_MIN && length <= NAME_MAX && !/\p{Cc}/u.test(name);
+  }, brandNameInvalidMessage);
+
+/** Brand registration (US-21): fields in form order — name, website, email, password. */
 export const brandRegisterSchema = z.object({
-  email: z
+  name: brandName,
+  websiteUrl: z
     .string()
-    .trim()
-    .toLowerCase()
-    .max(EMAIL_MAX, messages.EMAIL_TAKEN_OR_INVALID)
-    .regex(EMAIL, messages.EMAIL_TAKEN_OR_INVALID),
-  // The password is not trimmed: spaces are part of it.
-  password: z
-    .string()
-    .min(PASSWORD_MIN, messages.PASSWORD_TOO_SHORT)
-    .refine(
-      (password) => utf8Length(password) <= PASSWORD_MAX_BYTES,
-      messages.PASSWORD_TOO_SHORT,
-    ),
+    .transform(normalizeWebsiteUrl)
+    .refine(isWebsiteUrl, websiteUrlInvalidMessage),
+  email: newAccountEmail,
+  password: newAccountPassword,
 });
 
 export type BrandRegisterForm = z.infer<typeof brandRegisterSchema>;
@@ -58,16 +84,81 @@ export const brandLoginSchema = z.object({
 
 export type BrandLoginForm = z.infer<typeof brandLoginSchema>;
 
-/** Brand name in the profile (US-22.1): 2–50 characters after trimming, no control characters. */
-export const brandNameSchema = z.object({
-  name: z
+/**
+ * Buyer login (US-03): an email of the right shape and a non-empty password, shown under
+ * the fields. Only the shape is checked here, so it hints nothing about the account; a
+ * wrong pair is the one common INVALID_CREDENTIALS message from the server.
+ */
+export const buyerLoginSchema = z.object({
+  email: z
     .string()
     .trim()
-    .refine((name) => {
-      const length = codePointLength(name);
-      return length >= NAME_MIN && length <= NAME_MAX && !/\p{Cc}/u.test(name);
-    }, brandNameInvalidMessage),
+    // An empty field gets only «Введіть email», not the format message as well.
+    .min(1, { message: buyerAuthTexts.emailRequired, abort: true })
+    .max(EMAIL_MAX, buyerAuthTexts.emailInvalid)
+    .regex(EMAIL, buyerAuthTexts.emailInvalid),
+  password: z.string().min(1, buyerAuthTexts.passwordRequired),
 });
+
+export type BuyerLoginForm = z.infer<typeof buyerLoginSchema>;
+
+/**
+ * Buyer registration (US-02, ADR-0016): the name, «Email або номер телефону», the
+ * password with the brand's rules, and «Підтвердити пароль».
+ */
+export const buyerRegisterSchema = z
+  .object({
+    // «Імʼя»: required, 1–50 characters after trimming, not only spaces (@DisplayName).
+    name: z
+      .string()
+      .trim()
+      .min(1, { message: buyerAuthTexts.nameRequired, abort: true })
+      .refine(
+        (name) => codePointLength(name) <= NAME_MAX && !/\p{Cc}/u.test(name),
+        buyerAuthTexts.nameInvalid,
+      ),
+    // «Email або номер телефону»: the same rules as the server (shared/loginId.ts).
+    login: z
+      .string()
+      .refine(
+        (login) => parseLoginId(login) !== null,
+        buyerAuthTexts.loginInvalid,
+      ),
+    password: newAccountPassword,
+    confirmPassword: z.string().min(1, buyerAuthTexts.confirmRequired),
+  })
+  .refine(
+    ({ password, confirmPassword }) =>
+      confirmPassword === "" || password === confirmPassword,
+    {
+      message: buyerAuthTexts.passwordsMismatch,
+      path: ["confirmPassword"],
+      // Also when another field is invalid, so every error shows after one submit.
+      when: (payload) => {
+        const value = payload.value as Partial<Record<string, unknown>>;
+        return (
+          typeof value.password === "string" &&
+          typeof value.confirmPassword === "string"
+        );
+      },
+    },
+  );
+
+export type BuyerRegisterForm = z.infer<typeof buyerRegisterSchema>;
+
+/** Brand name in the profile (US-22.1): the same rule as at registration. */
+export const brandNameSchema = z.object({
+  name: brandName,
+});
+
+/** The website in the profile: optional (empty = none), otherwise the registration rule. */
+export const optionalWebsiteUrl = z
+  .string()
+  .transform(normalizeWebsiteUrl)
+  .refine(
+    (value) => value === "" || isWebsiteUrl(value),
+    websiteUrlInvalidMessage,
+  );
 
 export type BrandNameForm = z.infer<typeof brandNameSchema>;
 
@@ -173,6 +264,78 @@ export function isHttpUrl(value: string): boolean {
 /** External image URL: lowercase `https://` only, like @HttpsUrl (ADR-0007). */
 export function isHttpsUrl(value: string): boolean {
   return value.startsWith("https://") && isUrlWithHost(value, () => true);
+}
+
+/** Same as WebsiteUrlValidator.MAX_LENGTH on the backend. */
+export const WEBSITE_URL_MAX = 2048;
+const DOMAIN_LABEL = /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/;
+
+/**
+ * The brand's website (US-21, @WebsiteUrl): lowercase https://, a URL java.net.URI accepts,
+ * a host that is a domain name (two or more labels, the last starting with a letter — not
+ * localhost or an IP) and at most 2048 characters. Examples: validation.examples.json.
+ */
+export function isWebsiteUrl(value: string): boolean {
+  if (value.length > WEBSITE_URL_MAX || !isHttpsUrl(value)) return false;
+  const authority = URI_PARTS.exec(value)?.[2] ?? "";
+  const hostPort = authority.slice(authority.indexOf("@") + 1);
+  const host = hostPort.replace(/:\d*$/, "").replace(/\.$/, "");
+  const labels = host.split(".");
+  return (
+    labels.length >= 2 &&
+    labels.every((label) => DOMAIN_LABEL.test(label)) &&
+    /^[A-Za-z]/.test(labels[labels.length - 1] ?? "")
+  );
+}
+
+/**
+ * «brand.com.ua» → «https://brand.com.ua» when the field loses focus. Only a value without any
+ * scheme gets it; «http://…» stays as typed, so the error explains what is wrong.
+ */
+export function withHttps(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed === "" || /^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+  return `https://${trimmed.replace(/^\/+/, "")}`;
+}
+
+/** Query parameters that only track the visit: never part of the brand's own address. */
+function isTrackingParam(pair: string): boolean {
+  const key = (pair.split("=")[0] ?? "").toLowerCase();
+  return (
+    key === "srsltid" ||
+    key === "fbclid" ||
+    key === "gclid" ||
+    key.startsWith("utm_")
+  );
+}
+
+/**
+ * The website as it is checked and saved — the same as WebsiteUrlValidator.normalize on the
+ * backend (examples: validation.examples.json, «websiteUrlNormalized»): spaces trimmed and the
+ * tracking parameters (srsltid, fbclid, gclid, utm_*) removed; other parameters, the path and
+ * a #fragment stay; a «?» left with nothing after it goes too.
+ */
+export function normalizeWebsiteUrl(value: string): string {
+  const url = value.trim();
+  const hashIndex = url.indexOf("#");
+  const base = hashIndex === -1 ? url : url.slice(0, hashIndex);
+  const fragment = hashIndex === -1 ? "" : url.slice(hashIndex);
+  const queryIndex = base.indexOf("?");
+  if (queryIndex === -1) return url;
+  const kept = base
+    .slice(queryIndex + 1)
+    .split("&")
+    .filter((pair) => pair !== "" && !isTrackingParam(pair));
+  const query = kept.length > 0 ? `?${kept.join("&")}` : "";
+  return `${base.slice(0, queryIndex)}${query}${fragment}`;
+}
+
+/**
+ * What the «Сайт бренду» field shows after it loses focus: https:// added to a bare domain
+ * (withHttps), then the tracking parameters removed (normalizeWebsiteUrl).
+ */
+export function cleanWebsiteUrl(value: string): string {
+  return normalizeWebsiteUrl(withHttps(value));
 }
 
 /** Whole positive number of UAH typed into the price field. */

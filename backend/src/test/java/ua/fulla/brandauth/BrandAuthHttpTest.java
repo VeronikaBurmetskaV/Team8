@@ -35,7 +35,7 @@ class BrandAuthHttpTest {
     @Test
     void registerProfileLogoutOverRealHttp() throws Exception {
         String email = "brand-" + UUID.randomUUID() + "@example.com";
-        String credentials = "{\"email\":\"" + email + "\",\"password\":\"secret-123\"}";
+        String credentials = "{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}";
 
         // 1. GET /api/session hands out the CSRF cookie
         assertThat(send(request("/api/session").GET()).body())
@@ -51,7 +51,8 @@ class BrandAuthHttpTest {
         HttpResponse<String> registered = send(withCsrf(request("/api/brand/register"))
             .POST(BodyPublishers.ofString(credentials)));
         assertThat(registered.statusCode()).isEqualTo(201);
-        assertThat(registered.body()).contains("\"profileState\":\"INCOMPLETE\"");
+        // registered with a name (US-21): ACTIVE at once (domain-model.md §4.1)
+        assertThat(registered.body()).contains("\"profileState\":\"ACTIVE\"");
         String setCookie = String.join("\n", registered.headers().allValues("Set-Cookie"));
         assertThat(setCookie).contains("FULLA_SESSION=").contains("HttpOnly").contains("SameSite=Lax");
 

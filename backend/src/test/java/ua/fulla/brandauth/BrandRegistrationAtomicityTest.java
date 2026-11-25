@@ -38,11 +38,11 @@ class BrandRegistrationAtomicityTest {
     @Test
     void accountIsRolledBackWhenTheProfileCannotBeCreated() throws Exception {
         String email = "brand-" + UUID.randomUUID() + "@example.com";
-        doThrow(new IllegalStateException("profile insert failed (test)")).when(profiles).createEmpty(any());
+        doThrow(new IllegalStateException("profile insert failed (test)")).when(profiles).create(any(), any(), any());
 
         mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\"}"))
+                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isInternalServerError());
 
         Integer accounts = jdbc.sql("SELECT count(*) FROM brand_accounts WHERE email = :email")

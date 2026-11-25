@@ -11,6 +11,29 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Buyer pages (BuyerHeader sets the attribute). Rubber-band overscroll on macOS and iOS shows
+   the canvas around the page; with no background of its own, html took the body's light
+   colour, so pulling past the top showed a light band over the black header.
+   - overscroll-behavior: no bounce where the browser supports it on the root;
+   - where it still bounces (some Safari versions): the canvas is dark above the page and
+     light below it. The image is one tile as tall as the document — light half, dark half —
+     repeated: the body covers the tile itself, the area above the page shows the dark half of
+     the tile before it, the area below shows the light half of the tile after it. */
+html[data-overscroll="buyer-header"] {
+  overscroll-behavior-y: none;
+  background-color: var(--color-header-background);
+  background-image: linear-gradient(
+    to bottom,
+    var(--color-background) 50%,
+    var(--color-header-background) 50%
+  );
+}
+
+html[data-overscroll="buyer-header"] body {
+  overscroll-behavior-y: none;
+  min-height: 100dvh;
+}
+
 body {
   margin: 0;
   background-color: var(--color-background);
@@ -290,7 +313,12 @@ button:disabled {
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-heading);
   letter-spacing: var(--letter-spacing-logo);
+  line-height: 1;
   text-decoration: none;
+  white-space: nowrap;
+  /* The wide letter spacing also follows the last letter: keep it inside the link. */
+  padding-inline-end: var(--space-half);
+  flex-shrink: 0;
 }
 
 /* Cabinet navigation in the header (brand session only).
@@ -328,9 +356,24 @@ button:disabled {
   text-underline-offset: 6px;
 }
 
-.layout-nav button {
+/* «Вийти»: secondary — outlined, green on hover; not a black block in the bar. */
+.layout-nav .layout-logout {
   margin-left: auto;
   padding: 0 var(--space-2);
+  border-color: var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.layout-nav .layout-logout:hover:not(:disabled) {
+  border-color: var(--color-green);
+  background-color: var(--color-green);
+  color: var(--color-white);
+}
+
+/* The cabinet bar shows a focus ring only for the keyboard, never after a click. */
+.layout-header :focus:not(:focus-visible) {
+  outline: none;
 }
 
 .layout-header [role="alert"] {
@@ -357,7 +400,7 @@ button:disabled {
     gap: var(--space-3);
   }
 
-  .layout-nav button {
+  .layout-nav .layout-logout {
     margin-left: 0;
     padding: 0 var(--space-3);
   }

@@ -5,12 +5,12 @@ import { withUtm } from "../links";
 import { savedProductsTexts as t } from "../messages.uk";
 import { handleCancelEvent, lockPageScroll } from "../modalControl";
 import { ProductCard } from "../ProductCard/ProductCard";
-import type { SavedProduct } from "../productLists";
+import type { DetailedProduct } from "../productLists";
 import styles from "./ProductModal.module.css";
 
 interface ProductModalProps {
   /** The product to show; null keeps the modal closed. */
-  product: SavedProduct | null;
+  product: DetailedProduct | null;
   /** The «×», Esc and a click on the dimmed page. */
   onClose: () => void;
 }

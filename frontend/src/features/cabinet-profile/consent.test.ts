@@ -11,6 +11,7 @@ import { CONSENT_TEXT } from "./profileForm";
 
 const activeProfile: BrandProfileResponse = {
   name: "Лляна",
+  websiteUrl: "https://lileya.com.ua",
   logoImageId: null,
   logoUrl: null,
   consentGiven: false,
@@ -108,6 +109,8 @@ describe("toConsentRequest", () => {
       }),
     ).toEqual({
       name: "Лляна",
+      // the saved website goes back unchanged: the consent save must not clear it
+      websiteUrl: "https://lileya.com.ua",
       logoImageId: null,
       logoUrl: "https://cdn.brand-site.ua/logo.png",
       consentGiven: true,

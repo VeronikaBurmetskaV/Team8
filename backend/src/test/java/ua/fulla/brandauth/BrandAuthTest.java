@@ -45,29 +45,68 @@ class BrandAuthTest {
     // ---------- registration (US-21) ----------
 
     @Test
-    void registerCreatesAccountWithEmptyProfileAndLogsIn() throws Exception {
+    void registerCreatesAccountWithNameAndWebsiteAndLogsIn() throws Exception {
         String email = uniqueEmail();
 
         MvcResult result = register(email, PASSWORD)
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.brandId").isString())
             .andExpect(jsonPath("$.email").value(email))
-            .andExpect(jsonPath("$.profileState").value("INCOMPLETE"))
+            // the name is saved with the account (US-21): ACTIVE, not INCOMPLETE (domain-model.md §4.1)
+            .andExpect(jsonPath("$.profileState").value("ACTIVE"))
             .andExpect(jsonPath("$.length()").value(3))
             .andReturn();
 
         // logged in immediately: the session of the response opens the cabinet
         mvc.perform(get("/api/brand/profile").session(sessionOf(result)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.state").value("INCOMPLETE"));
+            .andExpect(jsonPath("$.state").value("ACTIVE"))
+            .andExpect(jsonPath("$.name").value("Lileya"))
+            .andExpect(jsonPath("$.websiteUrl").value("https://lileya.com.ua"))
+            .andExpect(jsonPath("$.consentGiven").value(false));
 
         Integer profiles = jdbc.sql("""
                 SELECT count(*) FROM brand_profiles p
                 JOIN brand_accounts a ON a.id = p.brand_id
-                WHERE a.email = :email AND p.name IS NULL
+                WHERE a.email = :email AND p.name = 'Lileya' AND p.website_url = 'https://lileya.com.ua'
                 """)
             .param("email", email).query(Integer.class).single();
-        assertThat(profiles).isEqualTo(1);
+        assertThat(profiles).as("one profile row with the name and website (T-9)").isEqualTo(1);
+    }
+
+    @Test
+    void nameAndWebsiteHaveTheProfileRulesAndNothingIsCreated() throws Exception {
+        String email = uniqueEmail();
+        for (String body : List.of(
+                // name outside 2–50
+                "{\"name\":\"L\",\"websiteUrl\":\"https://lileya.com.ua\",",
+                "{\"name\":\"" + "a".repeat(51) + "\",\"websiteUrl\":\"https://lileya.com.ua\",")) {
+            expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content(body + "\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+                .andExpect(jsonPath("$.error.fields.name").value("PROFILE_INVALID"))
+                .andExpect(jsonPath("$.error.fields.length()").value(1));
+        }
+        for (String websiteUrl : List.of("http://lileya.com.ua", "lileya.com.ua", "https://", "https://lileya",
+                "https://localhost:5173", "")) {
+            expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"name\":\"Lileya\",\"websiteUrl\":\"" + websiteUrl + "\",\"email\":\"" + email
+                        + "\",\"password\":\"" + PASSWORD + "\"}")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+                .andExpect(jsonPath("$.error.fields.websiteUrl").value("PROFILE_INVALID"))
+                .andExpect(jsonPath("$.error.fields.length()").value(1));
+        }
+        // the website is required at registration
+        expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Lileya\",\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}")))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error.fields.websiteUrl").value("PROFILE_INVALID"));
+
+        Integer accounts = jdbc.sql("SELECT count(*) FROM brand_accounts WHERE email = :email")
+            .param("email", email).query(Integer.class).single();
+        assertThat(accounts).isZero();
     }
 
     @Test
@@ -162,14 +201,17 @@ class BrandAuthTest {
     }
 
     @Test
-    void registerWithoutFieldsReportsBothFields() throws Exception {
+    void registerWithoutFieldsReportsEveryFieldNameFirst() throws Exception {
+        // form order: name, website, email, password → the top code is the name's (api.md §3.1)
         expectEnvelope(mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON).content("{}")))
             .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.error.code").value("EMAIL_TAKEN_OR_INVALID"))
+            .andExpect(jsonPath("$.error.code").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.name").value("PROFILE_INVALID"))
+            .andExpect(jsonPath("$.error.fields.websiteUrl").value("PROFILE_INVALID"))
             .andExpect(jsonPath("$.error.fields.email").value("EMAIL_TAKEN_OR_INVALID"))
             .andExpect(jsonPath("$.error.fields.password").value("PASSWORD_TOO_SHORT"))
-            .andExpect(jsonPath("$.error.fields.length()").value(2));
+            .andExpect(jsonPath("$.error.fields.length()").value(4));
     }
 
     @Test
@@ -247,7 +289,7 @@ class BrandAuthTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.brandId").isString())
             .andExpect(jsonPath("$.email").value(email))
-            .andExpect(jsonPath("$.profileState").value("INCOMPLETE"))
+            .andExpect(jsonPath("$.profileState").value("ACTIVE"))
             .andExpect(jsonPath("$.length()").value(3))
             .andReturn();
 
@@ -358,7 +400,7 @@ class BrandAuthTest {
 
     private ResultActions register(String email, String password) throws Exception {
         return mvc.perform(post("/api/brand/register").with(csrf())
-            .contentType(MediaType.APPLICATION_JSON).content(credentials(email, password)));
+            .contentType(MediaType.APPLICATION_JSON).content(registration(email, password)));
     }
 
     private ResultActions login(String email, String password) throws Exception {
@@ -379,6 +421,12 @@ class BrandAuthTest {
         MockHttpSession session = (MockHttpSession) result.getRequest().getSession(false);
         assertThat(session).as("a session was started").isNotNull();
         return session;
+    }
+
+    /** A valid registration (US-21): name and website as the form sends them. */
+    private static String registration(String email, String password) {
+        return "{\"name\":\"Lileya\",\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"" + email
+            + "\",\"password\":\"" + password + "\"}";
     }
 
     private static String credentials(String email, String password) {

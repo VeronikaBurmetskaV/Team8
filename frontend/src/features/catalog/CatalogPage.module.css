@@ -284,16 +284,16 @@
   color: var(--color-black);
 }
 
-/* «Фільтри»: brand olive with white text and icon (6.4:1); ~10 % darker on hover and
-   while the panel is open. */
+/* «Фільтри» (on / and /feed): black with white text and icon (19:1); green on hover, on
+   keyboard focus and while the panel is open (white on green 5.4:1), ~150 ms. */
 .filtersButton {
   padding: 0 var(--space-2);
-  border-color: var(--color-olive);
-  background-color: var(--color-olive);
+  border-color: var(--color-black);
+  background-color: var(--color-black);
   color: var(--color-white);
   transition:
-    background-color var(--transition-heart),
-    border-color var(--transition-heart);
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .filtersButton svg {
@@ -301,10 +301,17 @@
 }
 
 .filtersButton:hover:not(:disabled),
+.filtersButton:focus-visible,
 .filtersButton[aria-expanded="true"] {
-  border-color: var(--color-olive-hover);
-  background-color: var(--color-olive-hover);
+  border-color: var(--color-green);
+  background-color: var(--color-green);
   color: var(--color-white);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .filtersButton {
+    transition: none;
+  }
 }
 
 .secondaryButton:hover:not(:disabled),
@@ -314,7 +321,8 @@
   color: var(--color-offwhite);
 }
 
-/* Active filters on «Фільтри»: a white circle with the olive count. */
+/* Active filters on «Фільтри»: a white circle with a dark count — readable on the black and on
+   the green button (10:1 inside the circle). */
 .filtersBadge {
   display: inline-flex;
   align-items: center;
@@ -385,6 +393,15 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* «Повернути фільтри: …»: a quiet underlined text line, left-aligned; may wrap on a phone. */
+.restoreButton {
+  composes: textButton;
+  align-self: flex-start;
+  max-width: 100%;
+  text-align: left;
+  white-space: normal;
 }
 
 /* ---------- Active filter chips above the grid ---------- */
@@ -563,10 +580,80 @@
   outline-offset: calc(-1 * var(--focus-ring-width));
 }
 
+/* Group headings are black; on hover the title and «+/−» turn green (5.4:1 on white). */
 .groupToggle:hover:not(:disabled) {
   border-color: transparent;
   background: none;
+  color: var(--color-green);
+}
+
+/* ---------- «Розмір»: round toggles, a pill for long sizes ---------- */
+.sizeFieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sizeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+
+/* ≥ 44 px circle; longer text («One size», «XS/S») widens it into a pill, never cut. Default:
+   black ring and text on white (19:1); hover: green ring and text (5.4:1); chosen: green fill,
+   white text (5.4:1). */
+.size,
+.size:hover:not(:disabled) {
+  min-width: var(--icon-button-size);
+  min-height: var(--icon-button-size);
+  height: var(--icon-button-size);
+  padding: 0 var(--space-1);
+  border: var(--border-width) solid var(--color-black);
+  border-radius: var(--radius-pill);
+  background-color: transparent;
   color: var(--color-black);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.size:hover:not(:disabled) {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.size[aria-pressed="true"],
+.size[aria-pressed="true"]:hover:not(:disabled) {
+  border-color: var(--color-green);
+  background-color: var(--color-green);
+  color: var(--color-white);
+}
+
+.size[aria-pressed="true"]:hover:not(:disabled) {
+  border-color: var(--color-green-hover);
+  background-color: var(--color-green-hover);
+}
+
+.size:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-olive-dark);
+  outline-offset: var(--focus-ring-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .size {
+    transition: none;
+  }
 }
 
 .groupTitle {
@@ -594,7 +681,7 @@
 }
 
 .groupToggle:hover:not(:disabled) .groupIcon {
-  color: var(--color-olive-dark);
+  color: var(--color-green);
 }
 
 /* Expanded group: dark olive text on white (10:1). */
@@ -1043,8 +1130,9 @@
   }
 
   /* A white column beside the grid, as tall as the window at most: the groups scroll inside
-     it between the sticky header and the sticky «Показати N товарів». */
-  .panel {
+     it between the sticky header and the sticky «Показати N товарів». Only the catalogue's
+     column (data-layout); the /feed drawer stays a drawer. */
+  .panel[data-layout="column"] {
     position: sticky;
     /* `inset` first: after `top` it would reset it to auto and the column would not stick.
        Below the buyer header's thin bar, which is fixed at the top after scrolling. */
@@ -1063,7 +1151,7 @@
 
   /* «Показати всі»: about twice as wide, OVER the grid (its column keeps its width, so the
      products do not move), with a shadow. */
-  .panel[data-expanded="true"] {
+  .panel[data-layout="column"][data-expanded="true"] {
     width: var(--filter-panel-width-expanded);
     box-shadow: var(--shadow-lg);
   }

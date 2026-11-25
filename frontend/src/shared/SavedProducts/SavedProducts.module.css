@@ -20,6 +20,11 @@
   overflow-wrap: anywhere;
 }
 
+/* «18 з 25» next to «Вподобане»: the warning colour when ≤ 3 places are left (5:1 on the page). */
+.count[data-warning] {
+  color: var(--color-error);
+}
+
 .count {
   color: var(--color-olive-dark);
   font-family: var(--font-body);

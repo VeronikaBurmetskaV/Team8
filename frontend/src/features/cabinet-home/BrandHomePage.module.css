@@ -1,111 +1,300 @@
-/* /brand: desktop-first (ADR-0002) inside the wide cabinet container; one column on a phone. */
+/* The cabinet home page (/brand): desktop-first (ADR-0002), works down to 320 px. */
 .page {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  padding-block: var(--space-2) var(--space-4);
 }
 
-.title {
-  margin: 0;
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
-/* The main action, centred, with air around it. */
-.hero {
+/* ---------- Profile header: logo | name, website, consent | «Редагувати профіль» ---------- */
+.profile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--cabinet-avatar-size);
+  height: var(--cabinet-avatar-size);
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}
+
+/* Initials in the brand's catalogue colour (pairs of tokens.css, ≥ 5.4:1). */
+.monogram {
+  background-color: var(--monogram-bg);
+  color: var(--monogram-fg);
+  font-family: var(--font-heading);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-heading);
+}
+
+.profileText {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) 0;
-  text-align: center;
+  gap: var(--space-half);
+  min-width: 0;
 }
 
-.empty {
+.name,
+.nameMissing {
   margin: 0;
+  font-size: var(--font-size-h1);
+  line-height: var(--line-height-heading);
+  overflow-wrap: anywhere;
+}
+
+/* «Назва не вказана»: the same place, muted (4.9:1). */
+.nameMissing {
   color: var(--color-text-muted);
 }
 
-/* Profile and products: one under another on a phone, side by side from --bp-tablet. */
-.cards {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
+.website {
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.card {
+.consentLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Green dot and dark text with consent, a grey dot without. */
+.dot {
+  width: var(--space-1);
+  height: var(--space-1);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-gray-border);
+}
+
+.consentLine[data-consent="true"] {
+  color: var(--color-text);
+}
+
+.consentLine[data-consent="true"] .dot {
+  background-color: var(--color-green);
+}
+
+/* Secondary: outlined; green on hover (white text on green 5.4:1). */
+.editProfile,
+.noticeAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--color-black);
+  background-color: var(--color-surface);
+  color: var(--color-black);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.editProfile:hover,
+.noticeAction:hover {
+  border-color: var(--color-green);
+  background-color: var(--color-green);
+  color: var(--color-white);
+}
+
+/* ---------- Notices: light background, a green bar on the left; calm, not alarming ---------- */
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--space-half) solid var(--color-green);
+  background-color: var(--color-surface);
+}
+
+.noticeTitle {
+  margin: 0;
+  font-weight: var(--font-weight-semibold);
+}
+
+.noticeText {
+  margin: var(--space-half) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* ---------- «Товари»: a big centred card ---------- */
+.products {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-3);
+  width: min(100%, var(--cabinet-products-width));
+  margin: var(--space-2) auto 0;
   padding: var(--space-4) var(--space-3);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-lg);
   background-color: var(--color-surface);
   box-shadow: var(--shadow-md);
+  text-align: center;
 }
 
-.cardTitle {
+.productsTitle {
   margin: 0;
-  font-size: var(--font-size-lg);
 }
 
-.details,
-.counts {
-  display: flex;
-  flex-direction: column;
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
   width: 100%;
   margin: 0;
 }
 
-.details dt,
-.counts dt {
+.stats > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-half);
+}
+
+.stats dd {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: var(--cabinet-stat-size);
+  font-weight: var(--font-weight-heading);
+  line-height: 1;
+}
+
+.stats dt {
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
 }
 
-.details dd,
-.counts dd {
+.empty {
+  max-width: 36ch;
   margin: 0;
-  overflow-wrap: anywhere;
+  color: var(--color-text-muted);
 }
 
-/* Three numbers in a row: big figures under small labels. */
-.counts {
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.counts dd {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-xl);
+/* The main action: green like the other main buttons (white on green 5.4:1). */
+.addProduct,
+.addProduct:hover:not(:disabled) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, var(--cabinet-action-max-width));
+  min-height: var(--auth-control-height);
+  border: var(--border-width) solid var(--color-auth-accent);
+  background-color: var(--color-auth-accent);
+  color: var(--color-on-auth-accent);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  text-decoration: none;
+  text-transform: uppercase;
 }
 
-/* Pushes the link to the bottom so both cards end on the same line. */
-.cardAction {
-  margin-top: auto;
-  font-weight: var(--font-weight-medium);
+.addProduct:hover:not(:disabled) {
+  border-color: var(--color-auth-accent-hover);
+  background-color: var(--color-auth-accent-hover);
 }
 
-@media (min-width: 768px) {
-  .cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+.addHint {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.allProducts {
+  color: var(--color-text);
+}
+
+/* ---------- Loading ---------- */
+.skeleton {
+  background-color: var(--color-gray-border);
+  animation: home-pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonProfile {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.skeletonLine {
+  height: var(--space-4);
+  width: 60%;
+}
+
+.skeletonStat {
+  height: var(--cabinet-stat-size);
+}
+
+@keyframes home-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
   }
 
-  /* The profile card is a square with its content centred, like the card on /brand/profile.
-     aspect-ratio keeps min-height: auto, so long content makes it taller, never cut. */
-  .profileCard {
-    width: 100%;
-    max-width: var(--cabinet-profile-card-size);
-    aspect-ratio: 1 / 1;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+  .editProfile,
+  .noticeAction {
+    transition: none;
+  }
+}
+
+/* Narrow screens: the header blocks one under another, the counts too if they do not fit. */
+@media (max-width: 599px) {
+  .profile {
+    grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .profileCard .cardAction {
-    margin-top: 0;
+  .editProfile {
+    grid-column: 1 / -1;
+  }
+
+  .notice {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 359px) {
+  .stats {
+    grid-template-columns: 1fr;
   }
 }

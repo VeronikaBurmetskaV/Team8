@@ -6,6 +6,10 @@ fulla:
     # visitors arrive from 127.0.0.1 and would share the limit of 10. Without the dev profile
     # the value from application.yml (10) applies.
     max-attempts-per-minute: 1000
+  brands:
+    # GET /api/brands may show the logo URL the demo import found on a single-brand source
+    # site (ADR-0014, ADR-0015). Only here: prod and ops keep the default false.
+    source-logos: true
   import:
     # Demo catalogue import (ADR-0014, dev only). Runs ~10 s after start, then checks every
     # 10 min; each source really runs at most once per min-run-interval (1 h here, 6 h by

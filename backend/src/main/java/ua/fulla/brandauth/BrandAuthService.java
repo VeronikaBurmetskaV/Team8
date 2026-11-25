@@ -35,11 +35,12 @@ class BrandAuthService {
     }
 
     /**
-     * Account + empty profile in one transaction (T-9). The format of the email and the password
-     * is already checked by Bean Validation on the request record (@StrictEmail, @PasswordLength).
+     * Account + profile with the name and website in one transaction (T-9, US-21). Every field is
+     * already checked by Bean Validation on the request record (@BrandName, @WebsiteUrl,
+     * @StrictEmail, @PasswordLength). The website is only stored, never requested (A-15).
      */
     @Transactional
-    AuthenticatedBrand register(String rawEmail, String password) {
+    AuthenticatedBrand register(String rawEmail, String password, String name, String websiteUrl) {
         String email = StrictEmailValidator.normalize(rawEmail);
 
         UUID brandId;
@@ -50,8 +51,9 @@ class BrandAuthService {
             throw new ApiException(HttpStatus.CONFLICT, ErrorCode.EMAIL_TAKEN_OR_INVALID,
                 "email is already registered", Map.of("email", ErrorCode.EMAIL_TAKEN_OR_INVALID));
         }
-        profiles.createEmpty(brandId);
-        return new AuthenticatedBrand(brandId, email, ProfileState.INCOMPLETE);
+        // With a name the profile is ACTIVE at once (domain-model.md §4.1).
+        ProfileState state = profiles.create(brandId, name, websiteUrl).state();
+        return new AuthenticatedBrand(brandId, email, state);
     }
 
     AuthenticatedBrand login(String rawEmail, String password) {

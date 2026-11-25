@@ -3,7 +3,14 @@
  * panel state.
  */
 
+import {
+  BRAND_PARAM,
+  MAX_PRICE_PARAM,
+  MIN_PRICE_PARAM,
+  SIZE_PARAM,
+} from "../../shared/filterLinks";
 import { catalogTexts as t } from "../../shared/messages.uk";
+import { compareSizes, sizeKey } from "../../shared/sizes";
 import { formatPrice } from "../../shared/price";
 
 /** Tiles shown at first and added by each «Показати ще». */
@@ -28,9 +35,8 @@ export const PRICE_STEP = 100;
 /** PageUp / PageDown on a slider thumb. */
 export const PRICE_PAGE_STEP = 1_000;
 
-/** Search parameters of the home page (/) that hold the applied price range. */
-export const MIN_PRICE_PARAM = "minPrice";
-export const MAX_PRICE_PARAM = "maxPrice";
+/** Search parameters of / and /feed that hold the applied filters (shared/filterLinks). */
+export { BRAND_PARAM, MAX_PRICE_PARAM, MIN_PRICE_PARAM, SIZE_PARAM };
 
 /** Applied range: null on a side means no limit there (PRICE_MIN / PRICE_MAX). */
 export interface PriceRange {
@@ -307,16 +313,36 @@ export function nearestThumb(
 
 /* ---------- Brand filter (client side: brands collected from GET /api/feed) ---------- */
 
-/** Repeated search parameter of the home page: ?brand=<key>&brand=<key2>. */
-export const BRAND_PARAM = "brand";
+/* Repeated search parameter of / and /feed: ?brand=<key>&brand=<key2> (BRAND_PARAM above). */
 /** Brands shown before «Показати всі (N)». */
 export const BRAND_LIST_LIMIT = 8;
 /** With more brands than this, a «Пошук бренду» field sits over the list. */
 export const BRAND_SEARCH_MIN = 12;
 
-/** Brand key: case and extra spaces ignored, so «CHER'17» and « Cher'17 » are one brand. */
+/** Every apostrophe-like sign: ' ’ ‘ ʼ ‛ ` ´ ′ ʹ (fullwidth ＇ becomes ' with NFKC). */
+const APOSTROPHES = /['\u2019\u2018\u02BC\u201B`\u00B4\u2032\u02B9]/gu;
+/** Invisible characters that sometimes come with copied names (zero-width space, joiners, BOM). */
+const INVISIBLE = /[\u200B-\u200D\u2060\uFEFF]/gu;
+
+/**
+ * A brand name with tidy spaces, for display: every kind of space (U+00A0, U+2009…) is one
+ * ordinary space, none at the ends, invisible characters gone. Case and letters are kept.
+ */
+export function brandSpelling(name: string): string {
+  return name.replace(INVISIBLE, "").replace(/\s+/gu, " ").trim();
+}
+
+/**
+ * The ONE identity of a brand on the client: tiles, filter checkboxes, the brand link on a
+ * product tile, ?brand= in the URL, filterCatalog, isSingleBrandView, brandOptions.
+ * «CHER'17», «CHER’17» and « cher'17 » are one brand; so are «One By One», «One\u00A0By One»
+ * and «ONE BY ONE». Apostrophes are unified before NFKC (which would split ´ into a space and
+ * an accent), then NFKC, spaces, lower case by Ukrainian rules.
+ */
 export function brandKey(name: string): string {
-  return name.trim().replace(/\s+/g, " ").toLowerCase();
+  return brandSpelling(
+    name.replace(APOSTROPHES, "'").normalize("NFKC"),
+  ).toLocaleLowerCase("uk");
 }
 
 /** Link to the clothes of one brand: exactly /?brand=<key>, no other filters. */
@@ -349,7 +375,7 @@ export function brandOptions(
     const key = brandKey(item.brandName);
     if (key === "") continue;
     const brand = brands.get(key) ?? { count: 0, spellings: new Map() };
-    const spelling = item.brandName.trim().replace(/\s+/g, " ");
+    const spelling = brandSpelling(item.brandName);
     brand.count += 1;
     brand.spellings.set(spelling, (brand.spellings.get(spelling) ?? 0) + 1);
     brands.set(key, brand);
@@ -395,20 +421,82 @@ export function visibleBrands(
   );
 }
 
+/**
+ * The size list of the panel: the sizes in stock, plus every chosen size that has none left
+ * (count 0), so a chosen size can always be unticked.
+ */
+export function withSelectedSizes(
+  options: readonly SizeOption[],
+  selected: readonly string[],
+): SizeOption[] {
+  const present = new Set(options.map((option) => option.key));
+  const missing = selected
+    .filter((key) => !present.has(key))
+    .map((key) => ({ key, label: key, count: 0 }));
+  return [...options, ...missing].sort((a, b) => compareSizes(a.key, b.key));
+}
+
 /* ---------- All filters together ---------- */
 
-/** Every filter of the catalogue; null price sides mean no limit, no brands means all. */
+/* ---------- Size filter (client side: sizes of the imported cards, api.md §2.2) ---------- */
+
+// The size rules (sizeKey, compareSizes, ONE_SIZE) are shared with the product card:
+// shared/sizes.ts. Re-exported here, so the filter code keeps one import.
+export { compareSizes, ONE_SIZE, sizeKey } from "../../shared/sizes";
+
+/** The sizes a card has IN STOCK, as filter keys, each once. Brand cards have none. */
+export function availableSizes(item: {
+  sizes?: readonly { label: string; available: boolean }[];
+}): string[] {
+  const keys = (item.sizes ?? [])
+    .filter((size) => size.available)
+    .map((size) => sizeKey(size.label))
+    .filter((key) => key !== "");
+  return [...new Set(keys)];
+}
+
+export interface SizeOption {
+  /** sizeKey: the value in ?size= and the text on the button. */
+  key: string;
+  label: string;
+  /** Cards that have this size in stock. */
+  count: number;
+}
+
+/** The sizes in stock across the cards, in size order, with how many cards have each. */
+export function sizeOptions(
+  items: readonly {
+    sizes?: readonly { label: string; available: boolean }[];
+  }[],
+): SizeOption[] {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    for (const key of availableSizes(item)) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+  return [...counts]
+    .map(([key, count]) => ({ key, label: key, count }))
+    .sort((a, b) => compareSizes(a.key, b.key));
+}
+
+/* ---------- All filters together ---------- */
+
+/** Every filter of the catalogue; null price sides mean no limit, no brands/sizes means all. */
 export interface CatalogFilters {
   minPrice: number | null;
   maxPrice: number | null;
   /** Brand keys (brandKey), in URL order, without repeats. */
   brands: readonly string[];
+  /** Size keys (sizeKey), in URL order, without repeats. */
+  sizes: readonly string[];
 }
 
 export const NO_FILTERS: CatalogFilters = {
   minPrice: null,
   maxPrice: null,
   brands: [],
+  sizes: [],
 };
 
 export function priceRangeOf(filters: CatalogFilters): PriceRange {
@@ -421,6 +509,12 @@ function brandsInUrl(params: URLSearchParams): string[] {
   return [...new Set(keys)].filter((key) => key !== "");
 }
 
+/** Size keys of the URL: normalized, without repeats and empty values. */
+function sizesInUrl(params: URLSearchParams): string[] {
+  const keys = params.getAll(SIZE_PARAM).map(sizeKey);
+  return [...new Set(keys)].filter((key) => key !== "");
+}
+
 /**
  * Filters from the URL. Invalid prices are ignored (parsePriceRange). With `knownBrands` (the
  * keys of the loaded catalogue), brands that are not in it are ignored; while the catalogue
@@ -429,25 +523,43 @@ function brandsInUrl(params: URLSearchParams): string[] {
 export function parseFilters(
   params: URLSearchParams,
   knownBrands: ReadonlySet<string> | null = null,
+  knownSizes: ReadonlySet<string> | null = null,
 ): CatalogFilters {
   const price = parsePriceRange(params);
   const brands = brandsInUrl(params).filter(
     (key) => knownBrands === null || knownBrands.has(key),
   );
-  return { minPrice: price.min, maxPrice: price.max, brands };
+  // Like brands: a size that no card of the catalogue has is ignored once it is known.
+  const sizes = sizesInUrl(params).filter(
+    (key) => knownSizes === null || knownSizes.has(key),
+  );
+  return { minPrice: price.min, maxPrice: price.max, brands, sizes };
 }
 
 /**
  * Cards that pass every filter: the brand is one of the chosen ones (OR between brands) AND
- * the price is in the range (both ends included).
+ * one of the chosen sizes is in stock (OR between sizes; a card without sizes — every brand
+ * card — has none) AND the price is in the range (both ends included).
  */
 export function filterCatalog<
-  T extends { priceUah: number; brandName: string },
+  T extends {
+    priceUah: number;
+    brandName: string;
+    sizes?: readonly { label: string; available: boolean }[];
+  },
 >(items: readonly T[], filters: CatalogFilters): readonly T[] {
-  const byPrice = filterByPriceRange(items, priceRangeOf(filters));
-  if (filters.brands.length === 0) return byPrice;
-  const brands = new Set(filters.brands);
-  return byPrice.filter((item) => brands.has(brandKey(item.brandName)));
+  let result = filterByPriceRange(items, priceRangeOf(filters));
+  if (filters.brands.length > 0) {
+    const brands = new Set(filters.brands);
+    result = result.filter((item) => brands.has(brandKey(item.brandName)));
+  }
+  if (filters.sizes.length > 0) {
+    const sizes = new Set(filters.sizes);
+    result = result.filter((item) =>
+      availableSizes(item).some((key) => sizes.has(key)),
+    );
+  }
+  return result;
 }
 
 /**
@@ -457,19 +569,24 @@ export function filterCatalog<
 export function isSingleBrandView(filters: CatalogFilters): boolean {
   return (
     filters.brands.length === 1 &&
+    filters.sizes.length === 0 &&
     filters.minPrice === null &&
     filters.maxPrice === null
   );
 }
 
-/** Badge on «Фільтри»: each brand counts, the price range counts once. */
+/** Badge on «Фільтри»: each brand and each size count, the price range counts once. */
 export function countActiveFilters(filters: CatalogFilters): number {
-  return filters.brands.length + (hasPriceRange(priceRangeOf(filters)) ? 1 : 0);
+  return (
+    filters.brands.length +
+    filters.sizes.length +
+    (hasPriceRange(priceRangeOf(filters)) ? 1 : 0)
+  );
 }
 
 /** Changes whenever any filter does (first page again, scroll, announcement). */
 export function filtersKey(filters: CatalogFilters): string {
-  return `${filters.minPrice}-${filters.maxPrice}-${filters.brands.join("|")}`;
+  return `${filters.minPrice}-${filters.maxPrice}-${filters.brands.join("|")}-${filters.sizes.join("|")}`;
 }
 
 function withBrands(params: URLSearchParams, brands: readonly string[]) {
@@ -494,12 +611,34 @@ export function withBrandToggled(
   );
 }
 
-/** «Скинути все»: no price range, no brands; other parameters stay. */
-export function withoutFilters(params: URLSearchParams): URLSearchParams {
-  return withBrands(withPriceRange(params, NO_PRICE_RANGE), []);
+function withSizes(params: URLSearchParams, sizes: readonly string[]) {
+  const next = new URLSearchParams(params);
+  next.delete(SIZE_PARAM);
+  for (const key of sizes) next.append(SIZE_PARAM, key);
+  return next;
 }
 
-/** One chip above the grid; `id` is "price" or "brand:<key>". */
+/** A click on a size: adds it to ?size=, or removes it when it is already there. */
+export function withSizeToggled(
+  params: URLSearchParams,
+  key: string,
+): URLSearchParams {
+  const size = sizeKey(key);
+  const sizes = sizesInUrl(params);
+  return withSizes(
+    params,
+    sizes.includes(size)
+      ? sizes.filter((item) => item !== size)
+      : [...sizes, size],
+  );
+}
+
+/** «Скинути все»: no price range, no brands, no sizes; other parameters stay. */
+export function withoutFilters(params: URLSearchParams): URLSearchParams {
+  return withSizes(withBrands(withPriceRange(params, NO_PRICE_RANGE), []), []);
+}
+
+/** One chip above the grid; `id` is "price", "brand:<key>" or "size:<key>". */
 export interface FilterChip {
   id: string;
   label: string;
@@ -507,7 +646,7 @@ export interface FilterChip {
   removeLabel: string;
 }
 
-/** Chips of the active filters: one per chosen brand (catalogue order of choice), then price. */
+/** Chips of the active filters: one per chosen brand, then per size (order of choice), then price. */
 export function filterChips(
   filters: CatalogFilters,
   options: readonly BrandOption[],
@@ -517,6 +656,13 @@ export function filterChips(
     const label = labels.get(key) ?? key;
     return { id: `brand:${key}`, label, removeLabel: t.brandChipLabel(label) };
   });
+  for (const key of filters.sizes) {
+    chips.push({
+      id: `size:${key}`,
+      label: t.sizeChip(key),
+      removeLabel: t.sizeChipLabel(key),
+    });
+  }
   const price = priceRangeOf(filters);
   if (hasPriceRange(price)) {
     const range = formatPriceRange(price);
@@ -535,6 +681,13 @@ export function withoutFilter(
   chipId: string,
 ): URLSearchParams {
   if (chipId === "price") return withPriceRange(params, NO_PRICE_RANGE);
+  if (chipId.startsWith("size:")) {
+    const size = chipId.slice("size:".length);
+    return withSizes(
+      params,
+      sizesInUrl(params).filter((item) => item !== size),
+    );
+  }
   if (!chipId.startsWith("brand:")) return new URLSearchParams(params);
   const key = chipId.slice("brand:".length);
   return withBrands(

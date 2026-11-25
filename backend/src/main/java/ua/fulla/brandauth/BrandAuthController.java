@@ -12,23 +12,44 @@ import org.springframework.web.bind.annotation.RestController;
 import ua.fulla.brandauth.BrandAuthService.AuthenticatedBrand;
 import ua.fulla.brandprofile.ProfileState;
 import ua.fulla.common.AttemptLimiter;
+import ua.fulla.common.BrandName;
 import ua.fulla.common.PasswordLength;
 import ua.fulla.common.SessionAccount;
 import ua.fulla.common.SessionAccount.AccountType;
 import ua.fulla.common.SessionLogin;
 import ua.fulla.common.StrictEmail;
+import ua.fulla.common.WebsiteUrl;
 
 /** Brand register / login / logout (api.md §2.1, US-21, US-21.1). */
 @RestController
 class BrandAuthController {
 
-    /** The rules are checked only where the parameter is {@code @Valid}: on register, not on login. */
+    /** Login: not {@code @Valid}, any malformed input is the same 401 (US-21.1 CL). */
     record CredentialsRequest(@StrictEmail String email, @PasswordLength String password) {
 
         // Never print the password, e.g. if the record ends up in a log line.
         @Override
         public String toString() {
             return "CredentialsRequest[email=" + email + ", password=***]";
+        }
+    }
+
+    /**
+     * Registration (US-21): the fields in form order — name, website, email, password — so the
+     * top-level error code is the first wrong field (api.md §3.1). Name and website have the
+     * profile's rules (PROFILE_INVALID with fields.name / fields.websiteUrl).
+     */
+    record RegisterRequest(
+            @BrandName String name,
+            @WebsiteUrl(required = true) String websiteUrl,
+            @StrictEmail String email,
+            @PasswordLength String password) {
+
+        // Never print the password, e.g. if the record ends up in a log line.
+        @Override
+        public String toString() {
+            return "RegisterRequest[name=" + name + ", websiteUrl=" + websiteUrl + ", email=" + email
+                + ", password=***]";
         }
     }
 
@@ -47,10 +68,11 @@ class BrandAuthController {
     /** Register = create + log in (ADR-0006). */
     @PostMapping("/api/brand/register")
     @ResponseStatus(HttpStatus.CREATED)
-    BrandSessionResponse register(@Valid @RequestBody CredentialsRequest body,
+    BrandSessionResponse register(@Valid @RequestBody RegisterRequest body,
             HttpServletRequest request, HttpServletResponse response) {
         attemptLimiter.check(request);
-        return startSession(service.register(body.email(), body.password()), request, response);
+        return startSession(service.register(body.email(), body.password(), body.name(), body.websiteUrl()),
+            request, response);
     }
 
     /** Not {@code @Valid}: any malformed input is the same 401 as a wrong password (US-21.1 CL). */

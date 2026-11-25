@@ -57,8 +57,10 @@ class BuyerRegisterTest {
 
         MvcResult result = register(email, PASSWORD)
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$.length()").value(3))
             .andExpect(jsonPath("$.email").value(email))
+            .andExpect(jsonPath("$.phone").value((Object) null))
+            .andExpect(jsonPath("$.name").value("Софія"))
             .andReturn();
         MockHttpSession session = sessionOf(result);
 
@@ -78,13 +80,15 @@ class BuyerRegisterTest {
     }
 
     @Test
-    void onlyEmailAndBcryptHashAreStored() throws Exception {
+    void onlyTheLoginTheBcryptHashAndTheNameAreStored() throws Exception {
         String email = uniqueEmail();
         register(email, PASSWORD).andExpect(status().isCreated());
 
         var row = jdbc.sql("SELECT * FROM buyer_accounts WHERE email = :email")
             .param("email", email).query().singleRow();
-        assertThat(row).containsOnlyKeys("id", "email", "password_hash", "created_at");
+        assertThat(row).containsOnlyKeys("id", "email", "phone", "display_name", "password_hash", "created_at");
+        assertThat(row.get("phone")).isNull();
+        assertThat(row.get("display_name")).isEqualTo("Софія");
         String hash = (String) row.get("password_hash");
         assertThat(hash).startsWith("$2").hasSize(60).doesNotContain(PASSWORD);
         assertThat(new BCryptPasswordEncoder().matches(PASSWORD, hash)).isTrue();
@@ -113,7 +117,7 @@ class BuyerRegisterTest {
         register(email, PASSWORD).andExpect(status().isCreated());
 
         expectError(register(email, "another-password"), 409, "EMAIL_TAKEN_OR_INVALID")
-            .andExpect(jsonPath("$.error.fields.email").value("EMAIL_TAKEN_OR_INVALID"))
+            .andExpect(jsonPath("$.error.fields.login").value("EMAIL_TAKEN_OR_INVALID"))
             .andExpect(jsonPath("$.error.fields.length()").value(1));
     }
 
@@ -146,8 +150,9 @@ class BuyerRegisterTest {
             "@brand.ua", "", "a\\u0000b@brand.ua", "in fo@brand.ua", "info@bra\\u0007nd.ua",
             "a".repeat(246) + "@brand.ua");
         for (String email : invalid) {
-            expectError(register(email, PASSWORD), 400, "EMAIL_TAKEN_OR_INVALID")
-                .andExpect(jsonPath("$.error.fields.email").value("EMAIL_TAKEN_OR_INVALID"))
+            // neither a valid email nor a valid phone number (ADR-0016)
+            expectError(register(email, PASSWORD), 400, "LOGIN_INVALID")
+                .andExpect(jsonPath("$.error.fields.login").value("LOGIN_INVALID"))
                 .andExpect(jsonPath("$.error.fields.password").doesNotExist());
         }
     }
@@ -167,12 +172,14 @@ class BuyerRegisterTest {
     }
 
     @Test
-    void emptyBodyReportsBothFieldsWithEmailFirst() throws Exception {
+    void emptyBodyReportsEveryFieldWithTheNameFirst() throws Exception {
+        // form order: name, login, password → the top code is the name's
         expectError(mvc.perform(post("/api/buyer/register").with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{}")), 400, "EMAIL_TAKEN_OR_INVALID")
-            .andExpect(jsonPath("$.error.fields.email").value("EMAIL_TAKEN_OR_INVALID"))
+                .contentType(MediaType.APPLICATION_JSON).content("{}")), 400, "VALIDATION_FAILED")
+            .andExpect(jsonPath("$.error.fields.name").value("VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.fields.login").value("LOGIN_INVALID"))
             .andExpect(jsonPath("$.error.fields.password").value("PASSWORD_TOO_SHORT"))
-            .andExpect(jsonPath("$.error.fields.length()").value(2));
+            .andExpect(jsonPath("$.error.fields.length()").value(3));
     }
 
     @Test
@@ -181,13 +188,109 @@ class BuyerRegisterTest {
             .contentType(MediaType.APPLICATION_JSON).content("{\"email\":")), 400, "VALIDATION_FAILED");
     }
 
+    // ---------- phone and name (ADR-0016) ----------
+
+    @Test
+    void registerWithAUkrainianPhoneStoresItInE164() throws Exception {
+        String phone = uniquePhone();
+        String typed = "(0" + phone.substring(4, 6) + ") " + phone.substring(6, 9) + "-" + phone.substring(9, 11)
+            + "-" + phone.substring(11);
+
+        MvcResult result = register(typed, PASSWORD)
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.phone").value(phone))
+            .andExpect(jsonPath("$.email").value((Object) null))
+            .andReturn();
+
+        var row = jdbc.sql("SELECT email, phone, display_name FROM buyer_accounts WHERE phone = :phone")
+            .param("phone", phone).query().singleRow();
+        assertThat(row.get("email")).isNull();
+        assertThat(row.get("display_name")).isEqualTo("Софія");
+        // logged in at once; the session's login is the phone
+        mvc.perform(get("/api/session").session(sessionOf(result)))
+            .andExpect(jsonPath("$.accountType").value("BUYER"))
+            .andExpect(jsonPath("$.email").value(phone));
+    }
+
+    @Test
+    void takenPhoneInAnotherSpellingGetsTheSameNeutralAnswerAsATakenEmail() throws Exception {
+        String phone = uniquePhone();
+        register(phone, PASSWORD).andExpect(status().isCreated());
+
+        for (String spelling : List.of("0" + phone.substring(4), phone.substring(1), "+38 " + phone.substring(3))) {
+            expectError(register(spelling, PASSWORD), 409, "EMAIL_TAKEN_OR_INVALID")
+                .andExpect(jsonPath("$.error.fields.login").value("EMAIL_TAKEN_OR_INVALID"))
+                .andExpect(jsonPath("$.error.fields.length()").value(1));
+        }
+    }
+
+    @Test
+    void invalidPhoneNumbersAreRejected() throws Exception {
+        for (String phone : List.of("067123456", "+38067123456", "+1234567", "067.123.45.67", "+0671234567",
+                "telephone")) {
+            expectError(register(phone, PASSWORD), 400, "LOGIN_INVALID")
+                .andExpect(jsonPath("$.error.fields.login").value("LOGIN_INVALID"));
+        }
+    }
+
+    @Test
+    void theNameIsRequiredAndStoredTrimmed() throws Exception {
+        String email = uniqueEmail();
+        mvc.perform(post("/api/buyer/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"  Софія \",\"login\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}"))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.name").value("Софія"));
+        assertThat(jdbc.sql("SELECT display_name FROM buyer_accounts WHERE email = :email")
+            .param("email", email).query(String.class).single()).isEqualTo("Софія");
+
+        // no name, an empty one or only spaces: 400 under «Імʼя», nothing is created
+        String other = uniqueEmail();
+        for (String name : List.of("", "\"name\":\"\",", "\"name\":\"   \",", "\"name\":null,")) {
+            expectError(mvc.perform(post("/api/buyer/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content("{" + name + "\"login\":\"" + other + "\",\"password\":\"" + PASSWORD + "\"}")),
+                    400, "VALIDATION_FAILED")
+                .andExpect(jsonPath("$.error.fields.name").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.error.fields.length()").value(1));
+        }
+        assertThat(count("buyer_accounts", other)).isZero();
+    }
+
+    @Test
+    void theNameCheckLeavesOldRowsAloneButHoldsForNewOnes() {
+        // NOT VALID: rows created while the name was optional were not checked (not "validated")
+        assertThat(jdbc.sql("SELECT convalidated FROM pg_constraint WHERE conname = 'buyer_accounts_display_name_required'")
+            .query(Boolean.class).single()).isFalse();
+        // a new row without a name is refused by the database itself
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> jdbc.sql(
+                "INSERT INTO buyer_accounts (email, password_hash) VALUES (:email, 'x')")
+            .param("email", uniqueEmail()).update())
+            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void aNameLongerThanFiftyCharactersIsValidationFailed() throws Exception {
+        String email = uniqueEmail();
+        expectError(mvc.perform(post("/api/buyer/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + "я".repeat(51) + "\",\"login\":\"" + email + "\",\"password\":\""
+                    + PASSWORD + "\"}")), 400, "VALIDATION_FAILED")
+            .andExpect(jsonPath("$.error.fields.name").value("VALIDATION_FAILED"))
+            .andExpect(jsonPath("$.error.fields.length()").value(1));
+        assertThat(count("buyer_accounts", email)).isZero();
+
+        // exactly 50 is fine
+        mvc.perform(post("/api/buyer/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"" + "я".repeat(50) + "\",\"login\":\"" + email + "\",\"password\":\""
+                    + PASSWORD + "\"}"))
+            .andExpect(status().isCreated());
+    }
+
     // ---------- separate tables (ADR-0006, ADR-0012) ----------
 
     @Test
     void theSameEmailCanBeABrandAndABuyer() throws Exception {
         String email = uniqueEmail();
         mvc.perform(post("/api/brand/register").with(csrf()).contentType(MediaType.APPLICATION_JSON)
-                .content(credentials(email, PASSWORD)))
+                .content(brandRegistration(email, PASSWORD)))
             .andExpect(status().isCreated());
 
         register(email, "other-password").andExpect(status().isCreated());
@@ -215,7 +318,7 @@ class BuyerRegisterTest {
     @Test
     void brandSessionCannotOpenBuyerEndpoints() throws Exception {
         MockHttpSession brand = sessionOf(mvc.perform(post("/api/brand/register").with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(credentials(uniqueEmail(), PASSWORD)))
+                .contentType(MediaType.APPLICATION_JSON).content(brandRegistration(uniqueEmail(), PASSWORD)))
             .andExpect(status().isCreated()).andReturn());
 
         // /api/me/** is ROLE_BUYER only (SecurityConfig); the favourites endpoints themselves come later
@@ -228,7 +331,7 @@ class BuyerRegisterTest {
     @Test
     void buyerRegistrationReplacesABrandLoginInTheSameBrowser() throws Exception {
         MockHttpSession brand = sessionOf(mvc.perform(post("/api/brand/register").with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content(credentials(uniqueEmail(), PASSWORD)))
+                .contentType(MediaType.APPLICATION_JSON).content(brandRegistration(uniqueEmail(), PASSWORD)))
             .andExpect(status().isCreated()).andReturn());
         String buyerEmail = uniqueEmail();
 
@@ -261,8 +364,15 @@ class BuyerRegisterTest {
     }
 
     /** JSON escapes such as \u0000 in the examples are kept as written. */
-    private static String credentials(String email, String password) {
-        return "{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}";
+    /** A brand registration (US-21): with the brand name and website. */
+    private static String brandRegistration(String email, String password) {
+        return "{\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\",\"email\":\"" + email
+            + "\",\"password\":\"" + password + "\"}";
+    }
+
+    /** POST /api/buyer/register: «Email або номер телефону» is one field, `login`. */
+    private static String credentials(String login, String password) {
+        return "{\"name\":\"Софія\",\"login\":\"" + login + "\",\"password\":\"" + password + "\"}";
     }
 
     /** The single error envelope: { "error": { "code", "message", "fields"? } }. */
@@ -288,6 +398,12 @@ class BuyerRegisterTest {
         // table is one of two constants in this class, never user input
         return jdbc.sql("SELECT count(*) FROM " + table + " WHERE email = :email")
             .param("email", email).query(Long.class).single();
+    }
+
+    /** A random Ukrainian mobile number in E.164 (+38067…), unique enough for the shared DB. */
+    private static String uniquePhone() {
+        long digits = Math.floorMod(UUID.randomUUID().getMostSignificantBits(), 10_000_000L);
+        return "+38067" + String.format("%07d", digits);
     }
 
     private static String uniqueEmail() {

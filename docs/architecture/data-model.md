@@ -30,6 +30,7 @@ erDiagram
         varchar name "null = Incomplete"
         uuid logo_image_id FK
         varchar logo_url
+        varchar website_url
         timestamptz consent_given_at
         text consent_text
         timestamptz updated_at
@@ -57,7 +58,9 @@ erDiagram
     }
     buyer_accounts {
         uuid id PK
-        varchar email UK
+        varchar email UK "null if phone"
+        varchar phone UK "E.164, null if email"
+        varchar display_name "required for new rows"
         varchar password_hash
         timestamptz created_at
     }
@@ -89,6 +92,7 @@ erDiagram
 | `name` | `varchar(50)` | yes | `CHECK (name IS NULL OR char_length(btrim(name)) BETWEEN 2 AND 50)`; `NULL` = state Incomplete | US-22.1 CL |
 | `logo_image_id` | `uuid` | yes | FK → `images(id)` | US-22.1 CL, ADR-0007 |
 | `logo_url` | `varchar(2048)` | yes | `CHECK (logo_url IS NULL OR logo_url LIKE 'https://%')` | US-22.1 CL |
+| `website_url` | `varchar(2048)` | yes | `CHECK (website_url IS NULL OR website_url LIKE 'https://%')` (`brand_profiles_website_url_https`); the domain rule is in Bean Validation (`@WebsiteUrl`) | US-21 (entered at registration, required there), US-22.1 (editable); never requested by the server (A-15); migration `V20261126_1200` |
 | — | | | `CHECK (logo_image_id IS NULL OR logo_url IS NULL)` — at most one logo source | US-22.1 CL |
 | `consent_given_at` | `timestamptz` | yes | `NULL` = no consent | US-22.2 S1, A-17 |
 | `consent_text` | `text` | yes | exact text shown at the time of consent | A-17, NFR-14 |
@@ -131,7 +135,16 @@ Rows are never updated (immutable cache). Orphans (replaced logos/photos) are ke
 
 ### 2.5. `buyer_accounts` (US-02, US-03)
 
-Same columns and checks as `brand_accounts` (§2.1). Separate table, so the same email may exist in both (ADR-0012).
+The columns and checks of `brand_accounts` (§2.1), and since migration `V20261127_1200` (ADR-0016) a buyer registers by email **or** phone, with an optional name. Separate table, so the same email may exist in both (ADR-0012).
+
+| Column | Type | Null | Constraint / default | Source |
+|---|---|---|---|---|
+| `email` | `varchar(254)` | **yes** (was `no`) | `UNIQUE`; normalized and format CHECKs as before (they pass for NULL) | US-02 |
+| `phone` | `varchar(16)` | yes | `UNIQUE`; `CHECK (phone ~ '^\+[1-9][0-9]{7,14}$')` — E.164, normalized by the server (`LoginId`) before every insert; not verified by SMS | ADR-0016 |
+| `display_name` | `varchar(50)` | yes (column) | `CHECK (char_length(btrim(display_name)) BETWEEN 1 AND 50)`; since `V20261128_1200` also `CHECK (display_name IS NOT NULL) NOT VALID` — required for every new or changed row, while accounts created when the name was optional (NULL) are left as they are | ADR-0016 |
+| — | | | `CHECK (email IS NOT NULL OR phone IS NOT NULL)` — at least one way to log in; both are allowed, so a phone can later be added to an email account | ADR-0016 |
+
+Nothing else about a buyer is stored (NFR-19): the login, the password hash, the name and the liked product IDs.
 
 ### 2.6. `favorites` (US-02, US-03, US-09)
 
@@ -197,6 +210,7 @@ The server fetches three configured sources (Всі. Свої XML feed, One By O
 | `base_url` | `varchar(2048)` | no | `CHECK (base_url LIKE 'https://%')` | Host allow-list for SSRF checks |
 | `last_run_at` | `timestamptz` | yes | `NULL` = never ran | 6-hour gate survives restarts (T-18) |
 | `last_run_status` | `varchar(10)` | yes | `CHECK (last_run_status IN ('ok','partial','skipped','failed'))` | Unpublish of missing items only after `ok` (T-16) |
+| `logo_url` | `varchar(2048)` | yes | `CHECK (logo_url IS NULL OR logo_url LIKE 'https://%')` | Site logo URL for the brand tile, dev only; never the image itself (ADR-0014, ADR-0015; migration `V20261125_1200`) |
 | `created_at` | `timestamptz` | no | `now()` | |
 
 Rows are inserted by the importer on first start (`INSERT … ON CONFLICT (code) DO NOTHING`), not by the migration, so the migration contains no site URLs.

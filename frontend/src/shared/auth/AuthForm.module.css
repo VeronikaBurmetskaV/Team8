@@ -1,0 +1,234 @@
+/* One look for every auth form: buyer login and registration, brand login and registration.
+   Mobile-first (ADR-0002): the column fills the page width (the layout gutter gives the side
+   padding); from --bp-tablet it is --auth-card-width wide and centred (tokens.css).
+   index.css loads after the modules, so overrides of its element rules (button, [role]) use
+   a more specific selector. */
+
+.page {
+  width: min(100%, var(--auth-card-width));
+  margin: var(--auth-page-offset) auto 0;
+}
+
+.title {
+  margin-bottom: var(--space-3);
+}
+
+/* «Реєстрація бренду» / «Реєстрація»: centred over the card. */
+.titleCentered {
+  text-align: center;
+}
+
+/* The white card. /login draws it around its tabs; the other pages use this class. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--auth-card-padding);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* Narrow phones (320 px): a little more room for the fields. */
+@media (max-width: 359px) {
+  .card {
+    padding: var(--space-3) var(--space-2);
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.field {
+  min-width: 0;
+}
+
+.field label {
+  margin-bottom: var(--space-1);
+  font-size: var(--font-size-md);
+}
+
+/* Bigger fields than elsewhere (≥ 52px, text one step larger). */
+.field input {
+  min-height: var(--auth-control-height);
+  font-size: var(--auth-font-size);
+}
+
+/* Error state keeps the red frame while focused, with the same 2px ring as a normal focus. */
+.field input[aria-invalid="true"]:focus {
+  border-color: var(--color-error);
+  box-shadow: 0 0 0 var(--border-width) var(--color-error);
+}
+
+/* Hint under a field (password length). */
+.hint {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* Error under one field. */
+.fieldError {
+  margin: var(--space-1) 0 0;
+  color: var(--color-error);
+  font-size: var(--font-size-sm);
+}
+
+/* ---- Password with the eye button ---- */
+
+.password {
+  position: relative;
+}
+
+.password input {
+  /* Room for the eye button on the right. */
+  padding-right: calc(var(--control-height) + var(--space-half));
+}
+
+/* Inside the field, on the right: a 44px+ tap target, no black fill of the default button. */
+.eye,
+.eye:hover:not(:disabled) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--control-height);
+  min-height: var(--control-height);
+  height: 100%;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-lg);
+}
+
+.eye:hover:not(:disabled),
+.eye[aria-pressed="true"] {
+  color: var(--color-text);
+}
+
+.eye:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring-width) - var(--space-half));
+}
+
+/* ---- Submit button and the messages under it ---- */
+
+/* The button and its live message: no flex gap, so the empty message takes no space. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--space-1);
+}
+
+/* The main button: green, as tall as the fields, text one step larger (white on green 5.4:1). */
+.submit {
+  width: 100%;
+  min-height: var(--auth-control-height);
+  border-color: var(--color-auth-accent);
+  background-color: var(--color-auth-accent);
+  color: var(--color-on-auth-accent);
+  font-size: var(--font-size-sm);
+}
+
+.submit:hover:not(:disabled) {
+  border-color: var(--color-auth-accent-hover);
+  background-color: var(--color-auth-accent-hover);
+  color: var(--color-on-auth-accent);
+}
+
+.submit:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-auth-accent-hover);
+  outline-offset: var(--focus-ring-width);
+}
+
+/* While sending: still the green button, with a spinner. */
+.submit[aria-busy="true"]:disabled {
+  border-color: var(--color-auth-accent);
+  background-color: var(--color-auth-accent);
+  color: var(--color-on-auth-accent);
+  cursor: progress;
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: var(--border-width) solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--radius-pill);
+  animation: auth-spin 0.8s linear infinite;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.6;
+  }
+}
+
+/* The live region stays in the page; only its text appears and goes. */
+.live[role] {
+  margin: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* One common message for the whole form. */
+.message {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.error {
+  color: var(--color-error);
+}
+
+/* Neutral notice («скоро запрацює»): a calm gray box, readable text (≥ 4.5:1). */
+.notice {
+  padding: var(--space-2);
+  border-left: var(--border-width) solid var(--color-olive);
+  background-color: var(--color-background);
+  color: var(--color-text);
+  text-align: left;
+}
+
+.success {
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
+}
+
+/* «Немає акаунту? …» / «Вже є акаунт? …» and small print at the bottom of the card. */
+.footer {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+/* Small print under the button («Ми зберігаємо…»): one step smaller than the footer, the
+   secondary text colour (5.3:1 on the white card); one line on a laptop, may wrap on a phone. */
+.note {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  text-align: center;
+}
+
+/* The same line under a card (brand registration). */
+.switch {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}

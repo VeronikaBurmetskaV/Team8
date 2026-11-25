@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Link, useSearchParams } from "react-router";
 import { BrandLoginForm } from "../cabinet-auth/BrandLoginForm";
 import { loginTexts as t } from "../../shared/messages.uk";
+import auth from "../../shared/auth/AuthForm.module.css";
+import { useContentHeight } from "../../shared/useContentHeight";
+import { BuyerLoginForm } from "./BuyerLoginForm";
 import {
   LOGIN_TABS,
   parseLoginTab,
@@ -19,36 +22,12 @@ const TAB_LABELS: Record<LoginTab, string> = {
 const tabId = (tab: LoginTab) => `login-tab-${tab}`;
 const PANEL_ID = "login-panel";
 
-/** Follows the height of its content so the card grows and shrinks smoothly between tabs. */
-function useContentHeight() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [height, setHeight] = useState<number | "auto">("auto");
-  useEffect(() => {
-    const element = ref.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => {
-      if (entry) setHeight(entry.target.getBoundingClientRect().height);
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-  return { ref, height };
-}
-
 function BuyerPanel() {
   return (
     <>
-      <p className={styles.placeholder}>{t.buyerPlaceholder}</p>
-      <p className={styles.footer}>
-        {t.noAccount}{" "}
-        {/* Buyer registration is not built yet: no link to a page that does not exist. */}
-        <span
-          className={styles.disabledLink}
-          aria-disabled="true"
-          title={t.createAccountSoon}
-        >
-          {t.createAccount}
-        </span>
+      <BuyerLoginForm />
+      <p className={auth.footer}>
+        {t.noAccount} <Link to="/register">{t.registerBuyer}</Link>
       </p>
     </>
   );
@@ -58,7 +37,7 @@ function BrandPanel() {
   return (
     <>
       <BrandLoginForm />
-      <p className={styles.footer}>
+      <p className={auth.footer}>
         {t.noAccount} <Link to="/brand/register">{t.registerBrand}</Link>
       </p>
     </>
@@ -95,7 +74,7 @@ export function LoginPage() {
   const duration = reduceMotion ? 0 : 0.2;
 
   return (
-    <div className={styles.page}>
+    <div className={auth.page}>
       <h1 className={styles.visuallyHidden}>{t.title}</h1>
       <div
         className={styles.tabs}
@@ -121,6 +100,16 @@ export function LoginPage() {
               onClick={() => select(tab)}
             >
               {TAB_LABELS[tab]}
+              {/* One green line, shared by both tabs: motion slides it under the new tab
+                  (layoutId); with prefers-reduced-motion it just moves. */}
+              {selected && (
+                <motion.span
+                  layoutId="login-tab-line"
+                  className={styles.tabLine}
+                  aria-hidden="true"
+                  transition={{ duration, ease: "easeOut" }}
+                />
+              )}
             </button>
           );
         })}

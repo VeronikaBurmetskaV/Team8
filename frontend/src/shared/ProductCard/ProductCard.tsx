@@ -1,10 +1,12 @@
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import type { FeedCard, ProductColor } from "../../api/types";
 import { RotateIcon } from "../icons";
 import { productCardTexts as t } from "../messages.uk";
 import { formatPrice } from "../price";
+import { sortSizes } from "../sizes";
 import styles from "./ProductCard.module.css";
+import { SizeRow } from "./SizeRow";
 
 /** Only a plain `#rrggbb` from the data becomes a swatch colour. */
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -40,8 +42,8 @@ interface ProductCardProps {
 
 /**
  * The ONE product card renderer (NFR-17): the swipe feed, «Вподобане» and the brand preview.
- * Front: photo + name, brand, price (US-08.2), sizes and colours when the data has them.
- * Back: details. The brand logo is never shown (US-08.2 CL). The card fills its parent;
+ * Front: photo + name, brand, price (US-08.2) and one line of the sizes in stock when the
+ * data has sizes (the photo stays clear). Back: every detail (sizes, colour, material, description) that the data has. The brand logo is never shown (US-08.2 CL). The card fills its parent;
  * the parent decides the size, the card switches to the side column when it is wide enough.
  */
 export function ProductCard({
@@ -63,10 +65,14 @@ export function ProductCard({
     onFlippedChange?.(value);
   };
 
-  const sizes = card.sizes ?? [];
+  // The back lists every size in the filter's order (the front shows what fits in a line).
+  const sizes = sortSizes(card.sizes ?? []);
   const colors = card.colors ?? [];
   const hasDetails =
-    Boolean(card.material) || Boolean(card.description) || sizes.length > 0;
+    Boolean(card.material) ||
+    Boolean(card.description) ||
+    sizes.length > 0 ||
+    colors.length > 0;
 
   const photoBox = (
     <motion.div
@@ -119,43 +125,8 @@ export function ProductCard({
             </p>
             <p className={styles.price}>{formatPrice(card.priceUah)}</p>
 
-            {sizes.length > 0 && (
-              <div className={styles.group}>
-                <h3 className={styles.groupTitle}>{t.sizes}</h3>
-                <ul className={styles.sizes}>
-                  {sizes.map((size) => (
-                    <li
-                      key={size.label}
-                      className={styles.size}
-                      data-available={size.available}
-                      aria-label={
-                        size.available
-                          ? t.sizeAvailable(size.label)
-                          : t.sizeUnavailable(size.label)
-                      }
-                      title={
-                        size.available
-                          ? t.sizeAvailable(size.label)
-                          : t.sizeUnavailable(size.label)
-                      }
-                    >
-                      {size.label}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {colors.length > 0 && (
-              <div className={styles.group}>
-                <h3 className={styles.groupTitle}>{t.colors}</h3>
-                <ul className={styles.colors}>
-                  {colors.map((color) => (
-                    <ColorSwatch key={color.name} color={color} />
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* Only the sizes in one line; colours, material and description are on the back. */}
+            <SizeRow sizes={card.sizes} variant="card" />
 
             {flippable && (
               <button
@@ -182,52 +153,59 @@ export function ProductCard({
               <h2 className={styles.backName}>{card.name}</h2>
               <p className={styles.brand}>{card.brandName}</p>
 
-              <dl className={styles.details}>
-                {card.material && (
-                  <div className={styles.detail}>
-                    <dt>{t.material}</dt>
-                    <dd>{card.material}</dd>
-                  </div>
-                )}
-                {sizes.length > 0 && (
-                  <div className={styles.detail}>
-                    <dt>{t.sizes}</dt>
-                    <dd>
-                      {sizes.map((size, index) => (
-                        <span key={size.label}>
-                          {index > 0 && ", "}
-                          <span
-                            className={
-                              size.available
-                                ? undefined
-                                : styles.sizeTextUnavailable
-                            }
-                            aria-label={
-                              size.available
-                                ? t.sizeAvailable(size.label)
-                                : t.sizeUnavailable(size.label)
-                            }
-                          >
-                            {size.label}
-                          </span>
+              {sizes.length > 0 && (
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>{t.sizes}</h3>
+                  <ul className={styles.backSizes} aria-label={t.sizes}>
+                    {sizes.map((size) => (
+                      <li
+                        key={size.label}
+                        className={styles.backSize}
+                        data-available={size.available}
+                      >
+                        <span className={styles.backSizePill}>
+                          {size.label}
                         </span>
-                      ))}
-                    </dd>
-                  </div>
-                )}
-                {card.description && (
-                  <div className={styles.detail}>
-                    <dt>{t.description}</dt>
-                    <dd className={styles.description}>{card.description}</dd>
-                  </div>
-                )}
-                <div className={styles.detail}>
-                  <dt>{t.price}</dt>
-                  <dd className={styles.backPrice}>
-                    {formatPrice(card.priceUah)}
-                  </dd>
-                </div>
-              </dl>
+                        {!size.available && (
+                          <span className={styles.backSizeNote}>
+                            {t.outOfStock}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {colors.length > 0 && (
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>{t.colors}</h3>
+                  <ul className={styles.colors}>
+                    {colors.map((color) => (
+                      <ColorSwatch key={color.name} color={color} />
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {card.material && (
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>{t.material}</h3>
+                  <p className={styles.sectionText}>{card.material}</p>
+                </section>
+              )}
+              {card.description && (
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>{t.description}</h3>
+                  <p className={`${styles.sectionText} ${styles.description}`}>
+                    {card.description}
+                  </p>
+                </section>
+              )}
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>{t.price}</h3>
+                <p className={`${styles.sectionText} ${styles.backPrice}`}>
+                  {formatPrice(card.priceUah)}
+                </p>
+              </section>
               {!hasDetails && <p className={styles.noDetails}>{t.noDetails}</p>}
             </div>
 
@@ -286,9 +264,11 @@ function ColorSwatch({ color }: { color: ProductColor }) {
       className={styles.color}
       data-unknown={hex === null}
       // The product's own colour comes from the data, not from the palette tokens.
-      style={hex !== null ? { backgroundColor: hex } : undefined}
+      style={hex !== null ? ({ "--swatch": hex } as CSSProperties) : undefined}
       title={color.name}
-      aria-label={color.name}
-    />
+    >
+      <span className={styles.colorSwatch} aria-hidden="true" />
+      {color.name}
+    </li>
   );
 }

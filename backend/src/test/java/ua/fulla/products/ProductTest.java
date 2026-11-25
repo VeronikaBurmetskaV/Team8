@@ -287,7 +287,9 @@ class ProductTest {
 
     @Test
     void brandWithoutSavedNameCannotCreateCards() throws Exception {
+        // Registration now saves the name (US-21); a profile without one is older data.
         Brand brand = registerBrand();
+        jdbc.sql("UPDATE brand_profiles SET name = NULL WHERE brand_id = :id").param("id", brand.id()).update();
 
         expectError(createCard(brand, validCard()), 409, "PROFILE_INCOMPLETE")
             .andExpect(jsonPath("$.error.fields").doesNotExist());
@@ -449,7 +451,7 @@ class ProductTest {
     private Brand registerBrand() throws Exception {
         var result = mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\"}"))
+                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isCreated())
             .andReturn();
         String brandId = JsonPath.read(result.getResponse().getContentAsString(), "$.brandId");

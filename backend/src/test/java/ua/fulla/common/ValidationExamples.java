@@ -21,7 +21,14 @@ public final class ValidationExamples {
     public record Example(String value, boolean valid) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record ExamplesFile(List<Example> httpUrl, List<Example> httpsUrl) {}
+    record ExamplesFile(List<Example> httpUrl, List<Example> httpsUrl, List<Example> websiteUrl,
+            List<NormalizedExample> websiteUrlNormalized, List<LoginExample> loginId) {}
+
+    /** What the website becomes before it is checked and saved (WebsiteUrlValidator.normalize). */
+    public record NormalizedExample(String value, String normalized) {}
+
+    /** «Email або номер телефону»: the kind and the normalized value, or null for both = invalid. */
+    public record LoginExample(String value, String kind, String normalized) {}
 
     private static final ExamplesFile EXAMPLES = read();
 
@@ -35,6 +42,21 @@ public final class ValidationExamples {
     /** Examples for @HttpsUrl (photo and logo URL). */
     public static Stream<String> httpsUrl(boolean valid) {
         return values(EXAMPLES.httpsUrl(), valid);
+    }
+
+    /** Examples for LoginId.parse (the buyer's email or phone, ADR-0016). */
+    public static List<LoginExample> loginId() {
+        return EXAMPLES.loginId();
+    }
+
+    /** Examples for @WebsiteUrl (the brand's website, US-21). */
+    public static Stream<String> websiteUrl(boolean valid) {
+        return values(EXAMPLES.websiteUrl(), valid);
+    }
+
+    /** Examples for WebsiteUrlValidator.normalize (tracking parameters removed). */
+    public static List<NormalizedExample> websiteUrlNormalized() {
+        return EXAMPLES.websiteUrlNormalized();
     }
 
     private static Stream<String> values(List<Example> examples, boolean valid) {

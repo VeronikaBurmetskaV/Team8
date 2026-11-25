@@ -50,6 +50,13 @@ class CatalogSourceRepository {
             .update();
     }
 
+    void saveLogo(String code, String logoUrl) {
+        jdbc.sql("UPDATE catalog_sources SET logo_url = :logoUrl WHERE code = :code")
+            .param("logoUrl", logoUrl)
+            .param("code", code)
+            .update();
+    }
+
     /** The ID of the account-less brand with this name in this source; created on first use. */
     UUID sourceBrandId(UUID sourceId, String name) {
         jdbc.sql("""

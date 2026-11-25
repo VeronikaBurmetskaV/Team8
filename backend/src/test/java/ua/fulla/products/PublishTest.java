@@ -287,7 +287,7 @@ class PublishTest {
     private Brand brand(String name, boolean consentGiven) throws Exception {
         var result = mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\"}"))
+                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isCreated())
             .andReturn();
         String brandId = JsonPath.read(result.getResponse().getContentAsString(), "$.brandId");

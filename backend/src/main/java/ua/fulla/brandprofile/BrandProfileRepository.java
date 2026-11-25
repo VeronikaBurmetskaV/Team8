@@ -13,7 +13,7 @@ import ua.fulla.common.Timestamps;
 class BrandProfileRepository {
 
     private static final String COLUMNS =
-        "brand_id, name, logo_image_id, logo_url, consent_given_at, consent_text, created_at, updated_at";
+        "brand_id, name, logo_image_id, logo_url, website_url, consent_given_at, consent_text, created_at, updated_at";
 
     private final JdbcClient jdbc;
 
@@ -21,9 +21,12 @@ class BrandProfileRepository {
         this.jdbc = jdbc;
     }
 
-    void insertEmpty(UUID brandId) {
-        jdbc.sql("INSERT INTO brand_profiles (brand_id) VALUES (:brandId)")
+    /** The profile row of a new brand, with the name and website from registration (US-21). */
+    void insert(UUID brandId, String name, String websiteUrl) {
+        jdbc.sql("INSERT INTO brand_profiles (brand_id, name, website_url) VALUES (:brandId, :name, :websiteUrl)")
             .param("brandId", brandId)
+            .param("name", name)
+            .param("websiteUrl", websiteUrl)
             .update();
     }
 
@@ -40,10 +43,12 @@ class BrandProfileRepository {
      * this statement can clear them (INV-09). The name is set in the same statement, so the
      * {@code CHECK (consent_given_at IS NULL OR name IS NOT NULL)} holds.
      */
-    Optional<BrandProfile> updateNameAndConsent(UUID brandId, String name, boolean giveConsent, String consentText) {
+    Optional<BrandProfile> updateNameAndConsent(UUID brandId, String name, String websiteUrl, boolean giveConsent,
+            String consentText) {
         return jdbc.sql("""
                 UPDATE brand_profiles SET
                     name = :name,
+                    website_url = :websiteUrl,
                     consent_given_at = CASE WHEN :give THEN COALESCE(consent_given_at, now())
                                             ELSE consent_given_at END,
                     consent_text = CASE WHEN :give THEN COALESCE(consent_text, :consentText)
@@ -52,6 +57,7 @@ class BrandProfileRepository {
                 WHERE brand_id = :brandId
                 RETURNING\s""" + COLUMNS)
             .param("name", name)
+            .param("websiteUrl", websiteUrl)
             .param("give", giveConsent)
             .param("consentText", consentText)
             .param("brandId", brandId)
@@ -65,6 +71,7 @@ class BrandProfileRepository {
             rs.getString("name"),
             rs.getObject("logo_image_id", UUID.class),
             rs.getString("logo_url"),
+            rs.getString("website_url"),
             Timestamps.instant(rs, "consent_given_at"),
             rs.getString("consent_text"),
             Timestamps.instant(rs, "created_at"),

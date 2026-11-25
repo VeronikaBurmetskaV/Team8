@@ -8,7 +8,9 @@ import {
 } from "../../shared/validation";
 import { useLoginBrand } from "./api";
 import { pathAfterLogin } from "./pathAfterLogin";
-import styles from "./BrandLoginForm.module.css";
+import { LiveMessage, SubmitButton } from "../../shared/auth/FormMessage";
+import { PasswordInput } from "../../shared/auth/PasswordInput";
+import styles from "../../shared/auth/AuthForm.module.css";
 
 /**
  * Brand login form (US-21.1): email + password, one common error, redirect after success.
@@ -55,21 +57,18 @@ export function BrandLoginForm() {
       </div>
       <div className={styles.field}>
         <label htmlFor="brand-password">Пароль</label>
-        <input
+        <PasswordInput
           id="brand-password"
-          type="password"
           autoComplete="current-password"
           {...register("password")}
         />
       </div>
-      <button className={styles.submit} type="submit" disabled={isSubmitting}>
-        {isSubmitting ? "Входимо…" : "Увійти"}
-      </button>
-      {errorText && (
-        <p className={styles.error} role="alert">
-          {errorText}
-        </p>
-      )}
+      <div className={styles.actions}>
+        <SubmitButton busy={isSubmitting} label="Увійти" busyLabel="Входимо…" />
+        <LiveMessage role="alert" className={styles.error}>
+          {errorText ?? null}
+        </LiveMessage>
+      </div>
     </form>
   );
 }

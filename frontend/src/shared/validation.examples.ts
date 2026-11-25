@@ -35,3 +35,10 @@ export const cardPriceExamples: ValidationExample[] = [
  */
 export const httpUrlExamples: ValidationExample[] = urlExamples.httpUrl;
 export const httpsUrlExamples: ValidationExample[] = urlExamples.httpsUrl;
+/** `websiteUrl` = @WebsiteUrl / isWebsiteUrl (the brand's website, US-21). */
+export const websiteUrlExamples: ValidationExample[] = urlExamples.websiteUrl;
+/** `websiteUrlNormalized` = normalizeWebsiteUrl / WebsiteUrlValidator.normalize. */
+export const websiteUrlNormalizedExamples: {
+  value: string;
+  normalized: string;
+}[] = urlExamples.websiteUrlNormalized;
