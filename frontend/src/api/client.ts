@@ -149,6 +149,13 @@ export function updateBrandProduct(
   );
 }
 
+/** Draft → Published (US-31, api.md §4.2); no body. 409 CONSENT_REQUIRED without consent. */
+export function publishBrandProduct(id: string): Promise<BrandCard> {
+  return apiPost<BrandCard>(
+    `/api/brand/products/${encodeURIComponent(id)}/publish`,
+  );
+}
+
 /** POST /api/brand/products/publish: many drafts with the consent gate (ADR-0017). */
 export function publishBrandProducts(
   ids: string[],

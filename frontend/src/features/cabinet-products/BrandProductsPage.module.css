@@ -22,6 +22,16 @@
   color: var(--color-text-muted);
 }
 
+/* «Для показу товарів…» + the way to the profile, once above the list (US-31 S2). */
+.consentHint {
+  margin: 0;
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  font-size: var(--font-size-sm);
+}
+
 /* The list is one <table>. On a phone every row is drawn as a card, one under another;
    from --bp-tablet it is a real table across the whole container. */
 .table {
@@ -83,14 +93,13 @@
 
   .table tr {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
     grid-template-columns: auto auto minmax(0, 1fr);
     grid-template-areas:
       "select photo name"
       "select photo price"
       "select photo status"
-      "select photo actions";
-    grid-template-rows: auto auto auto 1fr;
+      "actions actions actions";
+    grid-template-rows: auto auto 1fr auto;
     column-gap: var(--space-2);
     row-gap: var(--space-half);
     padding: var(--space-2);
@@ -130,6 +139,16 @@
 
   .actions {
     grid-area: actions;
+  }
+
+  /* An empty cell (Published card) adds no gap under the card. */
+  .actions:empty {
+    display: none;
+  }
+
+  /* Full width of the card: the long upper-case text fits from 320 px. */
+  .publish {
+    width: 100%;
   }
 }
 
@@ -176,8 +195,14 @@
     width: 1%;
   }
 
-  .status {
+  .status,
+  .publish {
     white-space: nowrap;
+  }
+
+  /* «Редагувати» and «Опублікувати у стрічку» side by side in the narrow column. */
+  .actions .rowActions {
+    flex-wrap: nowrap;
   }
 }
 
@@ -249,25 +274,27 @@
   background-color: var(--color-primary-hover);
 }
 
+/* Disabled: light fill, so the muted text keeps 4.9:1. */
 .publishButton:disabled,
-.publishAllButton:disabled {
+.publishAllButton:disabled,
+.publish:disabled {
   border-color: var(--color-border);
   background-color: var(--color-background);
   color: var(--color-text-muted);
   cursor: not-allowed;
 }
 
-.consentHint,
+/* A draft's row actions: «Редагувати» + «Опублікувати у стрічку» (US-26, US-31). */
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
 .publishError {
   margin: 0;
   font-size: var(--font-size-sm);
-}
-
-.consentHint {
-  color: var(--color-text-muted);
-}
-
-.publishError {
   color: var(--color-error);
 }
 
