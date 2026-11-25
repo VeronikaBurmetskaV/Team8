@@ -36,4 +36,18 @@ describe("withUtm", () => {
     expect(withUtm("data:text/html,hi")).toBeNull();
     expect(withUtm("brand.ua/item")).toBeNull();
   });
+
+  it.each([undefined, null, "", "   "])(
+    "gives no link (and does not throw) for %j",
+    (value) => {
+      expect(withUtm(value)).toBeNull();
+    },
+  );
+
+  it("keeps http:// product links (product URLs may be http or https, CLAUDE.md §5.3)", () => {
+    expect(withUtm("http://brand.ua")).toBe("http://brand.ua?utm_source=fulla");
+    expect(withUtm("https://brand.ua")).toBe(
+      "https://brand.ua?utm_source=fulla",
+    );
+  });
 });

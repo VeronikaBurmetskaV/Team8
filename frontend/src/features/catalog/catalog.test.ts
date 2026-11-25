@@ -108,7 +108,7 @@ describe("heart on a tile", () => {
     const storage = memoryStorage();
     const list = createFavoriteList(() => storage);
 
-    expect(toggleFavorite(product, list)).toBe(true);
+    expect(toggleFavorite(product, list)).toBe("added");
     expect(list.has("p1")).toBe(true);
     expect(storage.getItem(FAVORITES_STORAGE_KEY)).toContain('"p1"');
   });
@@ -118,7 +118,7 @@ describe("heart on a tile", () => {
     const list = createFavoriteList(() => storage);
     addToFavorites(product, list); // swipe right in /feed
     // The tile shows a filled heart, so this click removes rather than duplicates.
-    expect(toggleFavorite(product, list)).toBe(false);
+    expect(toggleFavorite(product, list)).toBe("removed");
     toggleFavorite(product, list);
     addToFavorites(product, list);
     expect(list.read()).toHaveLength(1);
@@ -129,7 +129,7 @@ describe("heart on a tile", () => {
     const list = createFavoriteList(() => storage);
     toggleFavorite(product, list);
 
-    expect(toggleFavorite(product, list)).toBe(false);
+    expect(toggleFavorite(product, list)).toBe("removed");
     expect(list.has("p1")).toBe(false);
   });
 });
@@ -418,14 +418,24 @@ describe("all filters together", () => {
 
   it("one brand", () => {
     expect(
-      ids(filterCatalog(items, { ...NO_FILTERS, brands: ["barricade"] })),
+      ids(
+        filterCatalog(items, {
+          ...NO_FILTERS,
+          brands: ["barricade"],
+          sizes: [],
+        }),
+      ),
     ).toEqual(["a", "b"]);
   });
 
   it("several brands: OR", () => {
     expect(
       ids(
-        filterCatalog(items, { ...NO_FILTERS, brands: ["gunia", "cher'17"] }),
+        filterCatalog(items, {
+          ...NO_FILTERS,
+          brands: ["gunia", "cher'17"],
+          sizes: [],
+        }),
       ),
     ).toEqual(["c", "d"]);
   });
@@ -437,6 +447,7 @@ describe("all filters together", () => {
           minPrice: null,
           maxPrice: 2000,
           brands: ["barricade", "cher'17"],
+          sizes: [],
         }),
       ),
     ).toEqual(["a", "d"]);
@@ -450,6 +461,7 @@ describe("all filters together", () => {
       minPrice: 500,
       maxPrice: null,
       brands: ["gunia", "barricade"],
+      sizes: [],
     });
   });
 
@@ -462,6 +474,7 @@ describe("all filters together", () => {
       minPrice: null,
       maxPrice: null,
       brands: ["gunia"],
+      sizes: [],
     });
   });
 
@@ -502,6 +515,7 @@ describe("all filters together", () => {
       minPrice: 500,
       maxPrice: 2500,
       brands: ["gunia", "barricade"],
+      sizes: [],
     };
     const options = brandOptions(items);
     expect(filterChips(filters, options)).toEqual([
@@ -522,12 +536,77 @@ describe("all filters together", () => {
       },
     ]);
     expect(countActiveFilters(filters)).toBe(3);
-    expect(countActiveFilters({ ...NO_FILTERS, brands: ["gunia"] })).toBe(1);
+    expect(
+      countActiveFilters({ ...NO_FILTERS, brands: ["gunia"], sizes: [] }),
+    ).toBe(1);
     expect(countActiveFilters(NO_FILTERS)).toBe(0);
   });
 });
 
 describe("brand link and brand page", () => {
+  it("brandKey: every apostrophe gives one key («CHER'17»)", () => {
+    const key = brandKey("CHER'17");
+    expect(key).toBe("cher'17");
+    for (const spelling of [
+      "CHER’17",
+      "cher'17 ",
+      "Cher‘17",
+      "CHERʼ17",
+      "CHER`17",
+      "CHER´17",
+      "CHER＇17",
+      "\u200BCHER'17",
+    ]) {
+      expect(brandKey(spelling)).toBe(key);
+    }
+  });
+
+  it("brandKey: every kind of space gives one key («One By One»)", () => {
+    const key = brandKey("One By One");
+    expect(key).toBe("one by one");
+    for (const spelling of [
+      "One\u00A0By One",
+      "ONE BY ONE",
+      " one  by\tone ",
+      "One\u2009By\u202FOne",
+      "Ｏｎｅ Ｂｙ Ｏｎｅ",
+    ]) {
+      expect(brandKey(spelling)).toBe(key);
+    }
+  });
+
+  it("brandKey lower-cases Ukrainian names and keeps different brands apart", () => {
+    expect(brandKey("ЇЖАК Студія")).toBe("їжак студія");
+    expect(brandKey("SIL'")).not.toBe(brandKey("SIL"));
+    expect(brandKey("One By One")).not.toBe(brandKey("OneByOne"));
+  });
+
+  it("the ?brand= link survives the URL both ways (URLSearchParams only)", () => {
+    for (const name of ["CHER’17", "One\u00A0By One", "J. Cook & Co+"]) {
+      const href = brandHref(name);
+      const back = new URL(href, "http://fulla.local").searchParams;
+      expect(parseFilters(back).brands).toEqual([brandKey(name)]);
+    }
+    expect(brandHref("CHER’17")).toBe("/?brand=cher%2717");
+    expect(brandHref("One\u00A0By One")).toBe("/?brand=one+by+one");
+  });
+
+  it("brandOptions merges spellings and labels the brand by the commonest one", () => {
+    expect(
+      brandOptions([
+        { brandName: "CHER'17" },
+        { brandName: "CHER’17" },
+        { brandName: "CHER'17 " },
+        { brandName: "One\u00A0By One" },
+        { brandName: "One By One" },
+        { brandName: "One By One" },
+      ]),
+    ).toEqual([
+      { key: "cher'17", label: "CHER'17", count: 3 },
+      { key: "one by one", label: "One By One", count: 3 },
+    ]);
+  });
+
   it("brandKey is the same for any case and extra spaces", () => {
     expect(brandKey("MINT")).toBe("mint");
     expect(brandKey("  Mint ")).toBe("mint");
@@ -547,16 +626,32 @@ describe("brand link and brand page", () => {
   });
 
   it("a brand page is exactly one brand and no other filter", () => {
-    expect(isSingleBrandView({ ...NO_FILTERS, brands: ["mint"] })).toBe(true);
+    expect(
+      isSingleBrandView({ ...NO_FILTERS, brands: ["mint"], sizes: [] }),
+    ).toBe(true);
     expect(isSingleBrandView(NO_FILTERS)).toBe(false);
     expect(
-      isSingleBrandView({ ...NO_FILTERS, brands: ["mint", "gunia"] }),
+      isSingleBrandView({
+        ...NO_FILTERS,
+        brands: ["mint", "gunia"],
+        sizes: [],
+      }),
     ).toBe(false);
     expect(
-      isSingleBrandView({ minPrice: null, maxPrice: 2000, brands: ["mint"] }),
+      isSingleBrandView({
+        minPrice: null,
+        maxPrice: 2000,
+        brands: ["mint"],
+        sizes: [],
+      }),
     ).toBe(false);
     expect(
-      isSingleBrandView({ minPrice: 500, maxPrice: null, brands: ["mint"] }),
+      isSingleBrandView({
+        minPrice: 500,
+        maxPrice: null,
+        brands: ["mint"],
+        sizes: [],
+      }),
     ).toBe(false);
   });
 });

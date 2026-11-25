@@ -1,7 +1,7 @@
 # ADR-0012: Buyer accounts and moving «Вподобане» to the server
 
 ## Status
-Proposed — 2026-10-28 (revised the same day: one session cookie, see ADR-0006; Java backend)
+Proposed — 2026-10-28 (revised the same day: one session cookie, see ADR-0006; Java backend); revised 2026-11-26: limits 25 / 100 and the merge over the limit («Limits» below)
 
 ## Context
 Product decision (28 Oct 2026): a buyer can swipe without an account and «Вподобане» is kept in the browser. **If the buyer registers, the likes move to the server.** This brings buyer registration and login (US-02, US-03, now In Scope in `requirements.md`) into the MVP. For registered buyers it overrides digest assumption A-09.
@@ -29,6 +29,12 @@ Option 1.
 - **Logout:** clear local favourites and progress (shared-device privacy); the buyer is anonymous again.
 - **Entry points:** a call to action in «Вподобане» and in the navigation, **never** in front of the feed (BR-03). The form says what is stored: email and liked products.
 - The same email may be both a buyer and a brand (separate tables). In one browser only one of them is logged in at a time; logging in as the other replaces the session (ADR-0006).
+
+### Limits (revised 2026-11-26)
+- **A guest keeps at most 25** products in «Вподобане» (localStorage), **a registered buyer at most 100** (server). Constants: `FAVORITES_LIMIT_GUEST` / `FAVORITES_LIMIT_ACCOUNT` in `frontend/src/shared/favoritesLimit.ts`, `FavoritesService.FAVORITES_LIMIT_ACCOUNT` on the backend.
+- A new product over the limit is **not added**: the client shows «Вподобане заповнене (N з N)» (a guest is offered to register); in the swipe feed the card stays and is not counted as viewed. A product already saved can always be liked again (nothing changes).
+- **Merge after login/register:** the guest's ≤ 25 and the server's list together never exceed 100. `POST /api/me/favorites` adds the new IDs in the guest's order until 100; the rest is **not moved** and comes back as `skippedIds`, and the client tells the user how many did not fit. With no room at all for new IDs → `409 FAVORITES_LIMIT_REACHED`. Parallel writes of one buyer are serialised by locking the account row.
+- Because favourites are append-only on the server (removal is postponed, see below), a buyer at 100 cannot free places yet; the account text «Видаліть кілька товарів…» becomes true only with US-17.
 
 ## Consequences
 - **Simpler:** the merge is a union, there are no conflicts, and retries are safe. Duplicates are impossible at the DB level.

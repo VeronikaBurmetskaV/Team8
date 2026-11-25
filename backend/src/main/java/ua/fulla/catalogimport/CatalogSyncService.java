@@ -44,6 +44,11 @@ class CatalogSyncService {
         sources.finishRun(code, status);
     }
 
+    /** The source site's logo URL ({@code https://} only, never the image itself, ADR-0015). */
+    void saveLogo(String code, String logoUrl) {
+        sources.saveLogo(code, logoUrl);
+    }
+
     /**
      * Upserts every item (new card, or new price, sizes and availability for a known
      * {@code external_id}; the same ID twice in one batch is stored once). After a complete

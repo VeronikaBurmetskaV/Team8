@@ -1,0 +1,105 @@
+/* «Вподобане заповнене»: the ConfirmDialog frame, a ✕ in the top-right corner, a line of text and
+   the actions in one row of equal buttons at the bottom (one under another when they do not fit). */
+.dialog {
+  composes: dialog from "./ConfirmDialog.module.css";
+  width: min(var(--dialog-wide-max-width), calc(100vw - 2 * var(--space-2)));
+}
+
+/* Positioned: the ✕ sits in its corner. */
+.content {
+  composes: content from "./ConfirmDialog.module.css";
+  position: relative;
+}
+
+/* Room on the right for the ✕, so the title never runs under it. */
+/* Breaks only between words: no «ЗА-ПОВНЕНЕ» (the global h2 may hyphenate long words), and
+   «(25 з 25)» holds together with its non-breaking spaces. */
+.title {
+  composes: title from "./ConfirmDialog.module.css";
+  padding-right: calc(var(--icon-button-size) + var(--space-1));
+  hyphens: manual;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.text {
+  margin: 0;
+  color: var(--color-text);
+}
+
+/* ✕ «Закрити»: a 44×44 tap target in the corner, no fill (overrides the global button). */
+.close,
+.close:hover:not(:disabled) {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  width: var(--icon-button-size);
+  min-height: var(--icon-button-size);
+  height: var(--icon-button-size);
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--icon-size);
+}
+
+.close:hover:not(:disabled) {
+  color: var(--color-text);
+}
+
+.close:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-accent);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+/* The actions at the bottom: equal columns of equal height. Two side by side while each gets at
+   least --dialog-action-min; otherwise (≤ 360 px, long text) one under another, full width, in
+   the DOM order — «Зареєструватися» first. A single action takes the whole row. */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, var(--dialog-action-min)), 1fr)
+  );
+  gap: var(--space-1);
+  margin-top: auto;
+}
+
+.actions > button {
+  width: 100%;
+  min-height: var(--control-height);
+  height: 100%;
+  padding-inline: var(--space-2);
+  white-space: normal;
+}
+
+@media (max-width: 360px) {
+  .actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* «Зареєструватися»: the site's main action colour (the green of the main buttons). */
+.primary,
+.primary:hover:not(:disabled) {
+  border-color: var(--color-auth-accent);
+  background-color: var(--color-auth-accent);
+  color: var(--color-on-auth-accent);
+}
+
+.primary:hover:not(:disabled) {
+  border-color: var(--color-auth-accent-hover);
+  background-color: var(--color-auth-accent-hover);
+}
+
+/* «Перейти у вподобане»: secondary, outlined. */
+.secondary,
+.secondary:hover:not(:disabled) {
+  border-color: var(--color-text);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-background);
+}

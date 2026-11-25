@@ -21,6 +21,9 @@
   --color-offwhite: #f4f4f2; /* page background */
   --color-gray-border: #d4d4cf; /* thin borders of cards and fields */
   --color-gray-text: #6b6b66; /* secondary text; 4.9:1 on --color-offwhite */
+  /* The red count over the sizes when 1–2 are left (LOW_STOCK_SIZES); white text on it 5.6:1. */
+  --color-danger: #c62828;
+  --color-on-danger: var(--color-white);
   /* States, muted to sit with the olive palette (both ≥ 5:1 on --color-offwhite). */
   /* Muted olive green for the price slider and its «Показати …» button: 5.4:1 on white,
      4.9:1 on --color-offwhite (≥ 3:1 for the line and thumb rings, ≥ 4.5:1 under white text). */
@@ -30,6 +33,11 @@
     var(--color-green) 85%,
     var(--color-black)
   );
+  /* Brand monograms on the home page (catalog/BrandTiles): background + text pairs, each
+     ≥ 5.4:1. Earthy tones next to the olive palette; brandColor() picks one by the brand key. */
+  --color-brown: #6f5543; /* white text 6.9:1 */
+  --color-beige: #e8dfcf; /* black text 14.7:1 */
+  --color-warm-gray: #c2bcb2; /* black text 10.3:1 */
   --color-error: #a63d2f;
   --color-success: #4f6b3a;
 
@@ -153,15 +161,52 @@
   --form-aside-width: 320px;
   /* Side padding of the page; grows at the breakpoints in index.css. */
   --layout-gutter: var(--space-2);
-  --auth-card-max-width: 400px;
+  /* Auth pages (/login, /register, /brand/register): one card size for all three. The width
+     follows the screen: the whole column on a phone, ~80vw from --bp-tablet,
+     clamp(320px, 50vw, 880px) from --bp-desktop (set in the media queries at the end). */
+  --auth-card-width: 100%;
+  --auth-card-padding: clamp(var(--space-3), 4vw, 56px);
+  /* Fields and the main button: taller than --control-height, text one step larger. */
+  --auth-control-height: 52px;
+  --auth-font-size: 1.125rem; /* 18px */
+  /* Space between the header and the card: comfortable, never a big empty band. */
+  --auth-page-offset: clamp(var(--space-3), 5vh, 64px);
+  /* Tabs and main buttons of the auth pages: the price slider's green (white text 5.4:1,
+     green text on --color-offwhite 4.9:1), darker on hover (more contrast). */
+  --color-auth-accent: var(--color-green);
+  --color-auth-accent-hover: var(--color-green-hover);
+  --color-on-auth-accent: var(--color-white);
+  /* /login tabs: no fill. A line under each tab — warm gray under the inactive one, the green
+     accent under the active one (it slides between them). Inactive text: --color-gray-text,
+     4.86:1 on the page background (measured); hover: --color-olive-dark, darker. Active text:
+     green, 4.91:1. */
+  --auth-tab-line-width: 3px;
+  --color-auth-tab-line: var(--color-warm-gray);
+  --color-auth-tab-text: var(--color-gray-text);
+  --color-auth-tab-text-hover: var(--color-olive-dark);
   /* Square brand profile card (/brand/profile, the profile card on /brand): 1.4× the login
      card. Below --bp-tablet it is full width and not forced square. */
   --cabinet-profile-card-size: 560px;
   /* ConfirmDialog (shared/): never wider than this, nor than the screen. */
   --dialog-max-width: 440px;
+  /* «Вподобане заповнене»: a little wider than a confirmation, so its two actions fit side by
+     side with their text on one line («ПЕРЕЙТИ У ВПОДОБАНЕ» ≈ 170px + padding). */
+  --dialog-wide-max-width: 480px;
+  /* Narrowest width of one of two side-by-side dialog actions; below it they stack. */
+  --dialog-action-min: 12.5rem;
   /* The big «Додати товар» on the cabinet home page (/brand). */
   --cabinet-action-max-width: 480px;
   --cabinet-action-height: 96px;
+  /* /brand: the round logo / monogram of the profile header, the «Товари» card and its counts. */
+  /* Size pills on the back of the product card; size circles on the tile and the front. */
+  --size-pill-height: 1.75rem;
+  --size-dot-tile: 1.75rem;
+  --size-dot-card: 2rem;
+  --size-count-badge: 1.125rem;
+  --card-description-max-height: 12rem;
+  --cabinet-avatar-size: clamp(88px, 9vw, 120px);
+  --cabinet-products-width: clamp(320px, 60vw, 960px);
+  --cabinet-stat-size: clamp(2rem, 4vw, 3rem);
   --control-height: 48px;
   /* /login tabs (upper case): 14px, shrinking on a 320 px phone so «Вхід для бренду»
      stays on one line. */
@@ -281,4 +326,33 @@
   /* The full product card over the page: the page behind is dimmed and blurred. */
   --modal-backdrop-blur: 6px;
   --z-product-modal: 30;
+
+  /* Brand tiles (catalog/BrandTiles): monogram background / text, see brandColor(). */
+  --monogram-brown-bg: var(--color-brown);
+  --monogram-brown-fg: var(--color-white);
+  --monogram-beige-bg: var(--color-beige);
+  --monogram-beige-fg: var(--color-black);
+  --monogram-warm-gray-bg: var(--color-warm-gray);
+  --monogram-warm-gray-fg: var(--color-black);
+  --monogram-olive-bg: var(--color-olive); /* = --color-accent; white 6.4:1 */
+  --monogram-olive-fg: var(--color-white);
+  --monogram-green-bg: var(--color-green); /* white 5.4:1 */
+  --monogram-green-fg: var(--color-white);
+  --monogram-khaki-bg: var(--color-olive-light); /* black 5.6:1 */
+  --monogram-khaki-fg: var(--color-black);
+  /* Hover/focus of a brand tile: it rises a little. */
+  --tile-lift: -2px;
+}
+
+/* --bp-tablet / --bp-desktop: the auth card grows with the screen. */
+@media (min-width: 768px) {
+  :root {
+    --auth-card-width: 80vw;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --auth-card-width: clamp(320px, 50vw, 880px);
+  }
 }

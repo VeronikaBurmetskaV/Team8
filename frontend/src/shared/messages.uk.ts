@@ -8,6 +8,13 @@ import type { ErrorCode } from "../api/types";
 export const brandNameInvalidMessage = "Вкажіть назву бренду (2–50 символів)";
 
 /**
+ * Under «Сайт бренду» for PROFILE_INVALID on websiteUrl (registration and profile).
+ * PROVISIONAL: no story gives this text (Q-08).
+ */
+export const websiteUrlInvalidMessage =
+  "Вкажіть адресу сайту бренду, що починається з https://, наприклад https://brand.com.ua";
+
+/**
  * The only place for Ukrainian error texts (api.md §3.2, ADR-0008).
  * A code added to ErrorCode without a text here fails the typecheck.
  */
@@ -15,6 +22,8 @@ export const messages: Record<ErrorCode, string> = {
   // Exact texts from the user stories — do not reword.
   EMAIL_TAKEN_OR_INVALID:
     "Цей email вже використовується або має некоректний формат", // US-21 S2
+  // From the task text (ADR-0016): the buyer's «Email або номер телефону».
+  LOGIN_INVALID: "Введіть email або номер телефону у форматі +380…",
   INVALID_CREDENTIALS: "Невірний email або пароль", // US-21.1 S2
   PROFILE_INVALID:
     "Вкажіть назву бренду та завантажте зображення у форматі JPG, PNG або WEBP", // US-22.1 S2
@@ -45,28 +54,46 @@ export const messages: Record<ErrorCode, string> = {
   CARD_NOT_EDITABLE:
     "Опубліковану картку не можна редагувати. Спочатку зніміть її з публікації",
   INVALID_STATE: "Стан картки вже змінився. Оновіть сторінку",
+  // From the task text (ADR-0012 limits), no story yet.
+  FAVORITES_LIMIT_REACHED:
+    "Вподобане заповнене (100 з 100). Видаліть кілька товарів, щоб додати нові.",
 };
+
+/**
+ * Ukrainian plural form for a count: «1 товар», «3 товари», «5 товарів», «11 товарів»,
+ * «21 товар». `forms` = [one, few, many].
+ */
+export function pluralUk(
+  count: number,
+  forms: readonly [one: string, few: string, many: string],
+): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return forms[0];
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return forms[1];
+  }
+  return forms[2];
+}
 
 /** «1 товар», «3 товари», «5 товарів», «11 товарів», «21 товар». */
 export function productsCount(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  let word = "товарів";
-  if (mod10 === 1 && mod100 !== 11) word = "товар";
-  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
-    word = "товари";
-  return `${count} ${word}`;
+  return `${count} ${pluralUk(count, ["товар", "товари", "товарів"])}`;
 }
 
 /** «1 новий товар», «3 нові товари», «5 нових товарів». */
 export function newProductsCount(count: number): string {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-  let words = "нових товарів";
-  if (mod10 === 1 && mod100 !== 11) words = "новий товар";
-  else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
-    words = "нові товари";
+  const words = pluralUk(count, [
+    "новий товар",
+    "нові товари",
+    "нових товарів",
+  ]);
   return `${count} ${words}`;
+}
+
+/** «1 бренд», «3 бренди», «5 брендів». */
+export function brandsCount(count: number): string {
+  return `${count} ${pluralUk(count, ["бренд", "бренди", "брендів"])}`;
 }
 
 /** Common parts of the «Вподобане» page (shared/SavedProducts). */
@@ -91,6 +118,24 @@ export const favoritesTexts = {
   toCatalog: "До каталогу",
   listLabel: "Вподобані товари",
   removeLabel: (name: string) => `Прибрати з Вподобаного: ${name}`,
+} as const;
+
+/** «Вподобане» is full (shared/FavoritesLimitDialog, the counter on /favorites). */
+export const favoritesLimitTexts = {
+  /** Non-breaking spaces in «(25 з 25)»: it never breaks over two lines. */
+  title: (limit: number) =>
+    `Вподобане заповнене (${limit}\u00A0з\u00A0${limit})`,
+  guestText:
+    "Щоб зберігати більше товарів, створіть акаунт. Або звільніть місце у вподобаному.",
+  accountText: "Видаліть кілька товарів, щоб додати нові.",
+  register: "Зареєструватися",
+  toFavorites: "Перейти у вподобане",
+  /** The ✕ in the corner (it replaced «Скасувати»). */
+  close: "Закрити",
+  /** Next to the «Вподобане» title: «18 з 25». */
+  counter: (count: number, limit: number) => `${count} з ${limit}`,
+  counterLabel: (count: number, limit: number) =>
+    `Збережено ${count} з ${limit} можливих`,
 } as const;
 
 /** Texts of the buyer header (BuyerHeader.tsx) and the cart placeholder page. */
@@ -137,9 +182,12 @@ export const cartTexts = {
 export const productCardTexts = {
   photoPlaceholder: "Фото недоступне",
   sizes: "Розміри",
-  sizeAvailable: (size: string) => `Розмір ${size}: є в наявності`,
-  sizeUnavailable: (size: string) => `Розмір ${size}: немає в наявності`,
-  colors: "Кольори",
+  /** «+3» after the sizes that fit in one line on the front side. */
+  moreSizes: (count: number) => `+${count}`,
+  moreSizesLabel: (count: number) =>
+    `Ще ${count} ${pluralUk(count, ["розмір", "розміри", "розмірів"])}`,
+  outOfStock: "Немає в наявності",
+  colors: "Колір",
   material: "Матеріал",
   description: "Опис",
   price: "Ціна",
@@ -149,6 +197,14 @@ export const productCardTexts = {
   backLabel: "Перевернути картку назад до фото",
   detailsTitle: "Деталі товару",
   noDetails: "Бренд ще не додав деталей до цього товару.",
+  /** 1–2 sizes in stock (shared/sizes.ts stockHint, LOW_STOCK_SIZES): in the label of the size circles. */
+  stockFew: (count: number) =>
+    `${pluralUk(count, ["Залишився", "Залишилось", "Залишилось"])} ${count} ${pluralUk(count, ["розмір", "розміри", "розмірів"])}`,
+  /** The small grey text instead of the circles when every size is sold out. */
+  stockNone: "Немає в наявності",
+  /** The label of the size circles: «Доступні розміри: S, M. Залишилось 2 розміри». */
+  sizesInStockLabel: (labels: readonly string[], few: string | null) =>
+    `Доступні розміри: ${labels.join(", ")}.${few === null ? "" : ` ${few}`}`,
 } as const;
 
 /** The swipe feed page (/feed). */
@@ -168,6 +224,17 @@ export const feedTexts = {
   brandAll: (brand: string) => `${brand} — усі товари бренду на FULLA`,
   soon: "Скоро",
   allViewed: "Ви переглянули всі доступні речі",
+  /** Filters on /feed (the same as in the catalogue, shared through the URL). */
+  filtersEmpty: "За цими фільтрами нових карток немає",
+  resetFilters: "Скинути фільтри",
+  toCatalog: "Дивитися каталог",
+  /** Announced (aria-live) after the filters change: unviewed cards that pass them. */
+  cardsLeft: (count: number) =>
+    pluralUk(count, [
+      `Залишилась ${count} картка`,
+      `Залишилось ${count} картки`,
+      `Залишилось ${count} карток`,
+    ]),
   toFavorites: "Переглянути Вподобане",
   hintOpen: "Як користуватись свайпанням",
   hintTitle: "Як користуватися стрічкою",
@@ -197,6 +264,14 @@ export const catalogTexts = {
   filterGroups: ["Категорія одягу", "Розмір", "Ціна", "Бренд"],
   priceGroup: "Ціна",
   brandGroup: "Бренд",
+  sizeGroup: "Розмір",
+  /** A size button: «Розмір M, 5 товарів». */
+  sizeLabel: (size: string, count: number) =>
+    `Розмір ${size}, ${productsCount(count)}`,
+  sizeChip: (size: string) => `Розмір ${size}`,
+  sizeChipLabel: (size: string) => `Скинути фільтр: розмір ${size}`,
+  sizeListLabel: "Розміри в наявності",
+  sizeEmpty: "Розмірів у наявності поки немає",
   /** Next to «Бренд» in the panel: «Бренд · 2». */
   brandSelected: (count: number) => `· ${count}`,
   brandLoading: "Завантаження…",
@@ -210,6 +285,16 @@ export const catalogTexts = {
   brandChipLabel: (name: string) => `Скинути фільтр: бренд ${name}`,
   /** Brand name on a catalogue tile: a link to /?brand=<key>. */
   brandLinkLabel: (name: string) => `Увесь одяг бренду ${name}`,
+  /** «Бренди» block between the banner and «Усі товари» (catalog/BrandTiles). */
+  brandsTitle: "Бренди",
+  brandsCount: (count: number) => brandsCount(count),
+  brandsAll: (count: number) => `Усі бренди (${count})`,
+  brandsCollapse: "Згорнути",
+  brandsLoading: "Завантажуємо бренди…",
+  brandTileCount: (count: number) => productsCount(count),
+  brandLogoAlt: (name: string) => `Логотип ${name}`,
+  brandTileLabel: (name: string, count: number) =>
+    `Бренд ${name}, ${productsCount(count)}`,
   /** «Сторінка бренду»: the home page with exactly one brand and no other filter. */
   brandPageKicker: "Бренд",
   backToAll: "Весь одяг",
@@ -245,6 +330,8 @@ export const catalogTexts = {
   priceChip: (range: string) => `Ціна: ${range}`,
   priceChipLabel: (range: string) => `Скинути фільтр: ціна ${range}`,
   emptyFiltered: "Немає одягу за цими фільтрами",
+  /** Offered on / and /feed opened without filters while some are remembered. */
+  restoreFilters: (labels: string) => `Повернути фільтри: ${labels}`,
   loading: "Завантажуємо товари…",
   empty: "Товарів поки немає",
   error: "Не вдалося завантажити товари",
@@ -271,26 +358,90 @@ export const loginTexts = {
   tabsLabel: "Тип входу",
   buyerTab: "Вхід",
   brandTab: "Вхід для бренду",
-  buyerPlaceholder: "Тут скоро буде вхід для покупця",
   noAccount: "Немає акаунту?",
-  createAccount: "Створити",
-  createAccountSoon: "Реєстрація покупця скоро з'явиться",
+  registerBuyer: "Зареєструватися",
   registerBrand: "Зареєструвати бренд",
+} as const;
+
+/** Brand registration (/brand/register, US-21). */
+export const brandRegisterTexts = {
+  title: "Реєстрація бренду",
+  name: "Назва бренду",
+  website: "Сайт бренду",
+  websitePlaceholder: "https://brand.com.ua",
+  email: "Email",
+  password: "Пароль",
+  submit: "Зареєструвати бренд",
+  submitting: "Реєструємо…",
+  haveCabinet: "Вже маєте кабінет?",
+  login: "Увійти",
+} as const;
+
+/** Buyer login (the «Вхід» tab of /login, US-03) and registration (/register, US-02). */
+export const buyerAuthTexts = {
+  email: "Email",
+  password: "Пароль",
+  confirmPassword: "Підтвердити пароль",
+  /** /register (ADR-0016): the optional name and one field for email or phone. */
+  nameLabel: "Імʼя",
+  loginLabel: "Email або номер телефону",
+  showPassword: "Показати пароль",
+  login: "Увійти",
+  loggingIn: "Входимо…",
+  /** Shown instead of a request while POST /api/buyer/login does not exist (US-03). */
+  loginSoon:
+    "Вхід для покупців скоро запрацює. Поки що ти можеш свайпати й зберігати вподобане без акаунта.",
+  registerTitle: "Реєстрація",
+  /** The US-02 S1 button is «Зареєструватися»; the current design says «Створити акаунт». */
+  createAccount: "Створити акаунт",
+  creatingAccount: "Створюємо акаунт…",
+  accountCreated: "Акаунт створено",
+  passwordHint: (min: number) => `Мінімум ${min} символів`,
+  /** US-02 CL: the note under the form. */
+  privacyNote: "Ми зберігаємо вашу пошту та вподобані товари",
+  haveAccount: "Вже є акаунт?",
+  toLogin: "Увійти",
+  // PROVISIONAL: no story gives these texts (Q-08); written for this form.
+  emailRequired: "Введіть email",
+  emailInvalid: "Введіть email у форматі name@mail.com",
+  passwordRequired: "Введіть пароль",
+  confirmRequired: "Підтвердіть пароль",
+  loginInvalid: "Введіть email або номер телефону у форматі +380…",
+  /** 409 at registration: one neutral text, it never says whether the email or the phone is taken. */
+  loginTaken:
+    "Цей email або номер телефону вже використовується або має некоректний формат",
+  nameRequired: "Введіть імʼя",
+  nameInvalid: "Імʼя — до 50 символів",
+  passwordsMismatch: "Паролі не збігаються",
+  tooManyAttempts: "Забагато спроб, спробуйте пізніше",
+  network: "Не вдалося з'єднатися, спробуйте ще раз",
 } as const;
 
 /** Brand cabinet home page (/brand) and the «Додати товар» entry it shares with /brand/products. */
 export const cabinetHomeTexts = {
   title: "Кабінет бренду",
-  home: "Головна",
+  /** The profile header at the top of /brand. */
+  noName: "Назва не вказана",
+  addName: "Додати назву",
+  logoAlt: (name: string) => `Логотип ${name}`,
+  websiteLabel: (host: string) =>
+    `Сайт бренду ${host} (відкриється в новій вкладці)`,
+  consentGivenOn: (date: string) => `Згоду надано ${date}`,
+  consentMissing: "Згоду не надано",
+  /** Notice while there is no consent: publishing is refused (409 CONSENT_REQUIRED). */
+  consentNoticeTitle: "Покупці поки не бачать ваших товарів",
+  consentNoticeText:
+    "Щойно ви підтвердите згоду на показ матеріалів, ви зможете публікувати товари, і вони з'являться в стрічці FULLA.",
+  confirmConsent: "Підтвердити згоду",
+  /** Notice while there is no name (older accounts). */
+  nameNoticeTitle: "Спочатку збережіть назву бренду в профілі",
+  nameNoticeText:
+    "Без назви не можна створювати товари: покупці бачать її на кожній картці.",
+  addProductNeedsName: "Щоб додати товар, спершу збережіть назву бренду",
+  emptyProducts:
+    "У вас поки немає товарів. Додайте перший — це займе кілька хвилин.",
   addProduct: "Додати товар",
   fillProfile: "Заповнити профіль бренду",
-  noProducts: "У вас поки немає товарів",
-  profileTitle: "Профіль бренду",
-  brandName: "Назва бренду",
-  noBrandName: "Ще не вказана",
-  consent: "Згода на показ матеріалів",
-  consentGiven: (date: string) => `Дана ${date}`,
-  consentNotGiven: "Не дана",
   editProfile: "Редагувати профіль",
   productsTitle: "Товари",
   total: "Усього",
@@ -307,6 +458,16 @@ export const publishTexts = {
   // PROVISIONAL: no story gives these texts.
   actions: "Дії",
   toProfile: "Надати згоду в профілі",
+} as const;
+
+/** The error page of a route that crashed (shared/RouteError, errorElement in App.tsx). */
+export const routeErrorTexts = {
+  title: "Щось пішло не так",
+  text: "Ця сторінка не змогла відкритися. Спробуйте ще раз — зазвичай це допомагає.",
+  retry: "Спробувати ще раз",
+  home: "На головну",
+  cabinet: "До кабінету",
+  details: "Деталі помилки (видно лише в режимі розробки)",
 } as const;
 
 /** Confirmation dialogs of the brand cabinet (shared/ConfirmDialog). */

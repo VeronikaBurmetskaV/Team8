@@ -177,62 +177,32 @@
   white-space: nowrap;
 }
 
-.group {
-  margin-top: var(--space-half);
-}
-
-.groupTitle {
-  margin: 0 0 var(--space-half);
-  color: var(--color-black);
-  font-family: var(--font-body);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
-  letter-spacing: var(--letter-spacing-wide);
-  text-transform: uppercase;
-}
-
-.sizes,
 .colors {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-half);
+  gap: var(--space-1) var(--space-2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.size {
+/* A colour on the back: the swatch and its name. */
+.color {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-width: 2.25rem;
-  height: 2.25rem;
-  padding: 0 var(--space-half);
-  border: var(--focus-ring-width) solid var(--color-olive-dark);
-  border-radius: var(--radius-pill);
-  background-color: var(--color-olive-light);
-  color: var(--color-black);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-semibold);
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
 }
 
-.size[data-available="false"] {
-  border-color: var(--color-gray-border);
-  background-color: var(--color-offwhite);
-  color: var(--color-olive-dark);
-  text-decoration: line-through;
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.color {
-  width: 1.5rem;
-  height: 1.5rem;
+.colorSwatch {
+  width: 1.25rem;
+  height: 1.25rem;
   border: var(--border-width) solid var(--color-black);
   border-radius: var(--radius-sm);
+  background-color: var(--swatch, transparent);
 }
 
-.color[data-unknown="true"] {
+.color[data-unknown="true"] .colorSwatch {
   background: repeating-linear-gradient(
     45deg,
     var(--color-offwhite) 0 4px,
@@ -325,26 +295,30 @@
   text-transform: uppercase;
 }
 
-.details {
-  display: grid;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
+/* Sections of the back side: a small heading and its content. */
+.section {
+  margin-top: var(--space-2);
 }
 
-.detail dt {
+.sectionTitle {
+  margin: 0 0 var(--space-half);
   color: var(--color-olive-dark);
+  font-family: var(--font-body);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   letter-spacing: var(--letter-spacing-wide);
   text-transform: uppercase;
 }
 
-.detail dd {
-  margin: var(--space-half) 0 0;
+.sectionText {
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
+/* A long description scrolls inside the card (the back side scrolls as a whole too). */
 .description {
+  max-height: var(--card-description-max-height);
+  overflow-y: auto;
   white-space: pre-line;
 }
 
@@ -354,10 +328,45 @@
   font-weight: var(--font-weight-bold);
 }
 
-.sizeTextUnavailable {
-  color: var(--color-olive-dark);
+/* All sizes on the back: pills; a sold-out one struck through with «Немає в наявності». */
+.backSizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.backSize {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-half);
+}
+
+.backSizePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-pill-height);
+  height: var(--size-pill-height);
+  padding: 0 var(--space-1);
+  border: var(--border-width) solid var(--color-olive-dark);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.backSize[data-available="false"] .backSizePill {
+  border-color: var(--color-gray-border);
+  background-color: var(--color-offwhite);
+  color: var(--color-gray-text);
   text-decoration: line-through;
-  opacity: 0.7;
+}
+
+.backSizeNote {
+  color: var(--color-gray-text);
+  font-size: var(--font-size-xs);
 }
 
 .noDetails {

@@ -18,13 +18,20 @@ class BuyerAccountRepository {
     }
 
     /**
-     * Inserts the account and returns its ID. A taken email fails on the UNIQUE index
-     * with DuplicateKeyException; there is no check before the insert (NFR-04).
+     * Inserts the account and returns its ID: exactly one of email / phone is given (already
+     * normalized), the name may be null. A taken email or phone fails on its UNIQUE index with
+     * DuplicateKeyException; there is no check before the insert (NFR-04).
      */
-    UUID insert(String email, String passwordHash) {
-        return jdbc.sql("INSERT INTO buyer_accounts (email, password_hash) VALUES (:email, :passwordHash) RETURNING id")
+    UUID insert(String email, String phone, String passwordHash, String displayName) {
+        return jdbc.sql("""
+                INSERT INTO buyer_accounts (email, phone, password_hash, display_name)
+                VALUES (:email, :phone, :passwordHash, :displayName)
+                RETURNING id
+                """)
             .param("email", email)
+            .param("phone", phone)
             .param("passwordHash", passwordHash)
+            .param("displayName", displayName)
             .query(UUID.class)
             .single();
     }

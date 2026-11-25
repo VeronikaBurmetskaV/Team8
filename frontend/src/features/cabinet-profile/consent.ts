@@ -60,14 +60,16 @@ export function consentCheckbox(
 }
 
 /**
- * PUT /api/brand/profile that records only the consent: the name and logo are sent exactly
- * as the server has them, so unsaved edits in the name field are not saved with it.
+ * PUT /api/brand/profile that records only the consent: the name, website and logo are sent
+ * exactly as the server has them (PUT replaces the profile: a missing website would clear it),
+ * so unsaved edits in the form are not saved with it.
  */
 export function toConsentRequest(
   profile: BrandProfileResponse,
 ): BrandProfileRequest {
   return {
     name: profile.name ?? "",
+    websiteUrl: profile.websiteUrl,
     logoImageId: profile.logoImageId,
     logoUrl: profile.logoUrl,
     consentGiven: true,

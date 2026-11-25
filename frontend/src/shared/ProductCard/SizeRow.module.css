@@ -1,0 +1,115 @@
+/* The sizes in stock: one line of circles (never wraps; what does not fit is «+N»).
+   Card: under the price, from the left. Tile: right of the price (CatalogTile.module.css
+   moves it under the price on a narrow tile). */
+.row {
+  --dot: var(--size-dot-card);
+  position: relative;
+  display: flex;
+  min-width: 0;
+  /* Room for the red count that sticks out over the top right corner. */
+  padding-top: calc(var(--size-count-badge) / 3);
+  padding-right: calc(var(--size-count-badge) / 3);
+}
+
+.row[data-variant="tile"] {
+  --dot: var(--size-dot-tile);
+  justify-content: flex-end;
+}
+
+/* A narrow tile puts the row under the price: then it starts on the left. */
+@container (max-width: 219px) {
+  .row[data-variant="tile"] {
+    justify-content: flex-start;
+  }
+}
+
+.group {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.list,
+.measure {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-half);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* The measuring copy takes no place and is never seen. */
+.measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* All circles the same size; a long label («One size», «XS/S») grows into a pill. */
+.dot,
+.more {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: var(--dot);
+  height: var(--dot);
+  padding: 0 calc(var(--dot) / 5);
+  border: var(--border-width) solid var(--color-black);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-white);
+  color: var(--color-black);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.more {
+  border-style: dashed;
+  color: var(--color-gray-text);
+}
+
+/* 1–2 left (LOW_STOCK_SIZES): a red count over the top right corner of the group (white on red 5.6:1). */
+.count {
+  position: absolute;
+  top: calc(var(--size-count-badge) / -3);
+  right: calc(var(--size-count-badge) / -3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-count-badge);
+  height: var(--size-count-badge);
+  padding: 0 calc(var(--size-count-badge) / 6);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-danger);
+  color: var(--color-on-danger);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
+}
+
+/* Everything sold out: a small grey text instead of the circles. */
+.none {
+  margin: 0;
+  color: var(--color-gray-text);
+  font-size: var(--font-size-xs);
+}
+
+.none[data-variant="tile"] {
+  text-align: right;
+}
+
+@container (max-width: 219px) {
+  .none[data-variant="tile"] {
+    text-align: left;
+  }
+}

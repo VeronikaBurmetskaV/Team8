@@ -44,7 +44,7 @@ describe("one «Вподобане» for the feed and the catalogue", () => {
     addToFavorites(product("a"), list); // swipe right / «Сподобалось»
     toggleFavorite(product("b"), list); // heart on a catalogue tile
     addToFavorites(product("b"), list); // the same product liked in the feed
-    expect(toggleFavorite(product("a"), list)).toBe(false); // heart again removes
+    expect(toggleFavorite(product("a"), list)).toBe("removed"); // heart again removes
     toggleFavorite(product("a"), list); // and adds back, still once
     expect(ids(list.read())).toEqual(["b", "a"]);
     expect(storage.getItem(LEGACY_SWIPE_FAVORITES_STORAGE_KEY)).toBeNull();
@@ -54,8 +54,8 @@ describe("one «Вподобане» for the feed and the catalogue", () => {
     const { list } = setup();
     addToFavorites(product("a"), list);
     addToFavorites(product("b"), list);
-    const result = addToFavorites(product("a"), list);
-    expect(ids(result)).toEqual(["a", "b"]);
+    expect(addToFavorites(product("a"), list)).toBe("already");
+    expect(ids(list.read())).toEqual(["a", "b"]);
   });
 
   it("stores only the card fields, not the whole feed card", () => {

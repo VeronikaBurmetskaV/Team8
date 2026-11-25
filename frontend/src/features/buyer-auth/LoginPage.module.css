@@ -1,19 +1,5 @@
-/* /login: tabs on top, the card with the active form under them. Mobile-first (ADR-0002):
-   the column fills the page width (the layout gutter gives the side padding) up to
-   --auth-card-max-width. */
-.page {
-  width: 100%;
-  max-width: var(--auth-card-max-width);
-  margin: 0 auto;
-}
-
-/* --bp-tablet: more air above the card on large screens. */
-@media (min-width: 768px) {
-  .page {
-    margin-top: var(--space-4);
-  }
-}
-
+/* /login: tabs on top, the card with the active form under them. The column, the fields and
+   the buttons come from shared/auth/AuthForm.module.css, like the other auth pages. */
 .visuallyHidden {
   position: absolute;
   width: 1px;
@@ -26,49 +12,63 @@
   border: 0;
 }
 
-/* Two equal tabs side by side, as wide as the card. */
-/* Text tabs on a thin gray line; the active one is underlined with a thin black line. */
+/* Two equal tabs side by side, exactly as wide as the card (same column), touching: no fill.
+   Under each tab a line of the same width and thickness on the same level — warm gray, and
+   the green accent under the active one (.tabLine, moved by motion between the tabs).
+   Text: gray (4.9:1) for the inactive tab, darker on hover; green (4.9:1) for the active one. */
 .tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-1);
+  gap: 0;
   margin-bottom: var(--space-2);
-  border-bottom: var(--border-width) solid var(--color-border);
 }
 
 /* Never wraps to two lines: on a narrow phone the font shrinks instead (--font-size-tab). */
-.tab {
+.tab,
+.tab:hover:not(:disabled) {
+  position: relative;
   min-width: 0;
-  margin-bottom: calc(-1 * var(--border-width));
-  padding: 0 var(--space-1);
+  min-height: var(--auth-control-height);
+  padding: 0 var(--space-1) var(--auth-tab-line-width);
   border: none;
-  border-bottom: var(--border-width) solid transparent;
   border-radius: 0;
   background-color: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-auth-tab-text);
   font-size: var(--font-size-tab);
-  letter-spacing: normal;
+  letter-spacing: var(--letter-spacing-wide);
   white-space: nowrap;
+  /* The gray line, inside the tab's own box: both lines share one level and touch. */
+  box-shadow: inset 0 calc(-1 * var(--auth-tab-line-width)) 0
+    var(--color-auth-tab-line);
+}
+
+.tab:hover:not(:disabled):not([aria-selected="true"]) {
+  color: var(--color-auth-tab-text-hover);
 }
 
 .tab[aria-selected="true"],
-.tab[aria-selected="true"]:hover {
-  border: none;
-  border-bottom: var(--border-width) solid var(--color-primary);
-  background-color: transparent;
-  color: var(--color-primary);
+.tab[aria-selected="true"]:hover:not(:disabled) {
+  color: var(--color-auth-accent);
 }
 
-.tab:hover:not([aria-selected="true"]) {
-  border: none;
-  border-bottom: var(--border-width) solid var(--color-border);
-  background-color: transparent;
-  color: var(--color-text);
+/* The active tab's green line, over the gray one; motion moves it to the other tab. */
+.tabLine {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--auth-tab-line-width);
+  background-color: var(--color-auth-accent);
 }
 
+/* Keyboard only: a visible ring; a mouse click shows none. */
 .tab:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-olive);
-  outline-offset: var(--focus-ring-width);
+  outline: var(--focus-ring-width) solid var(--color-auth-accent-hover);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}
+
+.tab:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* The height is animated by motion; overflow hides the content while it changes. */
@@ -80,35 +80,19 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Same padding as AuthForm .card. */
 .cardInner {
-  padding: var(--space-4) var(--space-3);
+  padding: var(--auth-card-padding);
+}
+
+@media (max-width: 359px) {
+  .cardInner {
+    padding: var(--space-3) var(--space-2);
+  }
 }
 
 .panel {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-}
-
-.placeholder {
-  margin: 0;
-  padding: var(--space-3) 0;
-  color: var(--color-text-muted);
-  text-align: center;
-}
-
-/* «Немає акаунту? …» at the bottom of the card. */
-.footer {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--font-size-sm);
-  text-align: center;
-}
-
-/* Buyer registration does not exist yet: looks like a link, does nothing. */
-.disabledLink {
-  color: var(--color-text-muted);
-  text-decoration: underline;
-  text-underline-offset: var(--underline-offset);
-  cursor: not-allowed;
 }

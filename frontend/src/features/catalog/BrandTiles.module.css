@@ -1,0 +1,209 @@
+/* «Бренди» on the home page (BrandTiles.tsx). Mobile-first (ADR-0002): 3 square tiles per
+   row on a phone, 4 from --bp-tablet, 6 from --bp-desktop, 8 from 1440 px — the same numbers
+   as brandTileColumns() in brandGrid.ts. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Same look as «Усі товари». */
+.title {
+  composes: title from "./CatalogPage.module.css";
+}
+
+.count {
+  composes: count from "./CatalogPage.module.css";
+}
+
+.visuallyHidden {
+  composes: visuallyHidden from "./CatalogPage.module.css";
+}
+
+/* The height is animated by motion when «Усі бренди» opens or closes. */
+.listBox {
+  overflow: hidden;
+  /* Room for the lifted tile and its focus ring at the edges (.list pads it back). */
+  margin: calc(-1 * var(--space-half));
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grid.list {
+  padding: var(--space-half);
+}
+
+/* --bp-tablet */
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+}
+
+/* --bp-desktop */
+@media (min-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/* Wide container of index.css. */
+@media (min-width: 1440px) {
+  .grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Tile ---------- */
+
+/* The whole square is the link. Corners and frame as the catalogue tiles. */
+.tile {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  overflow: hidden;
+  border: var(--border-width) solid var(--color-gray-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-white);
+  color: var(--color-black);
+  text-decoration: none;
+  transition:
+    transform var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.tile:hover,
+.tile:focus-visible {
+  border-color: var(--color-black);
+  box-shadow: var(--shadow-card);
+  transform: translateY(var(--tile-lift));
+}
+
+.tile:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-accent);
+  outline-offset: var(--focus-ring-width);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tile:hover,
+  .tile:focus-visible {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Coloured square with 1–2 letters; the colour pair comes from monogramStyle(). */
+.monogram {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  background-color: var(--monogram-bg);
+  color: var(--monogram-fg);
+  font-family: var(--font-heading);
+  /* Grows with the tile: ~22 px on a 320 px phone, up to 32 px. */
+  font-size: clamp(var(--font-size-md), 24cqi, var(--font-size-2xl));
+  font-weight: var(--font-weight-heading);
+  line-height: 1;
+  letter-spacing: var(--letter-spacing-heading);
+}
+
+/* A brand logo instead of the monogram: the same square area, light background, contained. */
+.logoBox {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: var(--space-1);
+  background-color: var(--color-offwhite);
+}
+
+.logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.caption {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-half) var(--space-1);
+}
+
+/* One line; the full name is in the tile's title and aria-label. */
+.name {
+  overflow: hidden;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tileCount {
+  overflow: hidden;
+  color: var(--color-gray-text);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-tight);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --bp-tablet: more room, slightly larger name. */
+@media (min-width: 768px) {
+  .caption {
+    padding: var(--space-1);
+  }
+
+  .name {
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* ---------- Loading and «Усі бренди» ---------- */
+
+.skeleton {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-lg);
+  background-color: var(--color-gray-border);
+  animation: brand-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes brand-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+.moreButton {
+  composes: secondaryButton from "./CatalogPage.module.css";
+}

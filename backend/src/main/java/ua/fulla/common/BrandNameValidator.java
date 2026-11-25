@@ -1,9 +1,8 @@
-package ua.fulla.brandprofile;
+package ua.fulla.common;
 
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import java.util.regex.Pattern;
-import ua.fulla.common.UnicodeText;
 
 public class BrandNameValidator implements ConstraintValidator<BrandName, String> {
 
@@ -21,7 +20,7 @@ public class BrandNameValidator implements ConstraintValidator<BrandName, String
     }
 
     /** The name as it is validated and saved: trimmed, including non-breaking spaces. */
-    static String normalize(String rawName) {
+    public static String normalize(String rawName) {
         return rawName == null ? "" : UnicodeText.trim(rawName);
     }
 }

@@ -54,7 +54,7 @@ class ImageUploadHttpTest {
     private void registerBrand() throws Exception {
         // GET /api/session hands out the XSRF-TOKEN cookie, as in the SPA
         send(request("/api/session").GET());
-        String credentials = "{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\"}";
+        String credentials = "{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}";
         HttpResponse<String> registered = send(withCsrf(request("/api/brand/register"))
             .header("Content-Type", "application/json")
             .POST(BodyPublishers.ofString(credentials)));

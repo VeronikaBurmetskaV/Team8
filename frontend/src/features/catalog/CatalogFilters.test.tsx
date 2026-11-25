@@ -5,6 +5,7 @@ import type { FeedCard } from "../../api/types";
 import { BrandFilterView } from "./BrandFilter";
 import { CatalogResults } from "./CatalogPage";
 import { FilterGroupView } from "./FilterGroup";
+import { FilterChips } from "./FilterChips";
 import { FilterPanel } from "./FilterPanel";
 import { PriceFilterView } from "./PriceFilter";
 import {
@@ -15,16 +16,24 @@ import {
   NO_PRICE_RANGE,
   type BrandOption,
   type CatalogFilters,
+  type SizeOption,
   type PriceDraft,
   type PriceRange,
 } from "./catalog";
 
 type AnyProps = Record<string, unknown> & { children?: ReactNode };
 
+/** Hook-free components whose output the tests look into (called as plain functions). */
+const HOOK_FREE = new Set<unknown>([FilterChips]);
+
 /** All elements of a tree returned by a hook-free component, depth first. */
 function elements(node: ReactNode): ReactElement<AnyProps>[] {
   if (Array.isArray(node)) return node.flatMap(elements);
   if (!isValidElement<AnyProps>(node)) return [];
+  if (HOOK_FREE.has(node.type)) {
+    const render = node.type as (props: AnyProps) => ReactNode;
+    return [node, ...elements(render(node.props))];
+  }
   return [node, ...elements(node.props.children)];
 }
 
@@ -69,6 +78,8 @@ function panel(
   extra: {
     brands?: readonly BrandOption[] | null;
     selected?: string[];
+    sizes?: readonly SizeOption[] | null;
+    selectedSizes?: string[];
     activeCount?: number;
     isDrawer?: boolean;
   } = {},
@@ -84,6 +95,9 @@ function panel(
       brandOptions={extra.brands === undefined ? BRANDS : extra.brands}
       selectedBrands={extra.selected ?? []}
       onToggleBrand={() => {}}
+      sizeOptions={extra.sizes === undefined ? [] : extra.sizes}
+      selectedSizes={extra.selectedSizes ?? []}
+      onToggleSize={() => {}}
       activeCount={extra.activeCount ?? 0}
       onResetAll={() => {}}
       resultCount={12}

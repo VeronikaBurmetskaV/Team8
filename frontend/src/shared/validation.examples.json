@@ -1,73 +1,505 @@
 {
-  "_comment": "One list of URL examples for both sides (R-T17, final-review №6). Read by validation.test.ts (Vitest) and by HttpUrlValidatorTest, HttpsUrlValidatorTest and ProductTest (JUnit). The backend (java.net.URI) is the reference. IDN hosts such as магазин.укр: MVP: не підтримуємо, Post-MVP: IDN.toASCII.",
+  "_comment": "One list of URL examples for both sides (R-T17, final-review №6). Read by validation.test.ts (Vitest) and by HttpUrlValidatorTest, HttpsUrlValidatorTest, WebsiteUrlValidatorTest, LoginIdTest and ProductTest (JUnit). «loginId»: what parseLoginId / LoginId.parse make of the buyer's «Email або номер телефону» (normalized null = invalid). The backend (java.net.URI) is the reference. IDN hosts such as магазин.укр: MVP: не підтримуємо, Post-MVP: IDN.toASCII. «websiteUrlNormalized»: what normalizeWebsiteUrl / WebsiteUrlValidator.normalize save (tracking parameters srsltid, fbclid, gclid, utm_* removed).",
   "httpUrl": [
-    { "value": "https://brand-site.ua/linen-dress", "valid": true },
-    { "value": "https://brand-site.ua/product?id=42", "valid": true },
-    { "value": "https://brand-site.ua/product?id=42#reviews", "valid": true },
-    { "value": "http://x.ua", "valid": true },
-    { "value": "http://brand.ua/x", "valid": true },
-    { "value": "https://brand.ua", "valid": true },
-    { "value": "HTTPS://Brand.ua/Dress", "valid": true },
-    { "value": "https://brand.ua/сукня?колір=зелений", "valid": true },
+    {
+      "value": "https://brand-site.ua/linen-dress",
+      "valid": true
+    },
+    {
+      "value": "https://brand-site.ua/product?id=42",
+      "valid": true
+    },
+    {
+      "value": "https://brand-site.ua/product?id=42#reviews",
+      "valid": true
+    },
+    {
+      "value": "http://x.ua",
+      "valid": true
+    },
+    {
+      "value": "http://brand.ua/x",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua",
+      "valid": true
+    },
+    {
+      "value": "HTTPS://Brand.ua/Dress",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua/сукня?колір=зелений",
+      "valid": true
+    },
     {
       "value": "https://shop.brand.ua:8443/p/1?utm_source=insta",
       "valid": true
     },
-    { "value": "https://xn--80aaxitdbjk.xn--j1amh/a", "valid": true },
-    { "value": "https://brand.ua/a%20b", "valid": true },
-    { "value": "https://brand.ua/?a[]=1", "valid": true },
-    { "value": "https://brand.ua./x", "valid": true },
-    { "value": "https://1.2.3.4/x", "valid": true },
-    { "value": "https://localhost:5173/x", "valid": true },
-    { "value": "https://[::1]:8080/x", "valid": true },
-    { "value": "", "valid": false },
-    { "value": "сукня", "valid": false },
-    { "value": "brand.ua/x", "valid": false },
-    { "value": "www.brand.ua/x", "valid": false },
-    { "value": "javascript:alert(1)", "valid": false },
-    { "value": "data:text/html,<b>x</b>", "valid": false },
-    { "value": "ftp://brand.ua/x", "valid": false },
-    { "value": "mailto:shop@brand.ua", "valid": false },
-    { "value": "http://", "valid": false },
-    { "value": "https://", "valid": false },
-    { "value": "https:///dress", "valid": false },
-    { "value": "http:brand.ua", "valid": false },
-    { "value": "http:/brand.ua", "valid": false },
-    { "value": " https://brand.ua/x", "valid": false },
-    { "value": "https://brand.ua/linen dress", "valid": false },
-    { "value": "https://brand.ua/\u0000", "valid": false },
-    { "value": "https://brand.ua/a b", "valid": false },
-    { "value": "https://магазин.укр/a", "valid": false },
-    { "value": "https://brand.укр/a", "valid": false },
-    { "value": "http://my_shop.com/x", "valid": false },
-    { "value": "https://-brand.ua/", "valid": false },
-    { "value": "https://brand.123/x", "valid": false },
-    { "value": "https://1.2.3.256/x", "valid": false },
-    { "value": "https://brand.ua:80a/x", "valid": false },
-    { "value": "https://brand.ua/a|b", "valid": false },
-    { "value": "https://brand.ua/a[1]", "valid": false },
-    { "value": "https://brand.ua/a%zz", "valid": false },
-    { "value": "https://brand.ua/#a#b", "valid": false }
+    {
+      "value": "https://xn--80aaxitdbjk.xn--j1amh/a",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua/a%20b",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua/?a[]=1",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua./x",
+      "valid": true
+    },
+    {
+      "value": "https://1.2.3.4/x",
+      "valid": true
+    },
+    {
+      "value": "https://localhost:5173/x",
+      "valid": true
+    },
+    {
+      "value": "https://[::1]:8080/x",
+      "valid": true
+    },
+    {
+      "value": "",
+      "valid": false
+    },
+    {
+      "value": "сукня",
+      "valid": false
+    },
+    {
+      "value": "brand.ua/x",
+      "valid": false
+    },
+    {
+      "value": "www.brand.ua/x",
+      "valid": false
+    },
+    {
+      "value": "javascript:alert(1)",
+      "valid": false
+    },
+    {
+      "value": "data:text/html,<b>x</b>",
+      "valid": false
+    },
+    {
+      "value": "ftp://brand.ua/x",
+      "valid": false
+    },
+    {
+      "value": "mailto:shop@brand.ua",
+      "valid": false
+    },
+    {
+      "value": "http://",
+      "valid": false
+    },
+    {
+      "value": "https://",
+      "valid": false
+    },
+    {
+      "value": "https:///dress",
+      "valid": false
+    },
+    {
+      "value": "http:brand.ua",
+      "valid": false
+    },
+    {
+      "value": "http:/brand.ua",
+      "valid": false
+    },
+    {
+      "value": " https://brand.ua/x",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/linen dress",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/\u0000",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/a b",
+      "valid": false
+    },
+    {
+      "value": "https://магазин.укр/a",
+      "valid": false
+    },
+    {
+      "value": "https://brand.укр/a",
+      "valid": false
+    },
+    {
+      "value": "http://my_shop.com/x",
+      "valid": false
+    },
+    {
+      "value": "https://-brand.ua/",
+      "valid": false
+    },
+    {
+      "value": "https://brand.123/x",
+      "valid": false
+    },
+    {
+      "value": "https://1.2.3.256/x",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua:80a/x",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/a|b",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/a[1]",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/a%zz",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/#a#b",
+      "valid": false
+    }
   ],
   "httpsUrl": [
-    { "value": "https://cdn.brand-site.ua/shirt.webp", "valid": true },
+    {
+      "value": "https://cdn.brand-site.ua/shirt.webp",
+      "valid": true
+    },
     {
       "value": "https://cdn.brand-site.ua/linen-dress.webp?v=2",
       "valid": true
     },
-    { "value": "https://BRAND.UA/logo.png", "valid": true },
-    { "value": "https://cdn.brand.ua/фото.jpg", "valid": true },
-    { "value": "https://xn--80aaxitdbjk.xn--j1amh/a.jpg", "valid": true },
-    { "value": "http://cdn.brand-site.ua/shirt.webp", "valid": false },
-    { "value": "HTTPS://cdn.brand.ua/a.jpg", "valid": false },
-    { "value": "Https://cdn.brand.ua/a.jpg", "valid": false },
-    { "value": "cdn.brand-site.ua/shirt.webp", "valid": false },
-    { "value": "data:image/png;base64,AAAA", "valid": false },
-    { "value": "javascript:alert(1)", "valid": false },
-    { "value": "https://", "valid": false },
-    { "value": "", "valid": false },
-    { "value": "https://магазин.укр/a.jpg", "valid": false },
-    { "value": "https://my_cdn.brand.ua/a.jpg", "valid": false },
-    { "value": "https://cdn.brand.ua/a b.jpg", "valid": false }
+    {
+      "value": "https://BRAND.UA/logo.png",
+      "valid": true
+    },
+    {
+      "value": "https://cdn.brand.ua/фото.jpg",
+      "valid": true
+    },
+    {
+      "value": "https://xn--80aaxitdbjk.xn--j1amh/a.jpg",
+      "valid": true
+    },
+    {
+      "value": "http://cdn.brand-site.ua/shirt.webp",
+      "valid": false
+    },
+    {
+      "value": "HTTPS://cdn.brand.ua/a.jpg",
+      "valid": false
+    },
+    {
+      "value": "Https://cdn.brand.ua/a.jpg",
+      "valid": false
+    },
+    {
+      "value": "cdn.brand-site.ua/shirt.webp",
+      "valid": false
+    },
+    {
+      "value": "data:image/png;base64,AAAA",
+      "valid": false
+    },
+    {
+      "value": "javascript:alert(1)",
+      "valid": false
+    },
+    {
+      "value": "https://",
+      "valid": false
+    },
+    {
+      "value": "",
+      "valid": false
+    },
+    {
+      "value": "https://магазин.укр/a.jpg",
+      "valid": false
+    },
+    {
+      "value": "https://my_cdn.brand.ua/a.jpg",
+      "valid": false
+    },
+    {
+      "value": "https://cdn.brand.ua/a b.jpg",
+      "valid": false
+    }
+  ],
+  "websiteUrl": [
+    {
+      "value": "https://brand.com.ua",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua/",
+      "valid": true
+    },
+    {
+      "value": "https://shop.brand.ua/uk/",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua/?ref=fulla",
+      "valid": true
+    },
+    {
+      "value": "https://xn--80aaxitdbjk.xn--j1amh",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua.",
+      "valid": true
+    },
+    {
+      "value": "https://brand.ua/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valid": true
+    },
+    {
+      "value": "",
+      "valid": false
+    },
+    {
+      "value": "brand.com.ua",
+      "valid": false
+    },
+    {
+      "value": "http://brand.ua",
+      "valid": false
+    },
+    {
+      "value": "HTTPS://brand.ua",
+      "valid": false
+    },
+    {
+      "value": "ftp://brand.ua",
+      "valid": false
+    },
+    {
+      "value": "https://",
+      "valid": false
+    },
+    {
+      "value": "https://brand",
+      "valid": false
+    },
+    {
+      "value": "https://localhost:5173",
+      "valid": false
+    },
+    {
+      "value": "https://1.2.3.4",
+      "valid": false
+    },
+    {
+      "value": "https://brand..ua",
+      "valid": false
+    },
+    {
+      "value": "https://brand .ua",
+      "valid": false
+    },
+    {
+      "value": "javascript:alert(1)",
+      "valid": false
+    },
+    {
+      "value": "https://brand.ua/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "valid": false
+    }
+  ],
+  "loginId": [
+    {
+      "value": "Info@Brand.UA",
+      "kind": "email",
+      "normalized": "info@brand.ua"
+    },
+    {
+      "value": "  buyer@mail.com ",
+      "kind": "email",
+      "normalized": "buyer@mail.com"
+    },
+    {
+      "value": "0671234567",
+      "kind": "phone",
+      "normalized": "+380671234567"
+    },
+    {
+      "value": "067 123 45 67",
+      "kind": "phone",
+      "normalized": "+380671234567"
+    },
+    {
+      "value": "(067) 123-45-67",
+      "kind": "phone",
+      "normalized": "+380671234567"
+    },
+    {
+      "value": "380671234567",
+      "kind": "phone",
+      "normalized": "+380671234567"
+    },
+    {
+      "value": "+380671234567",
+      "kind": "phone",
+      "normalized": "+380671234567"
+    },
+    {
+      "value": "+38 (067) 123-45-67",
+      "kind": "phone",
+      "normalized": "+380671234567"
+    },
+    {
+      "value": " +380 67 123 45 67 ",
+      "kind": "phone",
+      "normalized": "+380671234567"
+    },
+    {
+      "value": "+48 601 234 567",
+      "kind": "phone",
+      "normalized": "+48601234567"
+    },
+    {
+      "value": "+1 (212) 555-0123",
+      "kind": "phone",
+      "normalized": "+12125550123"
+    },
+    {
+      "value": "+44 20 7946 0958",
+      "kind": "phone",
+      "normalized": "+442079460958"
+    },
+    {
+      "value": "",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "   ",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "buyer@mail",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "buyer@@mail.com",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "067123456",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "06712345678",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "671234567",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "+38067123456",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "+3806712345678",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "+1234567",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "+1234567890123456",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "+0671234567",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "067+1234567",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "067.123.45.67",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "telephone",
+      "kind": null,
+      "normalized": null
+    },
+    {
+      "value": "+380 67 123 45 6x",
+      "kind": null,
+      "normalized": null
+    }
+  ],
+  "websiteUrlNormalized": [
+    {
+      "value": "https://goldi.ua/?srsltid=AYCX9vJHexSw4L6lxjK6NUabc",
+      "normalized": "https://goldi.ua/"
+    },
+    {
+      "value": "  https://brand.com.ua  ",
+      "normalized": "https://brand.com.ua"
+    },
+    {
+      "value": "https://brand.ua/?lang=uk",
+      "normalized": "https://brand.ua/?lang=uk"
+    },
+    {
+      "value": "https://brand.ua/shop?utm_source=ig&lang=uk&fbclid=abc",
+      "normalized": "https://brand.ua/shop?lang=uk"
+    },
+    {
+      "value": "https://brand.ua/?UTM_Medium=x&gclid=1",
+      "normalized": "https://brand.ua/"
+    },
+    {
+      "value": "https://brand.ua/?",
+      "normalized": "https://brand.ua/"
+    },
+    {
+      "value": "https://brand.ua/?a=1&&srsltid=x#top",
+      "normalized": "https://brand.ua/?a=1#top"
+    },
+    {
+      "value": "https://brand.ua/?ref=fulla",
+      "normalized": "https://brand.ua/?ref=fulla"
+    }
   ]
 }

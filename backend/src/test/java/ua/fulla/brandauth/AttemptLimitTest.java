@@ -50,7 +50,7 @@ class AttemptLimitTest {
     @Test
     void registerAndLoginShareTheLimitAndARefusedRegistrationCreatesNothing() throws Exception {
         String email = "brand-" + UUID.randomUUID() + "@example.com";
-        String body = "{\"email\":\"" + email + "\",\"password\":\"secret-123\"}";
+        String body = "{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}";
 
         for (int attempt = 1; attempt <= 10; attempt++) {
             attempt("/api/brand/login", "10.2.2.2", body).andExpect(status().isUnauthorized());
@@ -68,7 +68,7 @@ class AttemptLimitTest {
     void buyerRegistrationSharesTheSameLimit() throws Exception {
         // one counter per IP for all login and register endpoints (AttemptLimiter)
         String brandBody = "{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"wrong-password\"}";
-        String buyerBody = "{\"email\":\"buyer-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\"}";
+        String buyerBody = "{\"name\":\"Софія\",\"login\":\"buyer-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\"}";
 
         for (int attempt = 1; attempt <= 10; attempt++) {
             attempt("/api/brand/login", "10.4.4.4", brandBody).andExpect(status().isUnauthorized());

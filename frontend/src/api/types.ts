@@ -4,6 +4,7 @@
 export type ErrorCode =
   | "VALIDATION_FAILED"
   | "EMAIL_TAKEN_OR_INVALID"
+  | "LOGIN_INVALID"
   | "PASSWORD_TOO_SHORT"
   | "INVALID_CREDENTIALS"
   | "UNAUTHENTICATED"
@@ -20,6 +21,7 @@ export type ErrorCode =
   | "CONSENT_REQUIRED"
   | "PUBLISH_FIELDS_MISSING"
   | "INVALID_STATE"
+  | "FAVORITES_LIMIT_REACHED"
   | "TOO_MANY_REQUESTS"
   | "SERVICE_UNAVAILABLE";
 
@@ -41,8 +43,16 @@ export interface SessionResponse {
   email: string | null;
 }
 
-/** POST /api/brand/register and POST /api/brand/login. */
+/** POST /api/brand/login. */
 export interface BrandCredentialsRequest {
+  email: string;
+  password: string;
+}
+
+/** POST /api/brand/register (US-21): fields in form order; name and website go to the profile. */
+export interface BrandRegisterRequest {
+  name: string;
+  websiteUrl: string;
   email: string;
   password: string;
 }
@@ -54,9 +64,50 @@ export interface BrandSessionResponse {
   profileState: ProfileState;
 }
 
+/** POST /api/buyer/register and POST /api/buyer/login (api.md §2.3). */
+export interface BuyerCredentialsRequest {
+  email: string;
+  password: string;
+}
+
+/** POST /api/me/favorites (api.md §2.3): the only write of a registered buyer's favourites. */
+export interface FavoritesRequest {
+  productIds: string[];
+}
+
+/**
+ * Answer of POST /api/me/favorites: the full list (oldest like first) and the new IDs that did
+ * not fit under the account limit of 100 (ADR-0012).
+ */
+export interface FavoritesMergeResponse {
+  productIds: string[];
+  skippedIds: string[];
+}
+
+/** Answer of buyer register (201) and login (200). */
+export interface BuyerSessionResponse {
+  /** One of email / phone is set (the login), the other is null (ADR-0016). */
+  email: string | null;
+  phone: string | null;
+  name: string | null;
+}
+
+/**
+ * POST /api/buyer/register (US-02, ADR-0016): fields in form order. `login` is «Email або номер
+ * телефону» as typed; the server decides which it is and normalizes it. `name` is required
+ * (1–50 characters after trimming).
+ */
+export interface BuyerRegisterRequest {
+  name: string;
+  login: string;
+  password: string;
+}
+
 /** PUT /api/brand/profile. */
 export interface BrandProfileRequest {
   name: string;
+  /** Optional in the profile; null clears it. https:// with a domain, ≤ 2048. */
+  websiteUrl: string | null;
   logoImageId: string | null;
   logoUrl: string | null;
   consentGiven: boolean;
@@ -65,6 +116,7 @@ export interface BrandProfileRequest {
 /** GET and PUT /api/brand/profile; `name` is null while the state is INCOMPLETE. */
 export interface BrandProfileResponse {
   name: string | null;
+  websiteUrl: string | null;
   logoImageId: string | null;
   logoUrl: string | null;
   consentGiven: boolean;
@@ -115,6 +167,18 @@ export type FeedCard = PublicCard & {
 /** GET /api/feed (api.md §2.2). */
 export interface FeedResponse {
   items: FeedCard[];
+}
+
+/**
+ * GET /api/brands (api.md §2.2, ADR-0015): brands that have Published cards. `key` is the
+ * catalogue's brand key; `logoUrl` is `/api/images/{id}`, an `https://` URL or null (no consent,
+ * no logo, or an imported brand outside the dev demo).
+ */
+export interface BrandSummary {
+  key: string;
+  name: string;
+  logoUrl: string | null;
+  productCount: number;
 }
 
 /** Card as its brand sees it in the cabinet (api.md §2.1, §4.1). */

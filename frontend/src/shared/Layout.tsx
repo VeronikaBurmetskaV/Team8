@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useLogoutBrand } from "../features/cabinet-auth/api";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { BuyerHeader } from "./BuyerHeader";
+import { FavoritesLimitDialog } from "./FavoritesLimitDialog";
 import { errorMessage } from "./errors";
 import { confirmTexts } from "./messages.uk";
 import { useSession } from "./session";
@@ -24,12 +25,17 @@ export function Layout() {
     isCabinet ||
     pathname === "/" ||
     pathname === "/feed" ||
-    pathname === "/favorites";
+    pathname === "/favorites" ||
+    // The auth card is up to 880px wide (--auth-card-width): more than the narrow column.
+    pathname === "/login" ||
+    pathname === "/register";
 
   return (
     <div className={isWide ? "layout layout--wide" : "layout"}>
       {/* Buyer pages get the new header; the cabinet keeps its own, unchanged. */}
       {!isCabinet && <BuyerHeader />}
+      {/* «Вподобане заповнене»: one dialog for the feed, the catalogue hearts and the rest. */}
+      {!isCabinet && <FavoritesLimitDialog />}
       {isCabinet && (
         <header className="layout-header">
           <div className="layout-header-inner">
@@ -46,6 +52,7 @@ export function Layout() {
                 <NavLink to="/brand/products">Товари</NavLink>
                 <button
                   type="button"
+                  className="layout-logout"
                   disabled={logout.isPending}
                   onClick={() => setConfirmLogout(true)}
                 >
@@ -54,20 +61,23 @@ export function Layout() {
               </nav>
             )}
             {logout.isError && <p role="alert">{errorMessage(logout.error)}</p>}
-            <ConfirmDialog
-              open={confirmLogout}
-              title={confirmTexts.logoutQuestion}
-              confirmLabel={confirmTexts.logoutConfirm}
-              onConfirm={() => {
-                setConfirmLogout(false);
-                logout.mutate(undefined, {
-                  onSuccess: () => navigate("/login?tab=brand"),
-                });
-              }}
-              onCancel={() => setConfirmLogout(false)}
-            />
           </div>
         </header>
+      )}
+      {/* Outside the header row: a closed <dialog> must not take a place (or a frame) in it. */}
+      {isCabinet && (
+        <ConfirmDialog
+          open={confirmLogout}
+          title={confirmTexts.logoutQuestion}
+          confirmLabel={confirmTexts.logoutConfirm}
+          onConfirm={() => {
+            setConfirmLogout(false);
+            logout.mutate(undefined, {
+              onSuccess: () => navigate("/login?tab=brand"),
+            });
+          }}
+          onCancel={() => setConfirmLogout(false)}
+        />
       )}
       <main className="layout-main">
         <Outlet />
