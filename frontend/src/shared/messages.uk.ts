@@ -25,6 +25,11 @@ export const messages: Record<ErrorCode, string> = {
   // From the task text (ADR-0016): the buyer's «Email або номер телефону».
   LOGIN_INVALID: "Введіть email або номер телефону у форматі +380…",
   INVALID_CREDENTIALS: "Невірний email або пароль", // US-21.1 S2
+  // Login: what exactly is wrong, under that field (ADR-0018)
+  EMAIL_NOT_FOUND: "Акаунт з такою поштою не знайдено",
+  WRONG_PASSWORD: "Неправильний пароль",
+  BRAND_NAME_MISMATCH: "Назва бренду не збігається з вказаною при реєстрації",
+  NAME_MISMATCH: "Імʼя не збігається з вказаним при реєстрації",
   PROFILE_INVALID:
     "Вкажіть назву бренду та завантажте зображення у форматі JPG, PNG або WEBP", // US-22.1 S2
   CARD_INVALID_PRICE_OR_PHOTO:
@@ -67,6 +72,7 @@ export const messages: Record<ErrorCode, string> = {
     "На сайті не знайдено одягу: немає товарного фіду, Shopify-каталогу чи розмітки товарів. Додайте посилання на товарний фід",
   IMPORT_TOO_FREQUENT: "Імпорт можна запускати не частіше ніж раз на 10 хвилин",
   IMPORT_FAILED: "Імпорт перервався. Спробуйте запустити його ще раз",
+  PRODUCT_NOT_ON_SITE: "Цього товару більше немає на сайті бренду",
   // From the task text (ADR-0012 limits), no story yet.
   FAVORITES_LIMIT_REACHED:
     "Вподобане заповнене (100 з 100). Видаліть кілька товарів, щоб додати нові.",
@@ -368,6 +374,21 @@ export function errorText(code: string): string {
 /** Single login page /login with the «Вхід» / «Вхід для бренду» tabs. */
 export const loginTexts = {
   title: "Вхід до FULLA",
+  /** Under the password on both tabs; leads to /forgot-password (a stub for now). */
+  forgotPassword: "Забули пароль?",
+  /** The first field of each tab (2026-12-02): «Вхід» asks the name, «Вхід для бренду» the brand. */
+  buyerName: "Ваше імʼя",
+  brandName: "Назва бренду",
+  brandNameRequired: "Введіть назву бренду",
+  brandNameTooLong: "Назва бренду — до 50 символів",
+  /** Before sending (ADR-0018): each under its own field. */
+  emailRequired: "Введіть email",
+  emailFormat: "Перевірте формат email",
+  passwordRequired: "Введіть пароль",
+  /** 429 on /login: once for the form. */
+  tooManyAttempts: "Забагато спроб. Спробуйте за кілька хвилин",
+  /** Next to EMAIL_NOT_FOUND under «Email». */
+  registerLink: "Зареєструватися",
   tabsLabel: "Тип входу",
   buyerTab: "Вхід",
   brandTab: "Вхід для бренду",
@@ -379,6 +400,8 @@ export const loginTexts = {
 /** Brand registration (/brand/register, US-21). */
 export const brandRegisterTexts = {
   title: "Реєстрація бренду",
+  /** The brand's contact person, the first field of the form. */
+  contactName: "Ваше імʼя",
   name: "Назва бренду",
   website: "Сайт бренду",
   websitePlaceholder: "https://brand.com.ua",
@@ -425,9 +448,25 @@ export const buyerAuthTexts = {
     "Цей email або номер телефону вже використовується або має некоректний формат",
   nameRequired: "Введіть імʼя",
   nameInvalid: "Імʼя — до 50 символів",
+  loginRequired: "Введіть email або номер телефону",
   passwordsMismatch: "Паролі не збігаються",
   tooManyAttempts: "Забагато спроб, спробуйте пізніше",
   network: "Не вдалося з'єднатися, спробуйте ще раз",
+} as const;
+
+/**
+ * /forgot-password: a stub without a server request until password reset exists (it is out
+ * of the MVP, CLAUDE.md §1.2). PROVISIONAL texts, agreed in prompts/6.42.
+ */
+export const forgotPasswordTexts = {
+  title: "Відновлення пароля",
+  intro: "Введіть пошту, яку ви вказували при реєстрації",
+  emailLabel: "Email",
+  buyerLoginLabel: "Email або номер телефону",
+  submit: "Надіслати",
+  submitting: "Надсилаємо…",
+  sent: "Скоро тут можна буде отримати лист для відновлення пароля. Поки що зверніться до команди FULLA.",
+  backToLogin: "Повернутися до входу",
 } as const;
 
 /** Brand cabinet home page (/brand) and the «Додати товар» entry it shares with /brand/products. */
@@ -454,6 +493,8 @@ export const cabinetHomeTexts = {
   emptyProducts:
     "У вас поки немає товарів. Додайте перший — це займе кілька хвилин.",
   addProduct: "Додати товар",
+  /** /brand/products: next to «Оновити з сайту». */
+  addManually: "Додати вручну",
   fillProfile: "Заповнити профіль бренду",
   editProfile: "Редагувати профіль",
   productsTitle: "Товари",
@@ -540,10 +581,21 @@ export const siteImportTexts = {
     `Знято з публікації ${count} (розпродано або зникли з сайту)`,
   failed: "Імпорт не вдався",
   viewDrafts: "Переглянути чернетки",
-  lastImport: (dateTime: string) => `Останній імпорт: ${dateTime}`,
   autoRefresh:
-    "Ціни, розміри й наявність оновлюються автоматично раз на добу. Нові товари з'являються як чернетки.",
-  nextAllowed: (time: string) => `Наступний імпорт можна запустити о ${time}`,
+    "Ціни, розміри й наявність оновлюються автоматично. Нові товари з'являються як чернетки, а товари, яких більше немає на сайті, знімаються з публікації.",
+  /** «Оновити з сайту зараз» (/brand/products and /brand): the same import, same rate limit. */
+  syncNow: "Оновити з сайту",
+  syncing: "Оновлюємо…",
+  /** /brand/products, a website that is not verified yet (outside demo mode). */
+  verifyFirst: "Підтвердіть, що сайт ваш, на головній кабінету",
+  syncedAt: (when: string) => `Оновлено: ${when}`,
+  neverSynced: "Ще не оновлювалося з сайту",
+  syncFailed: "Останнє оновлення не вдалося",
+  today: (time: string) => `сьогодні о ${time}`,
+  yesterday: (time: string) => `вчора о ${time}`,
+  onDate: (date: string, time: string) => `${date} о ${time}`,
+  /** Only in the title of the disabled button while the 10-minute limit lasts. */
+  syncAgainAt: (time: string) => `Оновити знову можна о ${time}`,
   feedLabel: "Посилання на товарний фід (необов'язково)",
   feedHint:
     "Товарний фід — це XML-файл з усіма товарами для Google Merchant або Facebook. Він дає найточніші дані. Де взяти: Horoshop — «Маркетинг → Експорт → Google Merchant»; Prom — «Налаштування → Експорт товарів → XML для Google»; Shopify — застосунок Google & YouTube (або залиште поле порожнім: Shopify-каталог ми знайдемо самі). Посилання має бути на домені вашого сайту.",
@@ -557,21 +609,41 @@ export const siteImportTexts = {
 /** The brand's product list (/brand/products) and the card editor (ADR-0017 additions). */
 export const brandProductsTexts = {
   title: "Товари бренду",
-  filterLabel: "Показати",
-  filterAll: "Усі товари",
-  filterImportedDrafts: "Чернетки з сайту",
-  fromSite: "з сайту",
-  editedByHand: "змінено вручну",
-  selectAll: "Вибрати всі чернетки на сторінці",
+  /** document.title of /brand/products. */
+  documentTitle: "Товари бренду — FULLA",
+  documentTitleOf: (brand: string) => `Товари ${brand} — FULLA`,
+  /** Left of the publish buttons: «47 товарів». */
+  count: (count: number) =>
+    `${count} ${pluralUk(count, ["товар", "товари", "товарів"])}`,
+  empty: "У вас поки немає товарів",
+  statusDraft: "Чернетка",
+  statusPublished: "Опубліковано",
+  statusNotOnSite: "Немає на сайті",
+  /** Next to the disabled publish button and selection circle of a «Немає на сайті» card. */
+  notOnSiteHint: "Цього товару більше немає на сайті бренду",
+  removeFromList: "Прибрати зі списку",
+  removeFromListOf: (name: string) => `Прибрати «${name}» зі списку`,
+  removing: "Прибираємо…",
+  /** «Опублікувати вибрані» with «Немає на сайті» cards among them. */
+  skippedNotOnSite: (count: number) =>
+    `${count} ${pluralUk(count, ["товар", "товари", "товарів"])} пропущено: ${pluralUk(count, ["його", "їх", "їх"])} немає на сайті`,
+  selectAll: "Вибрати всі товари на сторінці",
   select: (name: string) => `Вибрати «${name}»`,
   publishSelected: (count: number) => `Опублікувати вибрані (${count})`,
   publishAll: (count: number) => `Опублікувати всі чернетки (${count})`,
+  /** Published → Draft (US-31 CL), one card or the selected ones; both ask first. */
+  unpublish: "Зняти з публікації",
+  unpublishSelected: (count: number) => `Зняти вибрані з публікації (${count})`,
+  unpublishing: "Знімаємо…",
+  unpublishQuestion:
+    "Зняти товар з публікації? Покупці більше не побачать його в стрічці й каталозі.",
+  unpublishConfirm: "Зняти",
+  unpublished: (count: number) => `Знято з публікації товарів: ${count}`,
   publishing: "Публікуємо…",
   published: (count: number) => `Опубліковано товарів: ${count}`,
   skipped: (count: number) =>
     `Не опубліковано: ${count} (вже опубліковані або змінилися — оновіть список)`,
   consentLink: "Підтвердити згоду",
-  emptyFilter: "Чернеток з сайту немає",
   edit: (name: string) => `Редагувати «${name}»`,
   editShort: "Редагувати",
 } as const;

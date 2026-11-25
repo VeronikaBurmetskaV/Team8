@@ -40,10 +40,12 @@ interface FieldErrorProps {
   /** Referenced by aria-describedby of the input. */
   id: string;
   message: string | undefined;
+  /** A way out next to the text, e.g. «Зареєструватися» under «Акаунт з такою поштою не знайдено». */
+  action?: ReactNode;
 }
 
 /** Error under one field. Not a live region: focus moves to the field, which reads it. */
-export function FieldError({ id, message }: FieldErrorProps) {
+export function FieldError({ id, message, action }: FieldErrorProps) {
   const reduceMotion = useReducedMotion() ?? false;
   return (
     <AnimatePresence initial={false}>
@@ -58,6 +60,7 @@ export function FieldError({ id, message }: FieldErrorProps) {
           transition={{ duration: reduceMotion ? 0 : 0.15 }}
         >
           {message}
+          {action && <> {action}</>}
         </motion.p>
       )}
     </AnimatePresence>

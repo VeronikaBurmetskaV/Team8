@@ -18,7 +18,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const credentials = { email: "buyer@mail.com", password: "password1" };
+const credentials = {
+  name: "Софія",
+  email: "buyer@mail.com",
+  password: "password1",
+};
 
 describe("buyer login while the backend has no /api/buyer/login", () => {
   it("answers «скоро запрацює» without any request", async () => {

@@ -2,6 +2,7 @@ package ua.fulla.catalogimport;
 
 import static io.zonky.test.db.AutoConfigureEmbeddedDatabase.DatabaseProvider.ZONKY;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -199,7 +200,8 @@ class BrandSiteImportTest {
             .andExpect(jsonPath("$.updated").value(0))
             .andExpect(jsonPath("$.skipped").value(2)) // the gift card and the sold-out hoodie
             .andExpect(jsonPath("$.errorCode").doesNotExist())
-            .andExpect(jsonPath("$.lastSuccessAt").isString());
+            .andExpect(jsonPath("$.lastSuccessAt").isString())
+            .andExpect(jsonPath("$.lastSyncedAt").isString());
 
         mvc.perform(get("/api/brand/products").session(brand.session()))
             .andExpect(jsonPath("$.length()").value(1))
@@ -382,6 +384,155 @@ class BrandSiteImportTest {
                 + "\"productUrl\":\"https://brand.example.com/a\"}")), 409, "CARD_NOT_EDITABLE");
     }
 
+    // ---------- 5. sync: «Немає на сайті» (ADR-0017, revised 2026-12-01) ----------
+
+    @Test
+    void syncAddsNewItemsAsDraftsAndUpdatesThePrice() throws Exception {
+        Brand brand = brand("owner@gmail.com");
+        saveProfile(brand, "https://" + brand.domain(), null, true).andExpect(status().isOk());
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true)));
+        publishAll(brand);
+
+        var counts = imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1200, true),
+            item("/p/new", "Нова сукня", 900, true)));
+
+        assertThat(counts.created()).isEqualTo(1);
+        assertThat(counts.updated()).isEqualTo(1);
+        assertThat(statuses(brand)).containsEntry("/p/a", "published").containsEntry("/p/new", "draft");
+        assertThat(rows(brand).get(0).get("price_uah")).as("/p/a, a published card too").isEqualTo(1200);
+    }
+
+    @Test
+    void itemGoneFromACompleteListingIsNotOnSiteUnpublishedAndCannotBePublished() throws Exception {
+        Brand brand = brand("owner@gmail.com");
+        saveProfile(brand, "https://" + brand.domain(), null, true).andExpect(status().isOk());
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true), item("/p/b", "Сукня Б", 1000, true)));
+        publishAll(brand).andExpect(jsonPath("$.publishedIds.length()").value(2));
+        String gone = idOf(brand, "/p/b");
+
+        var counts = imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true)));
+
+        assertThat(counts.hidden()).as("was published").isEqualTo(1);
+        assertThat(statuses(brand)).containsEntry("/p/b", "draft");
+        assertThat(missingSince(gone)).isNotNull();
+        // the cabinet: at the end of the list, with notOnSiteSince; the listed card has none
+        mvc.perform(get("/api/brand/products").session(brand.session()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[-1].id").value(gone))
+            .andExpect(jsonPath("$[-1].status").value("DRAFT"))
+            .andExpect(jsonPath("$[-1].notOnSiteSince").isString())
+            .andExpect(jsonPath("$[0].notOnSiteSince").doesNotExist());
+        // the buyers: not in the feed
+        mvc.perform(get("/api/feed"))
+            .andExpect(jsonPath("$.items[?(@.id == '" + gone + "')]").isEmpty());
+        // publishing it is refused, one card or many
+        expectError(postAs(brand, "/api/brand/products/" + gone + "/publish"), 409, "PRODUCT_NOT_ON_SITE");
+        mvc.perform(post("/api/brand/products/publish").with(csrf()).session(brand.session())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"ids\":[\"" + gone + "\"]}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.publishedIds").isEmpty())
+            .andExpect(jsonPath("$.skippedIds[0]").value(gone));
+        assertThat(statuses(brand)).containsEntry("/p/b", "draft");
+        // a second complete run without it changes nothing more
+        assertThat(imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true))).hidden()).isZero();
+    }
+
+    @Test
+    void itemBackOnTheSiteIsADraftAgainNotPublished() throws Exception {
+        Brand brand = brand("owner@gmail.com");
+        saveProfile(brand, "https://" + brand.domain(), null, true).andExpect(status().isOk());
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true), item("/p/b", "Сукня Б", 1000, true)));
+        publishAll(brand);
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true)));
+        String back = idOf(brand, "/p/b");
+        postAs(brand, "/api/brand/products/" + back + "/remove-from-list").andExpect(status().isNoContent());
+
+        var counts = imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true),
+            item("/p/b", "Сукня Б", 1000, true)));
+
+        assertThat(counts.updated()).isEqualTo(1);
+        assertThat(counts.created()).isZero();
+        assertThat(missingSince(back)).isNull();
+        assertThat(statuses(brand)).containsEntry("/p/b", "draft");
+        // back in the list (also after «Прибрати зі списку»), and it can be published again
+        mvc.perform(get("/api/brand/products").session(brand.session()))
+            .andExpect(jsonPath("$[?(@.id == '" + back + "')].notOnSiteSince").isEmpty())
+            .andExpect(jsonPath("$.length()").value(2));
+        postAs(brand, "/api/brand/products/" + back + "/publish").andExpect(status().isOk());
+    }
+
+    @Test
+    void anIncompleteRunMarksNothingAsNotOnSite() throws Exception {
+        Brand brand = brand("owner@gmail.com");
+        saveProfile(brand, "https://" + brand.domain(), null, true).andExpect(status().isOk());
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true), item("/p/b", "Сукня Б", 1000, true)));
+        publishAll(brand);
+
+        var counts = imports.apply(brand.id(), new ImportBatch(List.of(item("/p/a", "Сукня А", 1000, true)), false,
+            Set.of("/p/a"), "sitemap", null, 0));
+
+        assertThat(counts.hidden()).isZero();
+        assertThat(missingSince(idOf(brand, "/p/b"))).isNull();
+        assertThat(statuses(brand)).containsEntry("/p/b", "published");
+    }
+
+    @Test
+    void handEditsSurviveTheSyncWhileTheSiteChanges() throws Exception {
+        Brand brand = brand("owner@gmail.com");
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true)));
+        String id = idOf(brand, "/p/a");
+        mvc.perform(put("/api/brand/products/" + id).with(csrf()).session(brand.session())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Сукня А\",\"priceUah\":800,\"photoImageId\":null,"
+                    + "\"photoUrl\":\"https://cdn.example.com/p/a.jpg\","
+                    + "\"productUrl\":\"https://" + brand.domain() + "/p/a\"}"))
+            .andExpect(status().isOk());
+
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А нова", 1500, true)));
+
+        Map<String, Object> row = rows(brand).get(0);
+        assertThat(row.get("price_uah")).as("edited by hand").isEqualTo(800);
+        assertThat(row.get("name")).as("not edited: follows the site").isEqualTo("Сукня А нова");
+    }
+
+    @Test
+    void notOnSiteCardsLeaveTheCabinetListWhenRemovedOrAfter30Days() throws Exception {
+        Brand brand = brand("owner@gmail.com");
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true), item("/p/b", "Сукня Б", 1000, true),
+            item("/p/c", "Сукня В", 1000, true)));
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true)));
+        String removed = idOf(brand, "/p/b");
+        String old = idOf(brand, "/p/c");
+
+        // a card the site still lists can't be removed; another brand's card is unknown
+        expectError(postAs(brand, "/api/brand/products/" + idOf(brand, "/p/a") + "/remove-from-list"),
+            409, "INVALID_STATE");
+        Brand other = brand("other@gmail.com");
+        expectError(postAs(other, "/api/brand/products/" + removed + "/remove-from-list"), 404, "NOT_FOUND");
+
+        postAs(brand, "/api/brand/products/" + removed + "/remove-from-list").andExpect(status().isNoContent());
+        postAs(brand, "/api/brand/products/" + removed + "/remove-from-list").andExpect(status().isNoContent());
+        jdbc.sql("UPDATE products SET missing_since = now() - interval '31 days' WHERE id = :id")
+            .param("id", UUID.fromString(old)).update();
+
+        mvc.perform(get("/api/brand/products").session(brand.session()))
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].id").value(idOf(brand, "/p/a")));
+        assertThat(rows(brand)).as("nothing is deleted").hasSize(3);
+    }
+
+    @Test
+    void theDatabaseRefusesAPublishedNotOnSiteCard() throws Exception {
+        Brand brand = brand("owner@gmail.com");
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true), item("/p/b", "Сукня Б", 1000, true)));
+        imports.apply(brand.id(), complete(item("/p/a", "Сукня А", 1000, true)));
+
+        assertThatThrownBy(() -> jdbc.sql("UPDATE products SET status = 'published', published_at = now() WHERE id = :id")
+                .param("id", UUID.fromString(idOf(brand, "/p/b"))).update())
+            .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class)
+            .hasMessageContaining("products_missing_is_draft");
+    }
+
     // ---------- helpers ----------
 
     private ImportedItem item(String path, String name, int price, boolean available) {
@@ -414,7 +565,7 @@ class BrandSiteImportTest {
         currentDomain = domain;
         var result = mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Lileya\","
+                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"contactName\":\"Olena\",\"name\":\"Lileya\","
                     + "\"websiteUrl\":\"https://" + domain + "\"}"))
             .andExpect(status().isCreated())
             .andReturn();
@@ -497,6 +648,16 @@ class BrandSiteImportTest {
                 FROM products WHERE brand_id = :id AND external_id IS NOT NULL ORDER BY external_id
                 """)
             .param("id", brand.id()).query().listOfRows();
+    }
+
+    private String idOf(Brand brand, String externalId) {
+        return rows(brand).stream().filter(row -> externalId.equals(row.get("external_id")))
+            .findFirst().orElseThrow().get("id").toString();
+    }
+
+    private java.time.OffsetDateTime missingSince(String id) {
+        return jdbc.sql("SELECT missing_since FROM products WHERE id = :id").param("id", UUID.fromString(id))
+            .query(java.time.OffsetDateTime.class).list().get(0);
     }
 
     private Map<String, String> statuses(Brand brand) {

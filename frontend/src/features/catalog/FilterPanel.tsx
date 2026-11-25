@@ -76,8 +76,8 @@ export function FilterPanel({
   announcement,
 }: FilterPanelProps) {
   const panelRef = useRef<HTMLElement>(null);
-  // «Показати всі» in «Бренд» widens the panel; the panel unmounts on close, so the next
-  // opening starts narrow again.
+  // «Показати всі» in «Бренд»: on a laptop the column then stops being sticky (CSS, by
+  // data-expanded); the panel unmounts on close, so the next opening starts collapsed again.
   const [brandsExpanded, setBrandsExpanded] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
 

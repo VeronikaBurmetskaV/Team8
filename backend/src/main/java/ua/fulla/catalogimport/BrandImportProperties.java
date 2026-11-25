@@ -10,8 +10,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * {@code fulla.brand-import.*} (ADR-0017), defaults in application.yml. The hard limits of the
  * ADR apply on top of whatever is configured: ≥ 2 s between requests, ≤ 50 products and
- * ≤ 100 requests per import, ≥ 10 min between two imports of one brand, a daily refresh at
- * most once per hour.
+ * ≤ 100 requests per import, ≥ 10 min between two imports of one brand, the automatic sync
+ * ({@code sync-interval}: 24 h by default, 1 h in dev) at most once per hour.
  */
 @ConfigurationProperties("fulla.brand-import")
 record BrandImportProperties(
@@ -21,7 +21,7 @@ record BrandImportProperties(
         Integer maxRequests,
         Duration minInterval,
         boolean autoRefresh,
-        Duration refreshInterval,
+        Duration syncInterval,
         Boolean emailDomainVerification,
         List<String> publicEmailDomains,
         Duration verifyMinInterval,
@@ -58,11 +58,12 @@ record BrandImportProperties(
         return minInterval == null || minInterval.compareTo(MIN_INTERVAL) < 0 ? MIN_INTERVAL : minInterval;
     }
 
-    Duration refreshEvery() {
-        if (refreshInterval == null) {
+    /** How often a brand with a site is synced automatically; never more than once per hour. */
+    Duration syncEvery() {
+        if (syncInterval == null) {
             return Duration.ofDays(1);
         }
-        return refreshInterval.compareTo(MIN_REFRESH) < 0 ? MIN_REFRESH : refreshInterval;
+        return syncInterval.compareTo(MIN_REFRESH) < 0 ? MIN_REFRESH : syncInterval;
     }
 
     boolean emailDomainAllowed() {

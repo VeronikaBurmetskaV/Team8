@@ -2,6 +2,7 @@ import type {
   ApiErrorBody,
   BrandCard,
   BulkPublishResponse,
+  BulkUnpublishResponse,
   ImportStatus,
   SiteVerifyResponse,
   UpdateProductRequest,
@@ -154,6 +155,29 @@ export function publishBrandProduct(id: string): Promise<BrandCard> {
   return apiPost<BrandCard>(
     `/api/brand/products/${encodeURIComponent(id)}/publish`,
   );
+}
+
+/** «Прибрати зі списку»: hides a «Немає на сайті» card from the cabinet list (204, ADR-0017). */
+export function removeBrandProductFromList(id: string): Promise<void> {
+  return apiPost<void>(
+    `/api/brand/products/${encodeURIComponent(id)}/remove-from-list`,
+  );
+}
+
+/** Published → Draft (US-31 CL); no body. 404 for an unknown or another brand's card. */
+export function unpublishBrandProduct(id: string): Promise<BrandCard> {
+  return apiPost<BrandCard>(
+    `/api/brand/products/${encodeURIComponent(id)}/unpublish`,
+  );
+}
+
+/** POST /api/brand/products/unpublish: «Зняти вибрані з публікації». */
+export function unpublishBrandProducts(
+  ids: string[],
+): Promise<BulkUnpublishResponse> {
+  return apiPost<BulkUnpublishResponse>("/api/brand/products/unpublish", {
+    ids,
+  });
 }
 
 /** POST /api/brand/products/publish: many drafts with the consent gate (ADR-0017). */

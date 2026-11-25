@@ -10,6 +10,7 @@ import {
 import { CONSENT_TEXT } from "./profileForm";
 
 const activeProfile: BrandProfileResponse = {
+  contactName: "Олена",
   name: "Лляна",
   websiteUrl: "https://lileya.com.ua",
   logoImageId: null,

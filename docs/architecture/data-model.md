@@ -27,6 +27,7 @@ erDiagram
     }
     brand_profiles {
         uuid brand_id PK,FK
+        varchar contact_name "null = registered before 2026-11-30"
         varchar name "null = Incomplete"
         uuid logo_image_id FK
         varchar logo_url
@@ -89,6 +90,7 @@ erDiagram
 | Column | Type | Null | Constraint / default | Source |
 |---|---|---|---|---|
 | `brand_id` | `uuid` | no | PK, FK → `brand_accounts(id)` | A-03 |
+| `contact_name` | `varchar(50)` | yes | `CHECK (contact_name IS NULL OR char_length(btrim(contact_name)) BETWEEN 1 AND 50)` (`brand_profiles_contact_name_length`); no default | US-21 («Ваше імʼя», required at registration by Bean Validation `@DisplayName(required = true)`), editable in the profile («Контактна особа»); migration `V20261130_1200`. On the profile, not on `brand_accounts`: it is data the brand fills in and edits with the name and website, while `brand_accounts` keeps only the login data. Nullable without a default: brands registered before the migration keep `NULL` (a made-up value would look real); a profile save without it keeps the stored value, so they keep working until they fill it in. Not part of the derived state (§ domain-model 4.1) |
 | `name` | `varchar(50)` | yes | `CHECK (name IS NULL OR char_length(btrim(name)) BETWEEN 2 AND 50)`; `NULL` = state Incomplete | US-22.1 CL |
 | `logo_image_id` | `uuid` | yes | FK → `images(id)` | US-22.1 CL, ADR-0007 |
 | `logo_url` | `varchar(2048)` | yes | `CHECK (logo_url IS NULL OR logo_url LIKE 'https://%')` | US-22.1 CL |
@@ -119,6 +121,13 @@ The profile state is **derived**, not stored: `name IS NULL` → Incomplete; `co
 | `created_at`, `updated_at` | `timestamptz` | no | `now()` | ADR-0004 |
 
 No `brand_name` column: it is joined from `brand_profiles` (INV-03). No delete is ever issued (US-31 CL), so FKs need no `ON DELETE` rule.
+
+Brand site import (ADR-0017, migration `V20261201_1200`), in addition to its columns from `V20261129_1200`:
+
+| Column | Type | Null | Constraint / default | Source |
+|---|---|---|---|---|
+| `missing_since` | `timestamptz` | yes | `CHECK (missing_since IS NULL OR (brand_id IS NOT NULL AND external_id IS NOT NULL))` (`products_missing_only_brand_imported`); `CHECK (missing_since IS NULL OR status = 'draft')` (`products_missing_is_draft`) | «Немає на сайті»: set when a complete sync no longer lists the brand's imported card, cleared when it is listed again. The publish `UPDATE`s also require `missing_since IS NULL` |
+| `removed_from_list_at` | `timestamptz` | yes | `CHECK (removed_from_list_at IS NULL OR missing_since IS NOT NULL)` (`products_removed_needs_missing`) | «Прибрати зі списку»: hidden from the cabinet list; cleared when the card is listed again. The list also leaves out cards with `missing_since` older than 30 days. The row is never deleted |
 
 ### 2.4. `images` (ADR-0007)
 
@@ -186,7 +195,7 @@ These are enforced in the service/repository code, **inside one transaction** wh
 | T-6 | **Operator consent withdrawal unpublishes everything** (R-P10, INV-02) | Two tables must change together | `ops` command, one transaction: `UPDATE brand_profiles SET consent_given_at=NULL, consent_text=NULL …; UPDATE products SET status='draft', published_at=NULL WHERE brand_id=:brand AND status='published'`. |
 | T-7 | **Ownership** (INV-07) | The DB doesn't know who is calling | Every brand query has `AND brand_id = :sessionBrandId`; the brand ID comes from the session principal, never from the request body. |
 | T-8 | **A card/profile may reference only the brand's own image** (Q-03) | FK checks existence, not owner | Before insert/update: `SELECT 1 FROM images WHERE id=:img AND uploaded_by=:brand`, else `NOT_FOUND`. |
-| T-9 | **Registration creates account + empty profile together** (US-21 CL) | Two inserts | One transaction: insert `brand_accounts`, insert `brand_profiles(brand_id)`. `DuplicateKeyException` (SQLState 23505) → `409 EMAIL_TAKEN_OR_INVALID`. Then log in. |
+| T-9 | **Registration creates account + empty profile together** (US-21 CL) | Two inserts | One transaction: insert `brand_accounts`, insert `brand_profiles(brand_id, contact_name, name, website_url)`. `DuplicateKeyException` (SQLState 23505) → `409 EMAIL_TAKEN_OR_INVALID`. Then log in. |
 | T-10 | **Email normalized before insert/lookup** (ADR-0009) | The CHECK only rejects un-normalized values; it doesn't normalize | Service: `email.strip().toLowerCase(Locale.ROOT)` before every insert and login query. |
 | T-11 | **Favourites merge ignores unknown IDs and is idempotent** (ADR-0012, US-03 S1) | The FK would *reject* the whole statement on one unknown ID | `INSERT INTO favorites (buyer_id, product_id) SELECT :buyer, p.id FROM products p WHERE p.id = ANY(:ids) ON CONFLICT DO NOTHING`, then `SELECT product_id … ORDER BY created_at`. Max 500 IDs per request (validated before SQL). |
 | T-12 | **Exact formats** (US-21, US-02, US-26) | Regex CHECKs are coarse | Bean Validation is the authority: email `name@domain.tld`, `@HttpUrl` = `java.net.URI` parses, scheme `http`/`https`, non-empty host. The DB CHECKs are a safety net only. |

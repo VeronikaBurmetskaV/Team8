@@ -67,6 +67,38 @@
   color: var(--color-black);
 }
 
+/* The catalogue's modal: the heart and «×» in one row on the right (ProductModal `heart`). */
+.topBar {
+  display: flex;
+  align-self: flex-end;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* The heart of the catalogue tile, the same white circle and olive icon (CatalogTile). */
+.heart,
+.heart:hover:not(:disabled) {
+  width: var(--heart-button-size);
+  min-height: var(--heart-button-size);
+  height: var(--heart-button-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-heart-background);
+  color: var(--color-olive);
+  font-size: var(--icon-size);
+}
+
+.heart:hover:not(:disabled) {
+  background-color: var(--color-heart-background-hover);
+}
+
+.heart:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-olive-dark);
+  outline-offset: var(--focus-ring-width);
+  box-shadow: 0 0 0 calc(2 * var(--focus-ring-width)) var(--color-white);
+}
+
 /* The card fills its parent (ProductCard), so the box sets the size. */
 .cardBox {
   flex: 1 1 auto;

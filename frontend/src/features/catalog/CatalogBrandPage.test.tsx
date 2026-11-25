@@ -7,7 +7,7 @@ import type { FeedCard } from "../../api/types";
 import { toggleFavorite } from "../../shared/productLists";
 import { feedQueryKey } from "../feed/FeedPage";
 import { CatalogPage } from "./CatalogPage";
-import { CatalogTile } from "./CatalogTile";
+import { CatalogTile, CatalogTileView } from "./CatalogTile";
 
 // The heart's action is spied on: a click on the brand name must never reach it.
 vi.mock("../../shared/productLists", async (importOriginal) => ({
@@ -80,17 +80,26 @@ describe("brand name on a catalogue tile", () => {
   it("a click on it scrolls to the top and does not like the product", () => {
     const scrollTo = vi.fn();
     vi.stubGlobal("window", { scrollTo });
-    const tree = CatalogTile({
+    const onLike = vi.fn();
+    const onOpen = vi.fn();
+    const tree = CatalogTileView({
       card: card("x", "MINT"),
       isFavorite: false,
-      index: 0,
+      onLike,
+      onOpen,
     });
     const link = elements(tree).find((element) => element.type === Link);
-    expect(link?.props.to).toBe("/?brand=mint");
-    (link?.props.onClick as () => void)();
-    expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
-    expect(toggleFavorite).not.toHaveBeenCalled();
-    vi.unstubAllGlobals();
+    try {
+      expect(link?.props.to).toBe("/?brand=mint");
+      (link?.props.onClick as () => void)();
+      expect(scrollTo).toHaveBeenCalledWith({ top: 0 });
+      // neither a like nor the full card (the link is not inside «Відкрити картку»)
+      expect(onLike).not.toHaveBeenCalled();
+      expect(onOpen).not.toHaveBeenCalled();
+      expect(toggleFavorite).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

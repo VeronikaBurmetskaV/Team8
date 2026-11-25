@@ -31,3 +31,6 @@ fulla:
     # its profile without proving ownership. Local development only; the fetcher's safety limits
     # (https, public addresses, robots.txt, pauses, caps) still apply. Ignored with prod/ops.
     require-site-verification: false
+    # Sync every hour locally (24 h elsewhere); due brands are looked for every 10 minutes.
+    sync-interval: 1h
+    refresh-check-interval: 10m

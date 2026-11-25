@@ -8,6 +8,7 @@ import { BrandProfilePage } from "./BrandProfilePage";
 import { CONSENT_TEXT } from "./profileForm";
 
 const activeProfile: BrandProfileResponse = {
+  contactName: "Олена",
   name: "Лляна",
   websiteUrl: "https://lileya.com.ua",
   logoImageId: null,
@@ -69,5 +70,16 @@ describe("/brand/profile consent", () => {
     const html = render({ ...activeProfile, name: null, state: "INCOMPLETE" });
     expect(checkbox(html)).toContain('disabled=""');
     expect(html).toContain("Спочатку збережіть назву бренду");
+  });
+});
+
+describe("/brand/profile without «Контактна особа» (2026-12-02)", () => {
+  it("has no such field; the brand name is the first one", () => {
+    const html = render(activeProfile);
+    expect(html).not.toContain("Контактна особа");
+    expect(html).not.toContain('id="contactName"');
+    expect(html.slice(html.indexOf("<form"))).toMatch(
+      /^<form[^>]*><div><label for="name">Назва бренду<\/label>/,
+    );
   });
 });

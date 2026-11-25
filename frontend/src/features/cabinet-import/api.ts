@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   apiPut,
@@ -10,6 +11,7 @@ import {
   brandProfileQueryKey,
   toBrandProfile,
 } from "../../shared/brandProfile";
+import { refreshAfterPublishChange } from "../cabinet-products/queries";
 import { isRunning } from "./siteImport";
 
 export const importStatusKey = ["brand", "import", "status"] as const;
@@ -30,6 +32,46 @@ export function useImportStatus(enabled: boolean) {
     enabled,
     refetchInterval: (query) => (isRunning(query.state.data) ? POLL_MS : false),
   });
+}
+
+/**
+ * «Now» for the rate limit of the import button: the time of the first render, then the moment
+ * `until` (nextAllowedAt) passes — a timer, so the disabled button turns active by itself,
+ * without a reload. Also refreshed when a new `until` arrives.
+ */
+export function useClockUntil(until: string | null | undefined): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!until) return;
+    const timer = setTimeout(
+      () => setNow(Date.now()),
+      reopenDelay(until, Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [until]);
+  return now;
+}
+
+/** How long useClockUntil waits: until `until`, plus a little so it is surely past (ms). */
+export function reopenDelay(until: string, now: number): number {
+  return Math.max(new Date(until).getTime() - now, 0) + 250;
+}
+
+/**
+ * When a run ends, the product list has new drafts, changes and «Немає на сайті» cards: it is
+ * read again once.
+ */
+export function useReloadProductsAfterRun(status: ImportStatus | null) {
+  const queryClient = useQueryClient();
+  const wasRunning = useRef(false);
+  const running = isRunning(status);
+  useEffect(() => {
+    if (wasRunning.current && !running) {
+      // New drafts, changes, and cards unpublished as «Немає на сайті»: the catalogue too.
+      void refreshAfterPublishChange(queryClient);
+    }
+    wasRunning.current = running;
+  }, [running, queryClient]);
 }
 
 /** POST /api/brand/import: the answer (RUNNING) replaces the status and starts the polling. */

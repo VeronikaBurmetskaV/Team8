@@ -9,6 +9,7 @@ import { FeedPage } from "./features/feed/FeedPage";
 import { FavoritesPage } from "./features/favorites/FavoritesPage";
 import { BuyerRegisterPage } from "./features/buyer-auth/BuyerRegisterPage";
 import { LoginPage } from "./features/buyer-auth/LoginPage";
+import { ForgotPasswordPage } from "./features/buyer-auth/ForgotPasswordPage";
 import { CartPage } from "./features/cart/CartPage";
 import { BrandRegisterPage } from "./features/cabinet-auth/BrandRegisterPage";
 import { BrandHomePage } from "./features/cabinet-home/BrandHomePage";
@@ -37,6 +38,7 @@ export const routes: RouteObject[] = [
           { path: "/favorites", element: <FavoritesPage /> },
           { path: "/register", element: <BuyerRegisterPage /> },
           { path: "/login", element: <LoginPage /> },
+          { path: "/forgot-password", element: <ForgotPasswordPage /> },
           { path: "/cart", element: <CartPage /> },
           { path: "/brand/register", element: <BrandRegisterPage /> },
           {

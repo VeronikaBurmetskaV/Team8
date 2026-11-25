@@ -20,7 +20,8 @@ import { brandRegisterErrors, REGISTER_FIELDS } from "./registerErrors";
 import styles from "../../shared/auth/AuthForm.module.css";
 
 /**
- * /brand/register (US-21): brand name, website, email and password. The name and website go
+ * /brand/register (US-21): the contact person («Ваше імʼя»), brand name, website, email and
+ * password. The name and website go
  * straight to the profile, so the new brand is ACTIVE (domain-model.md §4.1). The website is
  * only stored: the server never requests it (A-15).
  */
@@ -35,7 +36,13 @@ export function BrandRegisterPage() {
     formState: { errors, isSubmitting },
   } = useForm<BrandRegisterForm>({
     resolver: zodResolver(brandRegisterSchema),
-    defaultValues: { name: "", websiteUrl: "", email: "", password: "" },
+    defaultValues: {
+      contactName: "",
+      name: "",
+      websiteUrl: "",
+      email: "",
+      password: "",
+    },
   });
 
   async function onSubmit(values: BrandRegisterForm) {
@@ -79,6 +86,23 @@ export function BrandRegisterPage() {
           onSubmit={handleSubmit(onSubmit)}
           noValidate
         >
+          <div className={styles.field}>
+            <label htmlFor="brand-contact-name">{t.contactName}</label>
+            <input
+              id="brand-contact-name"
+              type="text"
+              autoComplete="name"
+              aria-invalid={errors.contactName ? true : undefined}
+              aria-describedby={describedBy(
+                errors.contactName && "brand-contact-name-error",
+              )}
+              {...register("contactName")}
+            />
+            <FieldError
+              id="brand-contact-name-error"
+              message={errors.contactName?.message}
+            />
+          </div>
           <div className={styles.field}>
             <label htmlFor="brand-name">{t.name}</label>
             <input

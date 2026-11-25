@@ -13,6 +13,7 @@ import { SiteImportView, type SiteImportViewProps } from "./SiteImportCard";
 const TOKEN = "0123456789abcdef0123456789abcdef";
 
 const unverified: BrandProfileResponse = {
+  contactName: "Олена",
   name: "Goldi",
   websiteUrl: "https://goldi.ua",
   logoImageId: null,
@@ -40,6 +41,7 @@ const idle: ImportStatus = {
   startedAt: null,
   finishedAt: null,
   lastSuccessAt: null,
+  lastSyncedAt: null,
   nextAllowedAt: null,
   found: 0,
   created: 0,
@@ -154,7 +156,9 @@ describe("«Імпорт з сайту»: site verified", () => {
     expect(html).toContain("Horoshop");
     expect(html).toContain("Prom");
     expect(html).toContain("Shopify");
-    expect(html).toContain("автоматично раз на добу");
+    expect(html).toContain("оновлюються автоматично");
+    // nothing synced yet: no «Оновлено: …»
+    expect(html).not.toContain("Оновлено:");
     expect(statusRegion(html)).toBe("");
   });
 
@@ -199,10 +203,11 @@ describe("«Імпорт з сайту»: site verified", () => {
     );
     expect(region).toContain("Знято з публікації 2");
     expect(region).toMatch(
-      /<a[^>]*href="\/brand\/products\?filter=imported"[^>]*>Переглянути чернетки<\/a>/,
+      /<a[^>]*href="\/brand\/products"[^>]*>Переглянути чернетки<\/a>/,
     );
-    expect(html).toContain("Останній імпорт: 25.11.2026, 17:55");
-    expect(html).toMatch(button("Імпортувати товари з goldi.ua"));
+    // after the first import the same button is «Оновити з сайту»
+    expect(html).toContain("Оновлено: сьогодні о 17:55");
+    expect(html).toMatch(button("Оновити з сайту"));
   });
 
   it("shows why the import failed", () => {
@@ -215,7 +220,7 @@ describe("«Імпорт з сайту»: site verified", () => {
     );
   });
 
-  it("explains the 10-minute limit with the time of the next import", () => {
+  it("during the 10-minute limit: the button is disabled, the time only in its title", () => {
     const html = render({
       status: {
         ...idle,
@@ -225,7 +230,21 @@ describe("«Імпорт з сайту»: site verified", () => {
       start: { ...action("IMPORT_TOO_FREQUENT"), onStart: noop },
     });
     expect(html).toContain(messages.IMPORT_TOO_FREQUENT);
-    expect(html).toContain("Наступний імпорт можна запустити о 18:10");
+    expect(html).not.toContain("Наступний імпорт");
+    expect(html).toMatch(
+      /<button[^>]*disabled=""[^>]*title="Оновити знову можна о 18:10"[^>]*>Імпортувати товари з goldi.ua<\/button>/,
+    );
+    // once the time has passed (the timer moves «now»), it is active again, without a title
+    const later = render({
+      status: {
+        ...idle,
+        status: "DONE",
+        nextAllowedAt: "2026-11-25T16:10:00Z",
+      },
+      now: Date.parse("2026-11-25T16:11:00Z"),
+    });
+    expect(later).toMatch(button("Імпортувати товари з goldi.ua"));
+    expect(later).not.toContain("Оновити знову можна");
   });
 
   it("disables the import button while it starts", () => {

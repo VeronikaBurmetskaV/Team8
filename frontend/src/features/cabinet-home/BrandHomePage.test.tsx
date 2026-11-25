@@ -17,6 +17,7 @@ import { BrandHomePage } from "./BrandHomePage";
 import { homeNotices, summarizeProducts, websiteLink } from "./cabinetHome";
 
 const consentedProfile: BrandProfileResponse = {
+  contactName: "Олена",
   name: "Тестовий бренд",
   websiteUrl: "https://lileya.com.ua/",
   logoImageId: null,
@@ -283,6 +284,7 @@ const importStatus: ImportStatus = {
   startedAt: null,
   finishedAt: null,
   lastSuccessAt: null,
+  lastSyncedAt: null,
   nextAllowedAt: null,
   found: 0,
   created: 0,

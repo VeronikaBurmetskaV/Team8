@@ -131,7 +131,7 @@ class FavoritesTest {
         // a brand session is the wrong account type (ADR-0006)
         MockHttpSession brand = (MockHttpSession) mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"Lileya\",\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"brand-"
+                .content("{\"contactName\":\"Olena\",\"name\":\"Lileya\",\"websiteUrl\":\"https://lileya.com.ua\",\"email\":\"brand-"
                     + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\"}"))
             .andExpect(status().isCreated())
             .andReturn().getRequest().getSession(false);

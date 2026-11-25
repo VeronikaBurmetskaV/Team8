@@ -15,7 +15,9 @@ import ua.fulla.feed.BrandListRepository.BrandRow;
  * The brands of the catalogue with their logos (ADR-0015). A logo is shown only when the brand
  * may be shown with its materials:
  * <ul>
- *   <li>a registered brand: only with consent (state CONSENTED, US-22.2) — without it null;</li>
+ *   <li>a registered brand: only with consent (state CONSENTED, US-22.2) — without it null; the
+ *       logo of its profile, else (only with {@code fulla.brands.source-logos}, i.e. dev) the
+ *       logo of its own site found by the brand site import (ADR-0017);</li>
  *   <li>an imported brand (ADR-0014): the source site's logo, only for a single-brand source and
  *       only when {@code fulla.brands.source-logos} is on — set in {@code application-dev.yml}
  *       only, so {@code prod} and {@code ops} always get null.</li>
@@ -65,6 +67,12 @@ class BrandListService {
         if (!row.consented()) {
             return null;
         }
-        return row.logoImageId() != null ? "/api/images/" + row.logoImageId() : row.logoUrl();
+        if (row.logoImageId() != null) {
+            return "/api/images/" + row.logoImageId();
+        }
+        if (row.logoUrl() != null) {
+            return row.logoUrl();
+        }
+        return sourceLogos ? row.siteLogoUrl() : null;
     }
 }

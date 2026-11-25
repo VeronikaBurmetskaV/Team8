@@ -23,6 +23,8 @@ class BrandSiteController {
             Instant startedAt,
             Instant finishedAt,
             Instant lastSuccessAt,
+            /** When the last successful sync finished («Оновлено: …»); the same as lastSuccessAt. */
+            Instant lastSyncedAt,
             Instant nextAllowedAt,
             int found,
             int created,
@@ -70,6 +72,7 @@ class BrandSiteController {
             state.method() == null ? null : state.method().toUpperCase(Locale.ROOT),
             state.startedAt(),
             state.finishedAt(),
+            state.lastSuccessAt(),
             state.lastSuccessAt(),
             next,
             state.found(),

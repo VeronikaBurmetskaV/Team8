@@ -4,6 +4,7 @@ import { parseLoginId } from "./loginId";
 import {
   brandNameInvalidMessage,
   buyerAuthTexts,
+  loginTexts,
   messages,
   websiteUrlInvalidMessage,
 } from "./messages.uk";
@@ -60,8 +61,26 @@ const brandName = z
     return length >= NAME_MIN && length <= NAME_MAX && !/\p{Cc}/u.test(name);
   }, brandNameInvalidMessage);
 
-/** Brand registration (US-21): fields in form order — name, website, email, password. */
+/**
+ * A person's name: the buyer's «Імʼя» (US-02) and the brand's contact person («Ваше імʼя»,
+ * «Контактна особа»). Required, 1–50 characters after trimming, not only spaces, no control
+ * characters (@DisplayName on the backend).
+ */
+const personName = z
+  .string()
+  .trim()
+  .min(1, { message: buyerAuthTexts.nameRequired, abort: true })
+  .refine(
+    (name) => codePointLength(name) <= NAME_MAX && !/\p{Cc}/u.test(name),
+    buyerAuthTexts.nameInvalid,
+  );
+
+/**
+ * Brand registration (US-21): fields in form order — contact name, brand name, website, email,
+ * password.
+ */
 export const brandRegisterSchema = z.object({
+  contactName: personName,
   name: brandName,
   websiteUrl: z
     .string()
@@ -73,31 +92,44 @@ export const brandRegisterSchema = z.object({
 
 export type BrandRegisterForm = z.infer<typeof brandRegisterSchema>;
 
+/** The login email (ADR-0018): «Введіть email» when empty, «Перевірте формат email» otherwise. */
+const loginEmail = z
+  .string()
+  .trim()
+  .min(1, { message: loginTexts.emailRequired, abort: true })
+  .max(EMAIL_MAX, loginTexts.emailFormat)
+  .regex(EMAIL, loginTexts.emailFormat);
+
 /**
- * Brand login (US-21.1). Only "not empty" is checked: the registration rules here
- * would hint which field is wrong, and the answer must be one common message.
+ * Brand login (US-21.1): «Назва бренду» (2026-12-02), email and password, each error under its
+ * own field (ADR-0018). The name: 1–50 characters after trimming, not only spaces. The password
+ * only must not be empty: the server says whether it is right.
  */
 export const brandLoginSchema = z.object({
-  email: z.string().trim().min(1, messages.INVALID_CREDENTIALS),
-  password: z.string().min(1, messages.INVALID_CREDENTIALS),
+  brandName: z
+    .string()
+    .trim()
+    .min(1, { message: loginTexts.brandNameRequired, abort: true })
+    .refine(
+      (name) => codePointLength(name) <= NAME_MAX,
+      loginTexts.brandNameTooLong,
+    ),
+  email: loginEmail,
+  password: z.string().min(1, loginTexts.passwordRequired),
 });
 
 export type BrandLoginForm = z.infer<typeof brandLoginSchema>;
 
 /**
- * Buyer login (US-03): an email of the right shape and a non-empty password, shown under
- * the fields. Only the shape is checked here, so it hints nothing about the account; a
- * wrong pair is the one common INVALID_CREDENTIALS message from the server.
+ * Buyer login (US-03): «Ваше імʼя», an email of the right shape and a non-empty password, each
+ * error under its own field. The server (once it exists) says which one is wrong (ADR-0018).
  */
 export const buyerLoginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    // An empty field gets only «Введіть email», not the format message as well.
-    .min(1, { message: buyerAuthTexts.emailRequired, abort: true })
-    .max(EMAIL_MAX, buyerAuthTexts.emailInvalid)
-    .regex(EMAIL, buyerAuthTexts.emailInvalid),
-  password: z.string().min(1, buyerAuthTexts.passwordRequired),
+  // «Ваше імʼя» (2026-12-02): the rule of the name at registration (1–50, not only spaces).
+  name: personName,
+  // An empty field gets only «Введіть email», not the format message as well.
+  email: loginEmail,
+  password: z.string().min(1, loginTexts.passwordRequired),
 });
 
 export type BuyerLoginForm = z.infer<typeof buyerLoginSchema>;
@@ -109,14 +141,7 @@ export type BuyerLoginForm = z.infer<typeof buyerLoginSchema>;
 export const buyerRegisterSchema = z
   .object({
     // «Імʼя»: required, 1–50 characters after trimming, not only spaces (@DisplayName).
-    name: z
-      .string()
-      .trim()
-      .min(1, { message: buyerAuthTexts.nameRequired, abort: true })
-      .refine(
-        (name) => codePointLength(name) <= NAME_MAX && !/\p{Cc}/u.test(name),
-        buyerAuthTexts.nameInvalid,
-      ),
+    name: personName,
     // «Email або номер телефону»: the same rules as the server (shared/loginId.ts).
     login: z
       .string()
@@ -150,6 +175,34 @@ export type BuyerRegisterForm = z.infer<typeof buyerRegisterSchema>;
 export const brandNameSchema = z.object({
   name: brandName,
 });
+
+/**
+ * «Забули пароль?» (/forgot-password): the brand's email (strict format) or, for a buyer,
+ * «Email або номер телефону» (parseLoginId, the same rule as /register).
+ */
+export const forgotPasswordSchemas = {
+  brand: z.object({
+    login: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .min(1, { message: buyerAuthTexts.emailRequired, abort: true })
+      .max(EMAIL_MAX, buyerAuthTexts.emailInvalid)
+      .regex(EMAIL, buyerAuthTexts.emailInvalid),
+  }),
+  buyer: z.object({
+    login: z
+      .string()
+      .trim()
+      .min(1, { message: buyerAuthTexts.loginRequired, abort: true })
+      .refine(
+        (login) => parseLoginId(login) !== null,
+        buyerAuthTexts.loginInvalid,
+      ),
+  }),
+} as const;
+
+export type ForgotPasswordForm = { login: string };
 
 /** The website in the profile: optional (empty = none), otherwise the registration rule. */
 export const optionalWebsiteUrl = z

@@ -105,7 +105,7 @@ class BrandSiteImportDemoModeTest {
         var result = mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"owner-" + UUID.randomUUID() + "@gmail.com\",\"password\":\"secret-123\","
-                    + "\"name\":\"Lileya\",\"websiteUrl\":\"https://" + domain + "\"}"))
+                    + "\"contactName\":\"Olena\",\"name\":\"Lileya\",\"websiteUrl\":\"https://" + domain + "\"}"))
             .andExpect(status().isCreated())
             .andReturn();
         return new Brand((MockHttpSession) result.getRequest().getSession(false), domain);

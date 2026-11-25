@@ -6,13 +6,15 @@ import {
   useRef,
   useState,
 } from "react";
-import { Link, useSearchParams } from "react-router";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getFeed } from "../../api/client";
 import type { FeedCard } from "../../api/types";
 import { FiltersIcon } from "../../shared/icons";
 import { catalogTexts as t } from "../../shared/messages.uk";
+import { useFavoritesLimit } from "../../shared/favoritesLimit";
 import { favoriteList, useProductList } from "../../shared/productLists";
+import { ProductModal } from "../../shared/SavedProducts/ProductModal";
 import { feedQueryKey } from "../feed/FeedPage";
 import {
   brandOptions,
@@ -35,7 +37,17 @@ import { restoreLabel } from "./filterState";
 import { useCatalogFilters } from "./useCatalogFilters";
 import { BrandTiles } from "./BrandTiles";
 import { showBrandTiles } from "./brandGrid";
-import { CatalogTile, CatalogTileSkeleton } from "./CatalogTile";
+import {
+  CatalogTile,
+  CatalogTileSkeleton,
+  likeFromCatalog,
+} from "./CatalogTile";
+import {
+  closeAction,
+  productOfUrl,
+  withProduct,
+  type ProductModalState,
+} from "./productParam";
 import { FilterPanel } from "./FilterPanel";
 import { HeroBanner } from "./HeroBanner";
 import { revealDelay, useReveal } from "../../shared/reveal";
@@ -123,6 +135,23 @@ export function CatalogPage() {
     setPaging({ filterKey, visible: nextVisibleCount(visible, items.length) });
 
   const favorites = useProductList(favoriteList);
+  const { limit } = useFavoritesLimit();
+
+  // The full card lives in the URL (?product=<id>): a link opens it, «Назад» closes it, the
+  // filters stay. A product the catalogue does not have is ignored.
+  const [productParams, setProductParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const openCard = productOfUrl(productParams, allItems);
+  const openProduct = (card: FeedCard) => {
+    const state: ProductModalState = { productModal: true };
+    setProductParams(withProduct(productParams, card.id), { state });
+  };
+  const closeProduct = () => {
+    const action = closeAction(location.state, productParams);
+    if (action.kind === "back") void navigate(-1);
+    else setProductParams(action.params, { replace: true });
+  };
   const favoriteIds = useMemo(
     () => new Set(favorites.map((item) => item.id)),
     [favorites],
@@ -309,8 +338,24 @@ export function CatalogPage() {
           onShowMore={showMore}
           onRemoveChip={removeChip}
           onResetAll={resetAll}
+          onOpenProduct={openProduct}
         />
       </div>
+
+      {/* The full card of ?product=<id> — the same modal as in «Вподобане», with the heart. */}
+      <ProductModal
+        product={openCard}
+        onClose={closeProduct}
+        heart={
+          openCard === null
+            ? undefined
+            : {
+                pressed: favoriteIds.has(openCard.id),
+                label: t.favoriteLabel(openCard.name),
+                onToggle: () => likeFromCatalog(openCard, limit),
+              }
+        }
+      />
     </div>
   );
 }
@@ -369,6 +414,8 @@ interface CatalogResultsProps {
   onResetAll: () => void;
   /** Empty result without chips (the brand page): this text instead of «Товарів поки немає». */
   emptyText?: string;
+  /** A click on a tile (not on its heart or brand): the full card. */
+  onOpenProduct?: (card: FeedCard) => void;
 }
 
 /** Hook-free list part of the page: filter chips, grid, empty states, «Показати ще». */
@@ -383,6 +430,7 @@ export function CatalogResults({
   onRemoveChip,
   onResetAll,
   emptyText = t.empty,
+  onOpenProduct,
 }: CatalogResultsProps) {
   const shown = items.slice(0, visible);
   const filtered = chips.length > 0;
@@ -450,6 +498,7 @@ export function CatalogResults({
                 card={card}
                 isFavorite={favoriteIds.has(card.id)}
                 index={index}
+                onOpen={onOpenProduct}
               />
             </li>
           ))}

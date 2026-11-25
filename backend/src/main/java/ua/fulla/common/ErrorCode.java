@@ -10,6 +10,12 @@ public enum ErrorCode {
     LOGIN_INVALID,
     PASSWORD_TOO_SHORT,
     INVALID_CREDENTIALS,
+    // Login: what exactly is wrong (ADR-0018), checked in this order
+    EMAIL_NOT_FOUND,
+    WRONG_PASSWORD,
+    BRAND_NAME_MISMATCH,
+    /** Buyer login (US-03), once POST /api/buyer/login exists. */
+    NAME_MISMATCH,
     UNAUTHENTICATED,
     FORBIDDEN,
     NOT_FOUND,
@@ -34,6 +40,8 @@ public enum ErrorCode {
     NO_PRODUCTS_FOUND,
     IMPORT_TOO_FREQUENT,
     IMPORT_FAILED,
+    /** Publish of a card the brand's site no longer lists («Немає на сайті», ADR-0017). */
+    PRODUCT_NOT_ON_SITE,
     TOO_MANY_REQUESTS,
     SERVICE_UNAVAILABLE
 }

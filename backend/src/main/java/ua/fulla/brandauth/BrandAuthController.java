@@ -13,6 +13,7 @@ import ua.fulla.brandauth.BrandAuthService.AuthenticatedBrand;
 import ua.fulla.brandprofile.ProfileState;
 import ua.fulla.common.AttemptLimiter;
 import ua.fulla.common.BrandName;
+import ua.fulla.common.DisplayName;
 import ua.fulla.common.PasswordLength;
 import ua.fulla.common.SessionAccount;
 import ua.fulla.common.SessionAccount.AccountType;
@@ -24,22 +25,30 @@ import ua.fulla.common.WebsiteUrl;
 @RestController
 class BrandAuthController {
 
-    /** Login: not {@code @Valid}, any malformed input is the same 401 (US-21.1 CL). */
-    record CredentialsRequest(@StrictEmail String email, @PasswordLength String password) {
+    private static final String CONTACT_NAME_INVALID =
+        "VALIDATION_FAILED: contactName must be 1-50 characters without control characters";
+
+    /**
+     * Login: brand name + email + password (2026-12-02). Not {@code @Valid}: the service checks
+     * email → password → brand name and answers 401 with the first failing field (ADR-0018).
+     */
+    record CredentialsRequest(String brandName, @StrictEmail String email, @PasswordLength String password) {
 
         // Never print the password, e.g. if the record ends up in a log line.
         @Override
         public String toString() {
-            return "CredentialsRequest[email=" + email + ", password=***]";
+            return "CredentialsRequest[brandName=" + brandName + ", email=" + email + ", password=***]";
         }
     }
 
     /**
-     * Registration (US-21): the fields in form order — name, website, email, password — so the
-     * top-level error code is the first wrong field (api.md §3.1). Name and website have the
-     * profile's rules (PROFILE_INVALID with fields.name / fields.websiteUrl).
+     * Registration (US-21): the fields in form order — contact name, brand name, website, email,
+     * password — so the top-level error code is the first wrong field (api.md §3.1). The contact
+     * person («Ваше імʼя») is required, 1–50 characters (VALIDATION_FAILED with fields.contactName);
+     * name and website have the profile's rules (PROFILE_INVALID with fields.name / fields.websiteUrl).
      */
     record RegisterRequest(
+            @DisplayName(required = true, message = CONTACT_NAME_INVALID) String contactName,
             @BrandName String name,
             @WebsiteUrl(required = true) String websiteUrl,
             @StrictEmail String email,
@@ -48,7 +57,8 @@ class BrandAuthController {
         // Never print the password, e.g. if the record ends up in a log line.
         @Override
         public String toString() {
-            return "RegisterRequest[name=" + name + ", websiteUrl=" + websiteUrl + ", email=" + email
+            return "RegisterRequest[contactName=" + contactName + ", name=" + name + ", websiteUrl=" + websiteUrl
+                + ", email=" + email
                 + ", password=***]";
         }
     }
@@ -71,16 +81,17 @@ class BrandAuthController {
     BrandSessionResponse register(@Valid @RequestBody RegisterRequest body,
             HttpServletRequest request, HttpServletResponse response) {
         attemptLimiter.check(request);
-        return startSession(service.register(body.email(), body.password(), body.name(), body.websiteUrl()),
+        return startSession(service.register(body.email(), body.password(), body.contactName(), body.name(),
+                body.websiteUrl()),
             request, response);
     }
 
-    /** Not {@code @Valid}: any malformed input is the same 401 as a wrong password (US-21.1 CL). */
+    /** Not {@code @Valid}: a malformed email is EMAIL_NOT_FOUND like an unknown one (ADR-0018). */
     @PostMapping("/api/brand/login")
     BrandSessionResponse login(@RequestBody CredentialsRequest body,
             HttpServletRequest request, HttpServletResponse response) {
         attemptLimiter.check(request);
-        return startSession(service.login(body.email(), body.password()), request, response);
+        return startSession(service.login(body.brandName(), body.email(), body.password()), request, response);
     }
 
     @PostMapping("/api/brand/logout")

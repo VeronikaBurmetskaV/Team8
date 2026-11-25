@@ -35,7 +35,11 @@ import {
 // The same examples as the backend tests BrandAuthTest and BrandProfileTest (R-T17).
 const PASSWORD = "secret-123";
 /** Valid name and website: the email and password tests change only their own field. */
-const BRAND = { name: "Lileya", websiteUrl: "https://lileya.com.ua" };
+const BRAND = {
+  contactName: "Олена",
+  name: "Lileya",
+  websiteUrl: "https://lileya.com.ua",
+};
 
 /** Field name → messages of a failed parse. */
 function fieldErrors(result: {
@@ -150,30 +154,82 @@ describe("brandRegisterSchema: password", () => {
 });
 
 describe("brandLoginSchema", () => {
-  it("accepts anything that is not empty: the server decides", () => {
+  it("accepts a well-formed email and any non-empty password: the server decides", () => {
     const result = brandLoginSchema.parse({
-      email: " not-an-email ",
+      brandName: "  Lileya ",
+      email: " Info@Brand.UA ",
       password: "1",
     });
-    expect(result).toEqual({ email: "not-an-email", password: "1" });
+    expect(result).toEqual({
+      brandName: "Lileya",
+      email: "Info@Brand.UA",
+      password: "1",
+    });
   });
 
   it.each([
-    { email: "", password: PASSWORD },
-    { email: "   ", password: PASSWORD },
-    { email: "info@brand.ua", password: "" },
-  ])("rejects %j with the common message", (credentials) => {
-    const result = brandLoginSchema.safeParse(credentials);
-    expect(result.success).toBe(false);
-    const texts = Object.values(fieldErrors(result)).flat();
-    expect(texts).toEqual([messages.INVALID_CREDENTIALS]);
+    [{ email: "", password: PASSWORD }, { email: ["Введіть email"] }],
+    [{ email: "   ", password: PASSWORD }, { email: ["Введіть email"] }],
+    [
+      { email: "info.brand.ua", password: PASSWORD },
+      { email: ["Перевірте формат email"] },
+    ],
+    [
+      { email: "info@brand.ua", password: "" },
+      { password: ["Введіть пароль"] },
+    ],
+    [
+      { email: "", password: "" },
+      { email: ["Введіть email"], password: ["Введіть пароль"] },
+    ],
+  ])("%j → each error under its own field", (credentials, expected) => {
+    const result = brandLoginSchema.safeParse({
+      brandName: "Lileya",
+      ...credentials,
+    });
+    expect(fieldErrors(result)).toEqual(expected);
+  });
+
+  it.each(["", "   ", "\u00A0"])(
+    "an empty brand name %j gets «Введіть назву бренду» under its field",
+    (brandName) => {
+      const result = brandLoginSchema.safeParse({
+        brandName,
+        email: "info@brand.ua",
+        password: PASSWORD,
+      });
+      expect(fieldErrors(result)).toEqual({
+        brandName: ["Введіть назву бренду"],
+      });
+    },
+  );
+
+  it("1 and 50 characters pass, 51 don't", () => {
+    const login = { email: "info@brand.ua", password: PASSWORD };
+    expect(
+      brandLoginSchema.safeParse({ ...login, brandName: "Л" }).success,
+    ).toBe(true);
+    expect(
+      brandLoginSchema.safeParse({ ...login, brandName: "я".repeat(50) })
+        .success,
+    ).toBe(true);
+    expect(
+      fieldErrors(
+        brandLoginSchema.safeParse({ ...login, brandName: "я".repeat(51) }),
+      ),
+    ).toEqual({ brandName: ["Назва бренду — до 50 символів"] });
   });
 });
 
 describe("buyerLoginSchema", () => {
   it("asks for both fields when they are empty", () => {
-    const result = buyerLoginSchema.safeParse({ email: "  ", password: "" });
+    const result = buyerLoginSchema.safeParse({
+      name: " ",
+      email: "  ",
+      password: "",
+    });
     expect(fieldErrors(result)).toEqual({
+      name: ["Введіть імʼя"],
       email: [buyerAuthTexts.emailRequired],
       password: [buyerAuthTexts.passwordRequired],
     });
@@ -182,19 +238,25 @@ describe("buyerLoginSchema", () => {
   it.each(["buyer", "buyer@mail", "buyer@@mail.com", "bu yer@mail.com"])(
     "rejects the email %j",
     (email) => {
-      const result = buyerLoginSchema.safeParse({ email, password: PASSWORD });
+      const result = buyerLoginSchema.safeParse({
+        name: "Софія",
+        email,
+        password: PASSWORD,
+      });
       expect(fieldErrors(result)).toEqual({
-        email: [buyerAuthTexts.emailInvalid],
+        email: ["Перевірте формат email"],
       });
     },
   );
 
   it("accepts any non-empty password (the server decides)", () => {
     const result = buyerLoginSchema.safeParse({
+      name: " Софія ",
       email: " buyer@mail.com ",
       password: "1",
     });
     expect(result.success).toBe(true);
+    expect(result.data?.name).toBe("Софія");
   });
 });
 
@@ -479,12 +541,14 @@ describe("brandRegisterSchema: brand name and website (US-21)", () => {
 
   it("reports every wrong field at once", () => {
     const result = brandRegisterSchema.safeParse({
+      contactName: "",
       name: "",
       websiteUrl: "",
       email: "",
       password: "",
     });
     expect(Object.keys(fieldErrors(result))).toEqual([
+      "contactName",
       "name",
       "websiteUrl",
       "email",

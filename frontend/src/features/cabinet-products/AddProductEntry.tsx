@@ -8,6 +8,11 @@ type Props = {
   profileState: ProfileState | null;
   /** "large" on the cabinet home page, "medium" on the product list. */
   size: "large" | "medium";
+  /**
+   * "outline" on /brand/products: «Додати вручну», a secondary button with a frame next to
+   * «Оновити з сайту». "filled" (default): «Додати товар».
+   */
+  variant?: "filled" | "outline";
 };
 
 /**
@@ -15,7 +20,11 @@ type Props = {
  * the entry is hidden for an INCOMPLETE profile (api.md §3.2 PROFILE_INCOMPLETE, US-22.1 CL).
  * The server still answers 409 if the form is opened anyway.
  */
-export function AddProductEntry({ profileState, size }: Props) {
+export function AddProductEntry({
+  profileState,
+  size,
+  variant = "filled",
+}: Props) {
   if (profileState === null) return null;
   if (profileState === "INCOMPLETE") {
     return (
@@ -27,10 +36,10 @@ export function AddProductEntry({ profileState, size }: Props) {
   }
   return (
     <Link
-      className={`${styles.button} ${styles[size]}`}
+      className={`${styles.button} ${styles[size]} ${styles[variant]}`}
       to="/brand/products/new"
     >
-      {t.addProduct}
+      {variant === "outline" ? t.addManually : t.addProduct}
     </Link>
   );
 }

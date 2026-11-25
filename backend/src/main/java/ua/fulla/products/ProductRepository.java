@@ -23,7 +23,7 @@ class ProductRepository {
     private static final String SELECT_CARD = """
         SELECT p.id, p.brand_id, p.name, bp.name AS brand_name, p.price_uah, p.photo_image_id, p.photo_url,
                p.product_url, p.status, p.published_at, p.created_at, p.updated_at, p.source_url,
-               array_to_string(p.edited_fields, ',') AS edited_fields
+               array_to_string(p.edited_fields, ',') AS edited_fields, p.missing_since
         FROM products p
         JOIN brand_profiles bp ON bp.brand_id = p.brand_id
         """;
@@ -69,15 +69,15 @@ class ProductRepository {
     }
 
     /**
-     * T-1: Draft → Published in one statement, only if the card is the brand's own Draft and the
-     * brand has given consent (ADR-0009, no check-then-update). A republish gets a new
+     * T-1: Draft → Published in one statement, only if the card is the brand's own Draft that its
+     * site still lists (not «Немає на сайті», ADR-0017) and the brand has given consent (ADR-0009, no check-then-update). A republish gets a new
      * {@code published_at}, so the card moves to the end of the brand's cards in the feed.
      * Returns the number of changed rows: 1 or 0.
      */
     int publish(UUID id, UUID brandId) {
         return jdbc.sql("""
                 UPDATE products SET status = 'published', published_at = now(), updated_at = now()
-                WHERE id = :id AND brand_id = :brandId AND status = 'draft'
+                WHERE id = :id AND brand_id = :brandId AND status = 'draft' AND missing_since IS NULL
                   AND EXISTS (SELECT 1 FROM brand_profiles
                               WHERE brand_id = :brandId AND consent_given_at IS NOT NULL)
                 """)
@@ -141,9 +141,26 @@ class ProductRepository {
     List<UUID> publishMany(Collection<UUID> ids, UUID brandId) {
         return jdbc.sql("""
                 UPDATE products SET status = 'published', published_at = now(), updated_at = now()
-                WHERE id IN (:ids) AND brand_id = :brandId AND status = 'draft'
+                WHERE id IN (:ids) AND brand_id = :brandId AND status = 'draft' AND missing_since IS NULL
                   AND EXISTS (SELECT 1 FROM brand_profiles
                               WHERE brand_id = :brandId AND consent_given_at IS NOT NULL)
+                RETURNING id
+                """)
+            .param("ids", List.copyOf(ids))
+            .param("brandId", brandId)
+            .query(UUID.class)
+            .list();
+    }
+
+    /**
+     * T-4 for many cards at once: the brand's own Published cards among {@code ids} go back to
+     * Draft in one statement. Returns the IDs that changed; foreign, unknown and Draft cards are
+     * not touched.
+     */
+    List<UUID> unpublishMany(Collection<UUID> ids, UUID brandId) {
+        return jdbc.sql("""
+                UPDATE products SET status = 'draft', published_at = NULL, updated_at = now()
+                WHERE id IN (:ids) AND brand_id = :brandId AND status = 'published'
                 RETURNING id
                 """)
             .param("ids", List.copyOf(ids))
@@ -157,8 +174,9 @@ class ProductRepository {
     /**
      * Updates the brand's imported card of {@code externalId}. Fields in {@code edited_fields}
      * keep the brand's values; sizes, colours, material and description always follow the site.
-     * Works on Published cards too (the ADR-0017 exception to INV-10). Empty when the brand has
-     * no such card; otherwise whether any stored value changed.
+     * Works on Published cards too (the ADR-0017 exception to INV-10). A card that was «Немає на
+     * сайті» is listed again: it becomes an ordinary Draft (not published) and counts as changed.
+     * Empty when the brand has no such card; otherwise whether any stored value changed.
      */
     Optional<Boolean> updateBrandImported(BrandImportedCard card) {
         return jdbc.sql("""
@@ -175,6 +193,9 @@ class ProductRepository {
                     description = CAST(:description AS text),
                     source_url = :sourceUrl,
                     last_synced_at = now(),
+                    -- listed again: an ordinary Draft (never published automatically), back in the list
+                    missing_since = NULL,
+                    removed_from_list_at = NULL,
                     updated_at = now()
                 FROM products old
                 WHERE p.id = old.id AND p.brand_id = :brandId AND p.external_id = :externalId
@@ -182,7 +203,8 @@ class ProductRepository {
                            p.description)
                           IS DISTINCT FROM
                           (old.name, old.price_uah, old.photo_url, old.product_url, old.sizes, old.colors,
-                           old.material, old.description) AS changed
+                           old.material, old.description)
+                          OR old.missing_since IS NOT NULL AS changed
                 """)
             .param("brandId", card.brandId())
             .param("externalId", card.externalId())
@@ -245,28 +267,58 @@ class ProductRepository {
     }
 
     /**
-     * After a complete listing of the site: the brand's Published imported cards that the site
-     * no longer lists go to Draft. Never deletes; hand-made cards ({@code external_id IS NULL})
-     * are never touched. An empty listing hides nothing.
+     * After a complete listing of the site (ADR-0017): the brand's imported cards that the site
+     * no longer lists become «Немає на сайті» ({@code missing_since}) in one statement; a
+     * Published one goes to Draft at the same time, so it leaves the feed. Never deletes;
+     * hand-made cards ({@code external_id IS NULL}) are never touched. An empty listing marks
+     * nothing. Returns how many of the marked cards were Published.
      */
-    int hideMissingBrandImported(UUID brandId, Collection<String> listedExternalIds) {
+    int markMissingBrandImported(UUID brandId, Collection<String> listedExternalIds) {
         if (listedExternalIds.isEmpty()) {
             return 0;
         }
-        return jdbc.sql("""
-                UPDATE products SET status = 'draft', published_at = NULL, updated_at = now()
-                WHERE brand_id = :brandId AND status = 'published' AND external_id IS NOT NULL
-                  AND external_id NOT IN (:listed)
+        return (int) jdbc.sql("""
+                UPDATE products p SET status = 'draft', published_at = NULL, missing_since = now(),
+                    updated_at = now()
+                FROM products old
+                WHERE p.id = old.id AND p.brand_id = :brandId AND p.external_id IS NOT NULL
+                  AND p.missing_since IS NULL AND p.external_id NOT IN (:listed)
+                RETURNING old.status = 'published' AS was_published
                 """)
             .param("brandId", brandId)
             .param("listed", List.copyOf(listedExternalIds))
+            .query(Boolean.class)
+            .list().stream().filter(Boolean.TRUE::equals).count();
+    }
+
+    /**
+     * «Прибрати зі списку»: hides a «Немає на сайті» card from the cabinet list. Only the brand's
+     * own missing card; the row stays (no deletion). Returns 1, or 0 when nothing changed.
+     */
+    int removeFromList(UUID id, UUID brandId) {
+        return jdbc.sql("""
+                UPDATE products SET removed_from_list_at = now(), updated_at = now()
+                WHERE id = :id AND brand_id = :brandId AND missing_since IS NOT NULL
+                  AND removed_from_list_at IS NULL
+                """)
+            .param("id", id)
+            .param("brandId", brandId)
             .update();
     }
 
-    /** The cabinet list (US-25.1 S1, US-21.1 S1): newest first. */
-    List<ProductCard> listOwn(UUID brandId) {
-        return jdbc.sql(SELECT_CARD + "WHERE p.brand_id = :brandId ORDER BY p.created_at DESC, p.id DESC")
+    /**
+     * The cabinet list (US-25.1 S1, US-21.1 S1): newest first, «Немає на сайті» cards at the end
+     * (ADR-0017). Left out: cards removed from the list by the brand and cards missing for longer
+     * than {@code keepMissing}; they stay in the table.
+     */
+    List<ProductCard> listOwn(UUID brandId, java.time.Duration keepMissing) {
+        return jdbc.sql(SELECT_CARD + """
+                WHERE p.brand_id = :brandId AND p.removed_from_list_at IS NULL
+                  AND (p.missing_since IS NULL OR p.missing_since > now() - :keepSeconds * interval '1 second')
+                ORDER BY (p.missing_since IS NOT NULL), p.created_at DESC, p.id DESC
+                """)
             .param("brandId", brandId)
+            .param("keepSeconds", keepMissing.toSeconds())
             .query(ProductRepository::mapRow)
             .list();
     }
@@ -360,7 +412,8 @@ class ProductRepository {
             Timestamps.instant(rs, "created_at"),
             Timestamps.instant(rs, "updated_at"),
             rs.getString("source_url"),
-            editedFields(rs.getString("edited_fields")));
+            editedFields(rs.getString("edited_fields")),
+            Timestamps.instant(rs, "missing_since"));
     }
 
     private static List<String> editedFields(String joined) {

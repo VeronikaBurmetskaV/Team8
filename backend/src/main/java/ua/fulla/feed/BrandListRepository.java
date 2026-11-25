@@ -23,7 +23,9 @@ class BrandListRepository {
             UUID logoImageId,
             String logoUrl,
             boolean singleBrandSource,
-            String sourceLogoUrl) {}
+            String sourceLogoUrl,
+            /** A registered brand: the logo of its own site, found by its site import (ADR-0017). */
+            String siteLogoUrl) {}
 
     private final JdbcClient jdbc;
 
@@ -41,15 +43,18 @@ class BrandListRepository {
                 SELECT bp.name, count(*) AS product_count, false AS imported,
                        bp.consent_given_at IS NOT NULL AS consented,
                        bp.logo_image_id, bp.logo_url,
-                       false AS single_brand_source, NULL AS source_logo_url
+                       false AS single_brand_source, NULL AS source_logo_url,
+                       bi.site_logo_url
                 FROM products p
                 JOIN brand_profiles bp ON bp.brand_id = p.brand_id
+                LEFT JOIN brand_imports bi ON bi.brand_id = bp.brand_id
                 WHERE p.status = 'published'
-                GROUP BY bp.brand_id, bp.name, bp.consent_given_at, bp.logo_image_id, bp.logo_url
+                GROUP BY bp.brand_id, bp.name, bp.consent_given_at, bp.logo_image_id, bp.logo_url,
+                         bi.site_logo_url
                 UNION ALL
                 SELECT sb.name, count(*), true, false, NULL, NULL,
                        (SELECT count(*) FROM source_brands other WHERE other.source_id = sb.source_id) = 1,
-                       cs.logo_url
+                       cs.logo_url, NULL
                 FROM products p
                 JOIN source_brands sb ON sb.id = p.source_brand_id
                 JOIN catalog_sources cs ON cs.id = sb.source_id
@@ -69,6 +74,7 @@ class BrandListRepository {
             rs.getObject("logo_image_id", UUID.class),
             rs.getString("logo_url"),
             rs.getBoolean("single_brand_source"),
-            rs.getString("source_logo_url"));
+            rs.getString("source_logo_url"),
+            rs.getString("site_logo_url"));
     }
 }

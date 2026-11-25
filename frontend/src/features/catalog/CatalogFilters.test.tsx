@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToString } from "react-dom/server";
@@ -525,10 +526,18 @@ describe("brand group", () => {
     expect(onToggleExpanded).toHaveBeenCalledTimes(1);
   });
 
-  it("«Показати всі» shows the full list in columns and turns into «Згорнути»", () => {
+  it("«Показати всі» shows the full list, still one column, and turns into «Згорнути»", () => {
     const { tree, markup } = list(true);
     expect(checkboxes(markup)).toBe(15);
-    expect(markup).toMatch(/id="b-list"[^>]*data-expanded="true"/);
+    // no column switch any more: the list has neither data-expanded nor a column width
+    const listTag = markup.match(/<div id="b-list"[^>]*>/)?.[0] ?? "";
+    expect(listTag).not.toContain("data-expanded");
+    expect(listTag).not.toContain("--brand-name-width");
+    expect(listTag).not.toContain("style=");
+    // the search stays above the list
+    expect(markup.indexOf('id="b-search"')).toBeLessThan(
+      markup.indexOf('id="b-list"'),
+    );
     const button = buttonByText(tree, "Згорнути");
     expect(button.props["aria-expanded"]).toBe(true);
     expect(markup).not.toContain("Показати всі");
@@ -601,5 +610,106 @@ describe("panel header and footer", () => {
 
   it("the panel starts narrow: «Показати всі» is not remembered between openings", () => {
     expect(panel(NO_PRICE_RANGE)).toContain('data-expanded="false"');
+  });
+});
+
+describe("«Показати всі» in the panel (CatalogPage.module.css)", () => {
+  // Vitest does not load CSS: the rules are read as text, from the file the app uses.
+  const css = readFileSync(
+    "src/features/catalog/CatalogPage.module.css",
+    "utf8",
+  );
+  const tokens = readFileSync("src/shared/tokens.css", "utf8");
+  const rule = (selector: string) => {
+    const start = css.indexOf(`${selector} {`);
+    return start < 0 ? "" : css.slice(start, css.indexOf("}", start));
+  };
+
+  it("does not change the panel's width or add columns", () => {
+    expect(css).not.toMatch(/\.panel\[data-expanded="true"\] \{/);
+    expect(
+      rule('.panel[data-layout="column"][data-expanded="true"]'),
+    ).not.toContain("width");
+    expect(css).not.toContain(".brandOptions[data-expanded");
+    expect(css).not.toContain("grid-template-columns: repeat(\n    auto-fill");
+    for (const gone of [
+      "--filter-panel-width-expanded",
+      "--brand-column-min",
+      "--brand-max-columns",
+      "--brand-name-width",
+    ]) {
+      expect(css + tokens).not.toContain(gone);
+    }
+    const options = rule(".brandOptions");
+    expect(options).toContain("flex-direction: column");
+  });
+
+  it("on a laptop, expanded, the column is not sticky and has no own scroll", () => {
+    const expanded = rule('.panel[data-layout="column"][data-expanded="true"]');
+    expect(expanded).toContain("position: static");
+    expect(expanded).toContain("max-height: none");
+    expect(expanded).toContain("overflow: visible");
+    // collapsed it stays the sticky column with its own height
+    const column = rule('.panel[data-layout="column"]');
+    expect(column).toContain("position: sticky");
+    expect(column).toContain("max-height:");
+  });
+
+  it("the drawer keeps scrolling inside, with «Показати N товарів» stuck at its bottom", () => {
+    expect(rule(".panel")).toContain("overflow-y: auto");
+    expect(rule(".panelFooter")).toContain("position: sticky");
+  });
+});
+
+describe("brands in the filter follow the published cards", () => {
+  // The filter and the tiles get the same `options`: brandOptions() of GET /api/feed, which
+  // has only Published cards (CatalogPage). A publish or an unpublish in the cabinet refetches
+  // the feed (refreshAfterPublishChange), so the next render is the new list.
+  const feedCard = (id: string, brandName: string) => ({ brandName, id });
+  const filter = (items: { brandName: string }[]) =>
+    renderToString(
+      <BrandFilterView
+        id="p"
+        options={brandOptions(items)}
+        selected={[]}
+        onToggle={() => {}}
+        expanded={false}
+        onToggleExpanded={() => {}}
+        query=""
+        onQuery={() => {}}
+      />,
+    );
+
+  it("a brand appears with its first published card and goes with its last", () => {
+    const before = [feedCard("m1", "MINT")];
+    expect(filter(before)).not.toContain("Gunia");
+
+    const published = [...before, feedCard("g1", "Gunia")];
+    expect(filter(published)).toMatch(
+      />Gunia<\/span><span[^>]*>[^<]*1[^<]*<\/span>/,
+    );
+    expect(brandOptions(published)).toContainEqual({
+      key: "gunia",
+      label: "Gunia",
+      count: 1,
+    });
+
+    const unpublished = published.filter((item) => item.id !== "g1");
+    expect(filter(unpublished)).not.toContain("Gunia");
+  });
+
+  it("a registered and a demo brand of the same name are one entry", () => {
+    expect(
+      brandOptions([
+        feedCard("a", "BEVZA (demo)"),
+        feedCard("b", "bevza  (DEMO)"),
+      ]),
+    ).toEqual([{ key: "bevza (demo)", label: "BEVZA (demo)", count: 2 }]);
+  });
+
+  it("no published brands at all: no «Бренд» group", () => {
+    expect(panel(NO_PRICE_RANGE, { brands: [] })).not.toContain(
+      "f-brand-button",
+    );
   });
 });

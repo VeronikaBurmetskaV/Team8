@@ -193,7 +193,7 @@ class ImageTest {
     private MockHttpSession registerBrand(String email) throws Exception {
         return (MockHttpSession) mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
+                .content("{\"email\":\"" + email + "\",\"password\":\"secret-123\",\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isCreated())
             .andReturn().getRequest().getSession(false);
     }

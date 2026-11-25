@@ -264,12 +264,6 @@
   --banner-max-height: 400px;
   /* Filters: a column beside the grid on a laptop, a drawer over the page below it. */
   --filter-panel-width: 240px;
-  /* The laptop column after «Показати всі» in «Бренд»: over the grid, about twice as wide. */
-  --filter-panel-width-expanded: calc(var(--filter-panel-width) * 2);
-  --transition-panel: 250ms ease;
-  /* Columns of the expanded brand list: as wide as the longest name, within these bounds. */
-  --brand-column-min: 9rem;
-  --brand-column-max: 14rem;
   --drawer-width: 320px;
   --z-drawer: 20;
   /* «Ціна» two-thumb slider: a thin light line, a thicker green part between the thumbs,

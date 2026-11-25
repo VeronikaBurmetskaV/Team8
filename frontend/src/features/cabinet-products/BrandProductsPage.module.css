@@ -7,14 +7,47 @@
 
 .title {
   margin: 0;
+  /* A long brand name wraps instead of widening the page (from 320 px). */
+  overflow-wrap: anywhere;
 }
 
-/* Title and the main action: stacked on a phone, one row from --bp-tablet. */
+/* «BEVZA (demo)» in the title: the same font, the brand's green (5.4:1 on the page). On a
+   narrow screen it simply continues on the next line. */
+.brandName {
+  color: var(--color-green);
+}
+
+/* The title, then one group of actions under it, on the left. */
 .header {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-2);
+}
+
+/* «Оновити з сайту» (with its note under it) and «Додати вручну» in one row; the second one
+   stays at the height of the first button, not of the note. Narrow screens: one under the
+   other, the whole width. */
+.actionGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+@media (max-width: 767.98px) {
+  .header,
+  .actionGroup {
+    align-items: stretch;
+  }
+
+  .actionGroup {
+    flex-direction: column;
+  }
+
+  .actionGroup > a {
+    width: 100%;
+  }
 }
 
 .empty {
@@ -32,11 +65,12 @@
   font-size: var(--font-size-sm);
 }
 
-/* The list is one <table>. On a phone every row is drawn as a card, one under another;
-   from --bp-tablet it is a real table across the whole container. */
+/* The list is one <table>. Desktop-first cabinet (ADR-0002): from --bp-tablet a real table
+   with large rows; below it every row is a card (photo on top, text under it), two per row
+   from 320 px. */
 .table {
-  /* Fixed-size preview: a large photo never stretches the row. */
-  --thumbnail-size: calc(var(--control-height) * 1.5);
+  /* The photo: clothing proportions 3:4, 140 px tall in the table. */
+  --photo-height: 140px;
   width: 100%;
   border-spacing: 0;
   font-size: var(--font-size-sm);
@@ -47,21 +81,103 @@
   text-align: left;
 }
 
+.row {
+  transition: background-color var(--transition-fast);
+}
+
+/* A row that a click selects (rowClickToggles); links and buttons keep their own cursor. */
+.selectable {
+  cursor: pointer;
+}
+
+.selectable:hover {
+  background-color: var(--color-background);
+}
+
+.selected,
+.selected:hover {
+  background-color: color-mix(
+    in srgb,
+    var(--color-green) 8%,
+    var(--color-surface)
+  );
+}
+
+/* «Немає на сайті»: muted, at the end of the list. The text keeps ≥ 4.5:1 (no opacity on it). */
+.notOnSite .photo {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.notOnSite .name,
+.notOnSite .price {
+  color: var(--color-text-muted);
+}
+
+.info {
+  min-width: 0;
+}
+
 /* A long name wraps instead of widening the list (no horizontal scroll from 320 px). */
 .name {
+  margin: 0;
   overflow-wrap: anywhere;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-half) var(--space-2);
+  margin: var(--space-1) 0 0;
+  font-size: var(--font-size-md);
 }
 
 .price {
   white-space: nowrap;
 }
 
+.status {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+}
+
+.statusDRAFT {
+  background-color: var(--color-background);
+  color: var(--color-text);
+}
+
+.statusPUBLISHED {
+  background-color: color-mix(
+    in srgb,
+    var(--color-green) 14%,
+    var(--color-surface)
+  );
+  color: var(--color-success);
+}
+
+.statusNOT_ON_SITE {
+  border: var(--border-width) dashed var(--color-text-muted);
+  color: var(--color-text-muted);
+}
+
+.notOnSiteHint {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
 .thumbnail,
 .placeholder {
   display: block;
-  width: var(--thumbnail-size);
-  height: var(--thumbnail-size);
-  border-radius: var(--radius-sm);
+  height: var(--photo-height);
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-md);
 }
 
 .thumbnail {
@@ -69,39 +185,110 @@
 }
 
 .placeholder {
+  display: grid;
+  place-items: center;
   overflow: hidden;
+  padding: var(--space-1);
   background-color: var(--color-background);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
   line-height: var(--line-height-tight);
+  text-align: center;
 }
 
-/* Below --bp-tablet: cards. The only max-width query of the cabinet: the card and the table
-   drawings exclude each other, so neither has to undo the other one. */
+/* ---------- The round selection circle: a native checkbox drawn by CSS ---------- */
+/* appearance: none keeps the <input type="checkbox">: Tab reaches it, Space toggles it, screen
+   readers say «прапорець, позначено». Only its look changes. index.css loads after the modules
+   and styles every input[type="checkbox"], so these rules need a more specific selector. */
+input[type="checkbox"].selector {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  box-shadow: none;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  flex: none;
+  border: 2px solid var(--color-text);
+  border-radius: 50%;
+  background-color: var(--color-surface);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 16px 16px;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+input[type="checkbox"].selector:hover:not(:disabled) {
+  border-color: var(--color-green);
+}
+
+/* Selected: the green circle with a white tick (white on green 5.4:1). */
+input[type="checkbox"].selector:checked {
+  border-color: var(--color-green);
+  background-color: var(--color-green);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"].selector:checked:hover:not(:disabled) {
+  border-color: var(--color-green-hover);
+  background-color: var(--color-green-hover);
+}
+
+input[type="checkbox"].selector:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-green);
+  outline-offset: var(--focus-ring-width);
+}
+
+/* «Немає на сайті»: the circle can't be ticked. */
+input[type="checkbox"].selector:disabled {
+  border-color: var(--color-border);
+  border-style: dashed;
+  background-color: var(--color-background);
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  input[type="checkbox"].selector {
+    transition: none;
+  }
+}
+
+/* Below --bp-tablet: cards, two per row (one under 360 px). The only max-width query of the
+   cabinet: the card and the table drawings exclude each other. */
 @media (max-width: 767.98px) {
   .table,
   .table tbody {
-    display: flex;
-    flex-direction: column;
+    display: block;
+  }
+
+  .table tbody {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
     gap: var(--space-2);
   }
 
-  /* The card needs no column titles: photo, name, price and status explain themselves. */
-  .table thead {
+  /* The card needs no column titles. «Вибрати всі» stays reachable in the toolbar row. */
+  .table thead tr {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin-bottom: var(--space-2);
+  }
+
+  .table thead th:not(.selectCell) {
     display: none;
   }
 
-  .table tr {
-    display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
-    grid-template-areas:
-      "select photo name"
-      "select photo price"
-      "select photo status"
-      "actions actions actions";
-    grid-template-rows: auto auto 1fr auto;
-    column-gap: var(--space-2);
-    row-gap: var(--space-half);
+  .table tbody tr {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
     padding: var(--space-2);
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-lg);
@@ -109,36 +296,38 @@
     box-shadow: var(--shadow-sm);
   }
 
+  .table tbody tr.selected {
+    border-color: var(--color-green);
+  }
+
   .table td {
     display: block;
     padding: 0;
   }
 
-  .photo {
-    grid-area: photo;
+  /* The photo fills the card's width; the circle sits on its top-left corner. */
+  .thumbnail,
+  .placeholder {
+    width: 100%;
+    height: auto;
+  }
+
+  .table tbody .selectCell {
+    position: absolute;
+    top: calc(var(--space-2) + var(--space-1));
+    left: calc(var(--space-2) + var(--space-1));
+  }
+
+  .table tbody .selectCell:empty {
+    display: none;
   }
 
   .name {
-    grid-area: name;
     font-size: var(--font-size-md);
-    font-weight: var(--font-weight-semibold);
   }
 
-  .price {
-    grid-area: price;
-  }
-
-  .status {
-    grid-area: status;
-    color: var(--color-text-muted);
-  }
-
-  .selectCell {
-    grid-area: select;
-  }
-
-  .actions {
-    grid-area: actions;
+  .meta {
+    font-size: var(--font-size-sm);
   }
 
   /* An empty cell (Published card) adds no gap under the card. */
@@ -146,22 +335,16 @@
     display: none;
   }
 
-  /* Full width of the card: the long upper-case text fits from 320 px. */
-  .publish {
+  .publish,
+  .remove,
+  .unpublish {
     width: 100%;
   }
 }
 
 /* --bp-tablet: a table in a white card like the forms of the cabinet. */
 @media (min-width: 768px) {
-  .header {
-    flex-flow: row wrap;
-    align-items: center;
-    justify-content: space-between;
-  }
-
   .table {
-    --thumbnail-size: var(--control-height);
     border: var(--border-width) solid var(--color-border);
     border-radius: var(--radius-lg);
     background-color: var(--color-surface);
@@ -170,12 +353,11 @@
 
   .table th,
   .table td {
-    padding: var(--space-1) var(--space-2);
+    padding: var(--space-2) var(--space-3);
     vertical-align: middle;
   }
 
   .table th {
-    padding-block: var(--space-2);
     color: var(--color-text-muted);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-medium);
@@ -185,28 +367,31 @@
     border-top: var(--border-width) solid var(--color-border);
   }
 
-  /* Every column but the name takes only what it needs; the name gets the rest. */
-  .table th:not(:nth-child(3)),
+  /* Every column but the product takes only what it needs; the product gets the rest. */
   .selectCell,
   .photo,
-  .price,
-  .status,
   .actions {
     width: 1%;
   }
 
-  .status,
-  .publish {
+  .selectCell {
+    padding-inline-end: 0;
+  }
+
+  .publish,
+  .remove,
+  .unpublish {
     white-space: nowrap;
   }
 
-  /* «Редагувати» and «Опублікувати у стрічку» side by side in the narrow column. */
+  /* One width for the column in every row, so the buttons line up: the widest label
+     («Опублікувати у стрічку») fits. */
   .actions .rowActions {
-    flex-wrap: nowrap;
+    width: 16rem;
   }
 }
 
-/* ---------- Filter, bulk publish, badges (ADR-0017) ---------- */
+/* ---------- Count and bulk publish (ADR-0017) ---------- */
 .visuallyHidden {
   position: absolute;
   width: 1px;
@@ -218,30 +403,19 @@
   white-space: nowrap;
 }
 
+/* Above the table: «47 товарів» on the left, the publish buttons on the right. */
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
 }
 
-.filter {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-half);
+.count {
+  margin: 0;
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
-}
-
-.filter select {
-  min-height: var(--control-height);
-  padding-inline: var(--space-1);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius-md);
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  font-size: var(--font-size-md);
 }
 
 .publishBar {
@@ -284,12 +458,54 @@
   cursor: not-allowed;
 }
 
-/* A draft's row actions: «Редагувати» + «Опублікувати у стрічку» (US-26, US-31). */
+/* A row's actions, in a column on the right: the main button on top («Опублікувати у
+   стрічку» / «Зняти з публікації» / «Прибрати зі списку»), the whole width of the column, and
+   «Редагувати» centred under it. */
 .rowActions {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+.rowActions > button {
+  width: 100%;
+}
+
+.edit {
+  align-self: center;
+  padding: var(--space-half) var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+/* «Зняти з публікації» / «Зняти вибрані з публікації»: a secondary button with a frame; on
+   hover the frame and the text turn green (index.css styles every <button>, hence the
+   :hover:not(:disabled) pair). */
+.unpublish,
+.unpublish:hover:not(:disabled) {
+  min-height: var(--control-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-text);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+}
+
+.unpublish:hover:not(:disabled) {
+  border-color: var(--color-green);
+  color: var(--color-green);
+}
+
+.unpublish:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-green);
+  outline-offset: var(--focus-ring-width);
+}
+
+.unpublish:disabled {
+  border-color: var(--color-border);
+  background-color: var(--color-background);
+  color: var(--color-text-muted);
+  cursor: progress;
 }
 
 .publishError {
@@ -308,28 +524,27 @@
   font-size: var(--font-size-sm);
 }
 
-.badge,
-.editedBadge {
-  display: inline-block;
-  margin-inline-start: var(--space-1);
-  padding: 0 var(--space-1);
-  border-radius: var(--radius-pill);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  white-space: nowrap;
+/* «2 товари пропущено: їх немає на сайті»: not an error, not a success. */
+.outcomeWarning {
+  color: var(--color-text);
 }
 
-.badge {
-  background-color: var(--color-beige);
-  color: var(--color-black);
+/* «Прибрати зі списку»: a quiet secondary button. */
+.remove,
+.remove:hover:not(:disabled) {
+  min-height: var(--control-height);
+  padding-inline: var(--space-2);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
 }
 
-.editedBadge {
-  border: var(--border-width) solid var(--color-olive-light);
-  color: var(--color-olive-dark);
+.remove:hover:not(:disabled) {
+  border-color: var(--color-text);
 }
 
-.selectCell input {
-  width: 1.25rem;
-  height: 1.25rem;
+.remove:disabled {
+  color: var(--color-text-muted);
+  cursor: progress;
 }

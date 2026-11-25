@@ -66,6 +66,47 @@
 
 /* ---------- Tile ---------- */
 
+/* The positioning box of one tile and its full-name label (BrandTileView). */
+.tileWrap {
+  position: relative;
+}
+
+/* The full name of a cut-off name: over the tile's own logo area, inside its box, so it never
+   covers a neighbouring tile and never leaves the screen; long names wrap. Shown on hover and
+   on keyboard focus of that tile only. Not clickable: the tile under it stays the link. */
+.tooltip {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  left: var(--space-1);
+  z-index: 1;
+  padding: var(--space-half) var(--space-1);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-black);
+  color: var(--color-white);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(var(--tile-lift));
+  transition: opacity var(--transition-fast);
+}
+
+.tileWrap:hover .tooltip,
+.tileWrap:focus-within .tooltip {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tooltip {
+    transform: none;
+    transition: none;
+  }
+}
+
 /* The whole square is the link. Corners and frame as the catalogue tiles. */
 .tile {
   container-type: inline-size;
@@ -148,7 +189,7 @@
   padding: var(--space-half) var(--space-1);
 }
 
-/* One line; the full name is in the tile's title and aria-label. */
+/* One line; the full name is in the tile's aria-label and, when cut off, in .tooltip. */
 .name {
   overflow: hidden;
   font-size: var(--font-size-xs);

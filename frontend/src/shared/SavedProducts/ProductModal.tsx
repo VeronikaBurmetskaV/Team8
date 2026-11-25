@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, type Ref } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CloseIcon } from "../icons";
+import { CloseIcon, HeartIcon } from "../icons";
 import { withUtm } from "../links";
 import { savedProductsTexts as t } from "../messages.uk";
 import { handleCancelEvent, lockPageScroll } from "../modalControl";
@@ -13,6 +13,11 @@ interface ProductModalProps {
   product: DetailedProduct | null;
   /** The «×», Esc and a click on the dimmed page. */
   onClose: () => void;
+  /**
+   * The heart of the catalogue tile, next to «×» (the catalogue on /): the same state and the
+   * same action as on the tile. «Вподобане» leaves it out: its modal has only «×».
+   */
+  heart?: { pressed: boolean; label: string; onToggle: () => void };
 }
 
 type ProductModalViewProps = ProductModalProps & {
@@ -31,6 +36,7 @@ type ProductModalViewProps = ProductModalProps & {
 export function ProductModalView({
   product,
   onClose,
+  heart,
   titleId,
   reduceMotion,
   dialogRef,
@@ -39,6 +45,20 @@ export function ProductModalView({
 }: ProductModalViewProps) {
   const href = product !== null ? withUtm(product.productUrl) : null;
   const duration = reduceMotion ? 0 : 0.22;
+  // One element, with or without the heart beside it (an element, not a component, so the
+  // tests can find it in the element tree).
+  const closeButton = (
+    <button
+      ref={closeRef}
+      type="button"
+      className={styles.close}
+      aria-label={t.closeCard}
+      title={t.closeCard}
+      onClick={onClose}
+    >
+      <CloseIcon />
+    </button>
+  );
 
   return (
     <dialog
@@ -70,16 +90,22 @@ export function ProductModalView({
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
             transition={{ duration, ease: "easeOut" }}
           >
-            <button
-              ref={closeRef}
-              type="button"
-              className={styles.close}
-              aria-label={t.closeCard}
-              title={t.closeCard}
-              onClick={onClose}
-            >
-              <CloseIcon />
-            </button>
+            {heart === undefined ? (
+              closeButton
+            ) : (
+              <div className={styles.topBar}>
+                <button
+                  type="button"
+                  className={styles.heart}
+                  aria-label={heart.label}
+                  aria-pressed={heart.pressed}
+                  onClick={heart.onToggle}
+                >
+                  <HeartIcon fill={heart.pressed ? "currentColor" : "none"} />
+                </button>
+                {closeButton}
+              </div>
+            )}
             <div className={styles.cardBox}>
               <ProductCard card={product} titleId={titleId} />
             </div>

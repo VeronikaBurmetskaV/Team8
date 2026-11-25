@@ -171,6 +171,57 @@ class PublishTest {
     }
 
     @Test
+    void anotherBrandCannotUnpublishACard() throws Exception {
+        Brand owner = brand("Lileya", true);
+        Brand other = brand("Goldi", true);
+        String id = createCard(owner);
+        publish(owner, id).andExpect(status().isOk());
+
+        expectError(unpublish(other, id), 404, "NOT_FOUND");
+        mvc.perform(post("/api/brand/products/unpublish").with(csrf()).session(other.session())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"ids\":[\"" + id + "\"]}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.unpublishedIds.length()").value(0))
+            .andExpect(jsonPath("$.skippedIds[0]").value(id));
+
+        assertThat(row(id).get("status")).isEqualTo("published");
+        assertThat(feedIds()).contains(id);
+    }
+
+    @Test
+    void bulkUnpublishReturnsTheBrandsPublishedCardsToDraft() throws Exception {
+        Brand brand = brand("Lileya", true);
+        Brand other = brand("Goldi", true);
+        String first = createCard(brand);
+        String second = createCard(brand);
+        String draft = createCard(brand);
+        String foreign = createCard(other);
+        publish(brand, first).andExpect(status().isOk());
+        publish(brand, second).andExpect(status().isOk());
+        publish(other, foreign).andExpect(status().isOk());
+
+        mvc.perform(post("/api/brand/products/unpublish").with(csrf()).session(brand.session())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"ids\":[\"" + first + "\",\"" + second + "\",\"" + draft + "\",\"" + foreign + "\"]}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$.unpublishedIds").value(org.hamcrest.Matchers.contains(first, second)))
+            .andExpect(jsonPath("$.skippedIds").value(org.hamcrest.Matchers.contains(draft, foreign)));
+
+        assertThat(row(first).get("status")).isEqualTo("draft");
+        assertThat(row(second).get("published_at")).isNull();
+        assertThat(row(foreign).get("status")).isEqualTo("published");
+        assertThat(feedIds()).doesNotContain(first, second).contains(foreign);
+
+        expectError(mvc.perform(post("/api/brand/products/unpublish").with(csrf()).session(brand.session())
+            .contentType(MediaType.APPLICATION_JSON).content("{\"ids\":[]}")), 400, "VALIDATION_FAILED");
+        // like every cabinet write: a brand session and the CSRF token
+        mvc.perform(post("/api/brand/products/unpublish").session(brand.session())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"ids\":[\"" + first + "\"]}"))
+            .andExpect(status().isForbidden());
+    }
+
+    @Test
     void unpublishingADraftIsInvalidState() throws Exception {
         Brand brand = brand("Lileya", true);
         String id = createCard(brand);
@@ -287,7 +338,7 @@ class PublishTest {
     private Brand brand(String name, boolean consentGiven) throws Exception {
         var result = mvc.perform(post("/api/brand/register").with(csrf())
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
+                .content("{\"email\":\"brand-" + UUID.randomUUID() + "@example.com\",\"password\":\"secret-123\",\"contactName\":\"Olena\",\"name\":\"Test Brand\",\"websiteUrl\":\"https://brand.example.com\"}"))
             .andExpect(status().isCreated())
             .andReturn();
         String brandId = JsonPath.read(result.getResponse().getContentAsString(), "$.brandId");
