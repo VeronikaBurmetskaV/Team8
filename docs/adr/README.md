@@ -20,6 +20,8 @@ Short records of decisions that are expensive to reverse. Options and ratings ar
 | [0012](0012-buyer-accounts-favorites-sync.md) | Buyer accounts and moving «Вподобане» to the server | Proposed |
 | [0013](0013-frontend-language-typescript.md) | Frontend language: TypeScript (strict) | Proposed |
 | [0014](0014-demo-catalog-import.md) | Demo catalogue import from three sites (dev profile only) | Proposed |
+| [0015](0015-brand-logos-on-brand-tiles.md) | Brand logos on the home page brand tiles: `GET /api/brands`, consent only | Proposed |
+| [0016](0016-buyer-login-email-or-phone.md) | Buyer account by email or phone (no SMS check), with a name | Proposed |
 
 Status flow: **Proposed** → **Accepted** (the team lead marks it after team review) → **Superseded by ADR-NNNN** (never edit an accepted decision; write a new ADR). While an ADR is Proposed, it is revised in place, with a note in its Status line.
 

@@ -1,6 +1,7 @@
 import type {
   ApiErrorBody,
   BrandCard,
+  BrandSummary,
   CreateProductRequest,
   ErrorCode,
   FeedResponse,
@@ -116,6 +117,11 @@ export function apiUpload<T>(path: string, form: FormData): Promise<T> {
 /** Published cards, oldest first; an empty list is valid (api.md §2.2). */
 export function getFeed(): Promise<FeedResponse> {
   return apiGet<FeedResponse>("/api/feed");
+}
+
+/** Brands of the catalogue with their logos (api.md §2.2, ADR-0015). */
+export function getBrands(): Promise<BrandSummary[]> {
+  return apiGet<BrandSummary[]>("/api/brands");
 }
 
 export function getBrandProducts(): Promise<BrandCard[]> {

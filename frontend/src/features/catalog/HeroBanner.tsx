@@ -6,10 +6,11 @@ import {
   type RefObject,
 } from "react";
 import { preload } from "react-dom";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import cardPng from "../../assets/hero/fulla-hero-layer-card.png";
 import cardWebp from "../../assets/hero/fulla-hero-layer-card.webp";
 import bgWebp from "../../assets/hero/fulla-hero-layer-bg.webp";
+import { withFilterParams } from "../../shared/filterLinks";
 import { catalogTexts as t } from "../../shared/messages.uk";
 import { revealDelay, useReveal } from "../../shared/reveal";
 import styles from "./CatalogPage.module.css";
@@ -42,11 +43,13 @@ export function HeroBanner() {
     revealDelay.bannerSubtitle,
   );
   const ctaRef = useReveal<HTMLSpanElement>(revealDelay.bannerCta);
+  // The swipe feed opens with the catalogue's current filters (shared through the URL).
+  const { search } = useLocation();
 
   return (
     <Link
       ref={bannerRef}
-      to="/feed"
+      to={withFilterParams("/feed", search)}
       className={styles.banner}
       data-animation={onScreen ? "running" : "paused"}
     >

@@ -5,10 +5,29 @@
    Selectors are prefixed with .header so they win over the global element styles in index.css. */
 
 .header {
+  /* Spacer and background height before the first measure (see .spacer). */
+  --header-full-height: 126px;
+  /* One horizontal frame for the full header and the thin bar (.container): the same width,
+     side padding and iPhone side safe area, so the bar's arrow, the language switch and the
+     profile icon end at the same x on every screen. Desktop values are set below. */
+  --header-container-max: calc(
+    var(--container-wide) + 2 * var(--layout-gutter)
+  );
+  --header-gutter: var(--layout-gutter);
+  /* City and language on a laptop; their «⌄» is drawn at this size (1em). */
+  --header-prefs-font-size: var(--font-size-sm);
   position: relative;
   margin-bottom: var(--space-3);
   background-color: var(--color-header-background);
   color: var(--color-on-header);
+}
+
+.container {
+  width: 100%;
+  max-width: var(--header-container-max);
+  margin-inline: auto;
+  padding-inline: max(var(--header-gutter), env(safe-area-inset-left, 0px))
+    max(var(--header-gutter), env(safe-area-inset-right, 0px));
 }
 
 .inner {
@@ -21,10 +40,7 @@
     "nav nav nav";
   align-items: center;
   row-gap: var(--space-1);
-  width: 100%;
-  max-width: calc(var(--container-wide) + 2 * var(--layout-gutter));
-  margin: 0 auto;
-  padding: var(--space-2) var(--layout-gutter) var(--space-1);
+  padding-block: var(--space-2) var(--space-1);
 }
 
 /* Logo: FULLA, a thin line, SWIPING. */
@@ -189,12 +205,12 @@
 .prefsOpen {
   position: absolute;
   top: 100%;
-  right: var(--layout-gutter);
+  right: var(--header-gutter);
   z-index: var(--z-header-menu);
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  width: min(var(--header-menu-width), calc(100% - 2 * var(--layout-gutter)));
+  width: min(var(--header-menu-width), calc(100% - 2 * var(--header-gutter)));
   padding: var(--space-2);
   border-top: var(--border-width) solid var(--color-header-divider);
   border-radius: 0 0 var(--radius-md) var(--radius-md);
@@ -270,26 +286,87 @@
   scroll-padding-top: var(--header-compact-offset);
 }
 
-/* Invisible line under the full header, watched by an IntersectionObserver. */
-.marker {
-  height: 1px;
-  margin-top: -1px;
-  pointer-events: none;
+/* The full header's place in the page flow: one height in EVERY state, so a change of state
+   never moves the page and never changes window.scrollY (no feedback into the scroll-based
+   state). BuyerHeader sets the measured height; before that, these defaults (measured:
+   phone 125.8px, tablet 91.4px, laptop 128px; set at the breakpoints below). */
+.spacer {
+  height: var(--header-full-height);
 }
 
-.barHost {
+/* The one header in every state (data-mode): always fixed at the top of the window, over the
+   spacer. Transparent itself; the dark colour is .shellBg. Positioned: the phone burger menu
+   (.prefsOpen) hangs under it. */
+.shell {
   position: fixed;
   top: 0;
   right: 0;
   left: 0;
   z-index: var(--z-header);
+  color: var(--color-on-header);
+}
+
+/* The dark background as its own layer, always as tall as the full header; for the bar it is
+   shrunk with transform: scaleY from the top (set inline). Only transform animates — no height,
+   so no layout on any frame of the transition. A new state during the transition simply
+   retargets it from where it is: no jump back. */
+.shellBg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: -1;
+  height: var(--header-full-height);
+  background-color: var(--color-header-background);
+  transform-origin: top center;
+  transition: transform var(--header-expand-duration) ease-out;
+}
+
+/* will-change only while a state change animates. */
+.shell[data-animating] .shellBg {
+  will-change: transform;
+}
+
+/* Shadows once the background has settled (a shadow on the shrinking layer would stretch). */
+.shell[data-mode="compact"]:not([data-animating]) {
+  box-shadow: var(--shadow-md);
+}
+
+.shell[data-mode="expanded"]:not([data-animating]) {
+  box-shadow: var(--shadow-lg);
+}
+
+/* iPhone notch: the fixed header starts below the status bar (in every state, so the
+   measured heights include it). */
+.shellContent {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Bar → full header: the height grows (motion) and the logo grows from the bar's size. */
+.shell[data-enter="expand"] .logo {
+  transform-origin: top center;
+  animation: header-logo-grow var(--header-expand-duration) ease-out;
+}
+
+/* Full header → bar: the small logo settles from the big one's size. */
+.shell[data-enter="collapse"] .barLogo {
+  animation: header-logo-shrink var(--header-expand-duration) ease-out;
+}
+
+@keyframes header-logo-grow {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+
+@keyframes header-logo-shrink {
+  from {
+    transform: scale(1.6);
+  }
 }
 
 .bar {
-  padding-top: env(safe-area-inset-top, 0px);
-  background-color: var(--color-header-background);
-  color: var(--color-on-header);
-  box-shadow: var(--shadow-md);
   cursor: pointer;
 }
 
@@ -300,9 +377,6 @@
     );
   align-items: center;
   height: var(--header-compact-height);
-  max-width: calc(var(--container-wide) + 2 * var(--layout-gutter));
-  margin: 0 auto;
-  padding-inline: var(--layout-gutter);
 }
 
 /* Small FULLA without «SWIPING», in the middle. */
@@ -325,9 +399,20 @@
   color: var(--color-header-hover);
 }
 
-.header .barArrow {
-  grid-column: 3;
-  justify-self: end;
+/* The arrow: one button for the bar and the expanded header (HeaderToggle), positioned
+   against the shell — the same right edge and width in both states, so its x never changes.
+   Phone and tablet: at the container's right edge (the burger's place; in the expanded header
+   the burger moves to the empty left cell). Laptop: centred in the right gutter, right of
+   «UA ⌄». Vertically: the middle of the bar; in the expanded header the top row (set by
+   BuyerHeader from the burger or the city / language row). */
+.header .toggle {
+  position: absolute;
+  z-index: 1;
+  top: calc(
+    env(safe-area-inset-top, 0px) +
+      (var(--header-compact-height) - var(--icon-button-size)) / 2
+  );
+  right: max(var(--header-gutter), env(safe-area-inset-right, 0px));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -342,48 +427,63 @@
   transition: color var(--transition-fast);
 }
 
-.header .barArrow:hover,
-.header .barArrow:focus-visible {
+.header .toggle:hover:not(:disabled),
+.header .toggle:focus-visible {
   border: none;
   background-color: transparent;
   color: var(--color-header-hover);
 }
 
+/* Keyboard focus only (:focus-visible), drawn inside the button; a mouse click shows none. */
 .header .barLogo:focus-visible,
-.header .barArrow:focus-visible {
+.header .toggle:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-header-hover);
-  outline-offset: var(--focus-ring-width);
+  outline-offset: calc(-1 * var(--focus-ring-width));
 }
 
-/* Chevron down = «Розгорнути меню»; turned up while the header is open. */
-.chevron {
+.header .barLogo:focus:not(:focus-visible),
+.header .toggle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ⌄ «Розгорнути меню» turns into ⌃ «Згорнути меню»: the only change of the arrow itself. */
+.toggleIcon {
   transition: transform var(--header-expand-duration) ease;
 }
 
-.bar[data-expanded="true"] .chevron {
+.toggle[data-expanded="true"] .toggleIcon {
   transform: rotate(180deg);
 }
 
-/* The full header opened from the bar: over the content right under the bar. The host has
-   no height of its own, so it never blocks clicks on the page. */
-.panelHost {
-  position: fixed;
-  top: var(--header-compact-offset);
-  right: 0;
-  left: 0;
-  z-index: var(--z-header);
-}
+/* Phone and tablet: in the expanded header the arrow takes the burger's place on the right,
+   and the burger moves to the empty left cell of the top row (logo and icons stay put; a
+   shift to the left would run into the logo at 320 px and the icons into it at 768 px).
+   Its city / language menu then opens from the left. */
+@media (max-width: 1023px) {
+  .shell[data-mode="expanded"] .burger {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
 
-/* Positioned: the phone burger menu (.prefsOpen) hangs under it. */
-.panel {
-  position: relative;
-  background-color: var(--color-header-background);
-  color: var(--color-on-header);
-  box-shadow: var(--shadow-lg);
+  .shell[data-mode="expanded"] .prefsOpen {
+    right: auto;
+    left: var(--header-gutter);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chevron {
+  .toggleIcon {
+    transition: none;
+  }
+
+  .shell[data-enter],
+  .shell[data-enter] .logo,
+  .shell[data-enter] .barLogo {
+    animation: none;
+  }
+
+  .shellBg {
     transition: none;
   }
 }
@@ -391,6 +491,7 @@
 /* --bp-tablet: empty | logo | icons + burger, in one row. The left cell stays empty. */
 @media (min-width: 768px) {
   .header {
+    --header-full-height: 92px;
     margin-bottom: var(--space-4);
   }
 
@@ -426,9 +527,13 @@
    right block sits at the window's edge with --header-padding-wide. The 1fr | auto | 1fr
    columns are equal, so the logo stays exactly in the middle of the window. */
 @media (min-width: 1024px) {
+  .header {
+    --header-full-height: 128px;
+    --header-container-max: none;
+    --header-gutter: var(--header-padding-wide);
+  }
+
   .inner {
-    max-width: none;
-    padding-inline: var(--header-padding-wide);
     grid-template-areas:
       ". logo prefs"
       ". logo shop";
@@ -446,11 +551,6 @@
 
   .header .burger {
     display: none;
-  }
-
-  .barInner {
-    max-width: none;
-    padding-inline: var(--header-padding-wide);
   }
 
   .groupShop {
@@ -479,6 +579,14 @@
   .header .select {
     width: auto;
     border-bottom-color: transparent;
-    font-size: var(--font-size-sm);
+    font-size: var(--header-prefs-font-size);
+  }
+
+  /* The arrow in the right gutter (--header-padding-wide, ≥ 32px), centred in it: right of
+     «UA ⌄», never over it, in the bar and in the expanded header alike. Narrower than the
+     icons, so it fits the 32px gutter at 1024px. */
+  .header .toggle {
+    right: max(0px, calc((var(--header-gutter) - var(--space-4)) / 2));
+    width: var(--space-4);
   }
 }

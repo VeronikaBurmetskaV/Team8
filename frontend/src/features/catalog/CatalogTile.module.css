@@ -1,5 +1,6 @@
 /* A catalogue tile. Colours: the olive palette tokens from tokens.css. Minimal decor, lots of air. */
 .tile {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: var(--space-half);
@@ -136,9 +137,33 @@
   line-clamp: 2;
 }
 
-.price {
-  margin: 0;
+/* Price and the size circles in one row, centred on each other; at least one circle tall,
+   so tiles with and without sizes keep the same height. */
+.priceRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: calc(var(--size-dot-tile) + var(--space-1));
   padding-inline: var(--space-2);
+}
+
+.priceRow > :last-child:not(.price) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A narrow tile (two columns on a phone): the sizes go under the price. */
+@container (max-width: 219px) {
+  .priceRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-half);
+  }
+}
+
+.price {
+  flex: 0 0 auto;
+  margin: 0;
   color: var(--color-black);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);

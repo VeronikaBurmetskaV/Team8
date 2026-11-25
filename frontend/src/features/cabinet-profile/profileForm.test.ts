@@ -2,16 +2,19 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "../../api/client";
 import type { BrandProfileResponse } from "../../api/types";
 import { toFormErrors } from "../../shared/errors";
+import { messages, websiteUrlInvalidMessage } from "../../shared/messages.uk";
 import {
   brandProfileFormSchema,
   CONSENT_TEXT,
   profileFields,
+  profileSaveErrors,
   toBrandProfileFormValues,
   toBrandProfileRequest,
 } from "./profileForm";
 
 const activeProfile: BrandProfileResponse = {
   name: "Лляна",
+  websiteUrl: "https://lileya.com.ua",
   logoImageId: null,
   logoUrl: null,
   consentGiven: false,
@@ -46,28 +49,60 @@ describe("toBrandProfileFormValues", () => {
     };
     expect(toBrandProfileFormValues(incomplete)).toEqual({
       name: "",
+      websiteUrl: "https://lileya.com.ua",
       consentGiven: false,
     });
+    // no website saved → an empty field
+    expect(
+      toBrandProfileFormValues({ ...activeProfile, websiteUrl: null })
+        .websiteUrl,
+    ).toBe("");
     expect(toBrandProfileFormValues(activeProfile).consentGiven).toBe(false);
   });
 
   it("checks the box only when the server confirms the consent", () => {
     expect(toBrandProfileFormValues(consentedProfile)).toEqual({
       name: "Лляна",
+      websiteUrl: "https://lileya.com.ua",
       consentGiven: true,
     });
   });
 });
 
 describe("brandProfileFormSchema", () => {
-  it("accepts a save with or without the consent", () => {
+  it("«Сайт бренду» is optional here but must be a valid site when filled", () => {
+    const base = { name: "Лляна", consentGiven: false };
     expect(
-      brandProfileFormSchema.safeParse({ name: "Лляна", consentGiven: true })
-        .success,
+      brandProfileFormSchema.safeParse({ ...base, websiteUrl: "" }).success,
     ).toBe(true);
     expect(
-      brandProfileFormSchema.safeParse({ name: "Лляна", consentGiven: false })
-        .success,
+      brandProfileFormSchema.safeParse({
+        ...base,
+        websiteUrl: "http://lileya.ua",
+      }).success,
+    ).toBe(false);
+    expect(
+      brandProfileFormSchema.safeParse({
+        ...base,
+        websiteUrl: "https://lileya.ua",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts a save with or without the consent", () => {
+    expect(
+      brandProfileFormSchema.safeParse({
+        name: "Лляна",
+        websiteUrl: "https://lileya.com.ua",
+        consentGiven: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      brandProfileFormSchema.safeParse({
+        name: "Лляна",
+        websiteUrl: "https://lileya.com.ua",
+        consentGiven: false,
+      }).success,
     ).toBe(true);
   });
 
@@ -86,14 +121,28 @@ describe("brandProfileFormSchema", () => {
 });
 
 describe("toBrandProfileRequest", () => {
+  it("sends the website, and null for an empty field (PUT replaces it)", () => {
+    expect(
+      toBrandProfileRequest(
+        { name: "Лляна", websiteUrl: "", consentGiven: false },
+        activeProfile,
+      ).websiteUrl,
+    ).toBeNull();
+  });
+
   it("sends the consent when the box was ticked", () => {
     expect(
       toBrandProfileRequest(
-        { name: "Лляна", consentGiven: true },
+        {
+          name: "Лляна",
+          websiteUrl: "https://lileya.com.ua",
+          consentGiven: true,
+        },
         activeProfile,
       ),
     ).toEqual({
       name: "Лляна",
+      websiteUrl: "https://lileya.com.ua",
       logoImageId: null,
       logoUrl: null,
       consentGiven: true,
@@ -103,7 +152,11 @@ describe("toBrandProfileRequest", () => {
   it("sends no consent when the box was not ticked", () => {
     expect(
       toBrandProfileRequest(
-        { name: "Лляна", consentGiven: false },
+        {
+          name: "Лляна",
+          websiteUrl: "https://lileya.com.ua",
+          consentGiven: false,
+        },
         activeProfile,
       ).consentGiven,
     ).toBe(false);
@@ -115,7 +168,11 @@ describe("toBrandProfileRequest", () => {
       logoUrl: "https://cdn.brand-site.ua/logo.png",
     };
     const request = toBrandProfileRequest(
-      { name: "Лляна", consentGiven: false },
+      {
+        name: "Лляна",
+        websiteUrl: "https://lileya.com.ua",
+        consentGiven: false,
+      },
       withLogo,
     );
     expect(request.logoImageId).toBeNull();
@@ -125,7 +182,11 @@ describe("toBrandProfileRequest", () => {
   it("never withdraws a consent the server has saved", () => {
     expect(
       toBrandProfileRequest(
-        { name: "Лляна", consentGiven: false },
+        {
+          name: "Лляна",
+          websiteUrl: "https://lileya.com.ua",
+          consentGiven: false,
+        },
         consentedProfile,
       ).consentGiven,
     ).toBe(true);
@@ -165,5 +226,47 @@ describe("profile save errors", () => {
       fields: {},
       form: "SERVICE_UNAVAILABLE",
     });
+  });
+});
+
+describe("a failed save shows its error under the right field", () => {
+  it("400 PROFILE_INVALID on websiteUrl → the hint under «Сайт бренду», not «Сервіс недоступний»", () => {
+    const texts = profileSaveErrors(
+      new ApiError(400, "PROFILE_INVALID", { websiteUrl: "PROFILE_INVALID" }),
+    );
+    expect(texts).toEqual({ websiteUrl: websiteUrlInvalidMessage });
+    expect(Object.values(texts)).not.toContain(messages.SERVICE_UNAVAILABLE);
+  });
+
+  it("a 500 without fields is the common text above the button", () => {
+    expect(profileSaveErrors(new ApiError(500, "SERVICE_UNAVAILABLE"))).toEqual(
+      { form: messages.SERVICE_UNAVAILABLE },
+    );
+  });
+});
+
+describe("«Сайт бренду» in the profile form", () => {
+  const parse = (websiteUrl: string) =>
+    brandProfileFormSchema.safeParse({
+      name: "Goldi",
+      websiteUrl,
+      consentGiven: false,
+    });
+
+  it("accepts a link with srsltid and keeps only the clean address", () => {
+    const result = parse("https://goldi.ua/?srsltid=AYCX9vJHexSw4L6lxjK6NU");
+    expect(result.success).toBe(true);
+    expect(result.data?.websiteUrl).toBe("https://goldi.ua/");
+    expect(toBrandProfileRequest(result.data!, activeProfile).websiteUrl).toBe(
+      "https://goldi.ua/",
+    );
+  });
+
+  it("keeps useful parameters and rejects http://", () => {
+    expect(parse("https://goldi.ua/?lang=uk").data?.websiteUrl).toBe(
+      "https://goldi.ua/?lang=uk",
+    );
+    expect(parse("http://goldi.ua").success).toBe(false);
+    expect(parse(`https://goldi.ua/${"a".repeat(2048)}`).success).toBe(false);
   });
 });

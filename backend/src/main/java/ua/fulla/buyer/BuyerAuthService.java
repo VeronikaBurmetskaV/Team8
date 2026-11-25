@@ -8,13 +8,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import ua.fulla.common.ApiException;
 import ua.fulla.common.ErrorCode;
-import ua.fulla.common.StrictEmailValidator;
+import ua.fulla.common.DisplayName;
+import ua.fulla.common.LoginId;
 
 @Service
 class BuyerAuthService {
 
-    /** The account that has just registered. */
-    record RegisteredBuyer(UUID buyerId, String email) {}
+    /** The account that has just registered: an email or a phone, and the optional name. */
+    record RegisteredBuyer(UUID buyerId, String email, String phone, String name) {
+
+        /** The login the person typed, normalized: the email or the phone. */
+        String login() {
+            return email != null ? email : phone;
+        }
+    }
 
     private final BuyerAccountRepository repository;
     private final PasswordEncoder passwordEncoder;
@@ -25,19 +32,30 @@ class BuyerAuthService {
     }
 
     /**
-     * US-02: creates the account. The format of the email and the password is already checked by
-     * Bean Validation on the request record (@StrictEmail, @PasswordLength). Only the email and the
-     * BCrypt hash are stored (NFR-19). The favourites move in a separate call,
+     * US-02: creates the account by email OR phone, with a name (ADR-0016). The formats
+     * are already checked by Bean Validation on the request record (@BuyerLogin, @PasswordLength,
+     * @DisplayName). Only the login, the BCrypt hash and the name are stored (NFR-19). The phone
+     * is not verified by SMS. The favourites move in a separate call,
      * {@code POST /api/me/favorites} (api.md §2.3, ADR-0012), not here.
      */
-    RegisteredBuyer register(String rawEmail, String password) {
-        String email = StrictEmailValidator.normalize(rawEmail);
+    RegisteredBuyer register(String rawLogin, String password, String rawName) {
+        LoginId login = LoginId.parse(rawLogin);
+        if (login == null) {
+            // Bean Validation already refused it; kept for direct callers.
+            throw new ApiException(HttpStatus.BAD_REQUEST, ErrorCode.LOGIN_INVALID,
+                "login must be an email or a phone number", Map.of("login", ErrorCode.LOGIN_INVALID));
+        }
+        String email = login.kind() == LoginId.Kind.EMAIL ? login.value() : null;
+        String phone = login.kind() == LoginId.Kind.PHONE ? login.value() : null;
+        String name = DisplayName.Validator.normalize(rawName);
         try {
-            return new RegisteredBuyer(repository.insert(email, passwordEncoder.encode(password)), email);
+            UUID id = repository.insert(email, phone, passwordEncoder.encode(password), name);
+            return new RegisteredBuyer(id, email, phone, name);
         } catch (DuplicateKeyException e) {
-            // The UNIQUE index decides, also when two registrations race (INV-08).
+            // The UNIQUE indexes decide, also when two registrations race (INV-08). One neutral
+            // answer for a taken email and a taken phone: it never tells which accounts exist.
             throw new ApiException(HttpStatus.CONFLICT, ErrorCode.EMAIL_TAKEN_OR_INVALID,
-                "email is already registered", Map.of("email", ErrorCode.EMAIL_TAKEN_OR_INVALID));
+                "login is already registered", Map.of("login", ErrorCode.EMAIL_TAKEN_OR_INVALID));
         }
     }
 }

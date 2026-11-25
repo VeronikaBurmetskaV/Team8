@@ -1,16 +1,14 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { BrandProfileResponse } from "../../api/types";
 import { useBrandProfile } from "../../shared/brandProfile";
 import { ConfirmDialog } from "../../shared/ConfirmDialog";
 import { formatConsentDate } from "../../shared/consentDate";
-import { errorCodeOf, errorMessage, toFormErrors } from "../../shared/errors";
-import {
-  brandNameInvalidMessage,
-  confirmTexts,
-  messages,
-} from "../../shared/messages.uk";
+import { errorCodeOf, errorMessage } from "../../shared/errors";
+import { confirmTexts, messages } from "../../shared/messages.uk";
+import { cleanWebsiteUrl } from "../../shared/validation";
 import { useSaveBrandProfile } from "./api";
 import styles from "./BrandProfilePage.module.css";
 import {
@@ -23,7 +21,7 @@ import {
 import {
   brandProfileFormSchema,
   CONSENT_TEXT,
-  profileFields,
+  profileSaveErrors,
   toBrandProfileFormValues,
   toBrandProfileRequest,
   type BrandProfileForm,
@@ -55,6 +53,7 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
     register,
     handleSubmit,
     setError,
+    setValue,
     reset,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<BrandProfileForm>({
@@ -76,19 +75,13 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
   }
 
   function showError(error: unknown) {
-    const { fields, form } = toFormErrors(error, profileFields);
-    if (fields.name) {
-      // PROFILE_INVALID on the name gets the name-only hint; any other code keeps its own text.
-      const message =
-        fields.name === "PROFILE_INVALID"
-          ? brandNameInvalidMessage
-          : messages[fields.name];
-      setError("name", { message });
+    const texts = profileSaveErrors(error);
+    if (texts.name) setError("name", { message: texts.name });
+    if (texts.websiteUrl) setError("websiteUrl", { message: texts.websiteUrl });
+    if (texts.consentGiven) {
+      setError("consentGiven", { message: texts.consentGiven });
     }
-    if (fields.consentGiven) {
-      setError("consentGiven", { message: messages[fields.consentGiven] });
-    }
-    if (form) setError("root", { message: messages[form] });
+    if (texts.form) setError("root", { message: texts.form });
   }
 
   return (
@@ -106,6 +99,33 @@ function BrandProfileForm({ profile }: { profile: BrandProfileResponse }) {
         {errors.name && (
           <p id="name-error" role="alert">
             {errors.name.message}
+          </p>
+        )}
+      </div>
+      <div>
+        <label htmlFor="websiteUrl">Сайт бренду</label>
+        <input
+          id="websiteUrl"
+          type="url"
+          inputMode="url"
+          autoComplete="url"
+          placeholder="https://brand.com.ua"
+          aria-invalid={errors.websiteUrl ? true : undefined}
+          aria-describedby={errors.websiteUrl ? "websiteUrl-error" : undefined}
+          {...register("websiteUrl", {
+            // On blur: «brand.com.ua» → «https://brand.com.ua», and tracking parameters
+            // (srsltid, utm_*, fbclid, gclid) are removed, so the field shows what is saved.
+            onBlur: (event: { target: { value: string } }) => {
+              const value = cleanWebsiteUrl(event.target.value);
+              if (value !== event.target.value) {
+                setValue("websiteUrl", value, { shouldDirty: true });
+              }
+            },
+          })}
+        />
+        {errors.websiteUrl && (
+          <p id="websiteUrl-error" role="alert">
+            {errors.websiteUrl.message}
           </p>
         )}
       </div>
@@ -142,6 +162,15 @@ function ConsentField({ profile }: { profile: BrandProfileResponse }) {
   const [step, setStep] = useState<ConsentStep>("idle");
   const [error, setError] = useState<string | null>(null);
   const box = consentCheckbox(profile, step);
+  // «Підтвердити згоду» on /brand leads here as /brand/profile#consent: scroll to the box and
+  // focus it, so the next Space ticks it.
+  const { hash } = useLocation();
+  const boxRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (hash !== "#consent") return;
+    boxRef.current?.scrollIntoView({ block: "center" });
+    boxRef.current?.focus({ preventScroll: true });
+  }, [hash]);
 
   function send(event: ConsentEvent): boolean {
     const next = consentTransition(step, event, profile);
@@ -166,10 +195,11 @@ function ConsentField({ profile }: { profile: BrandProfileResponse }) {
   }
 
   return (
-    <div className={styles.consent}>
+    <div className={styles.consent} id="consent">
       {/* The box sits inside its label, so the global styles put them on one line. */}
       <label>
         <input
+          ref={boxRef}
           type="checkbox"
           checked={box.checked}
           disabled={box.disabled}

@@ -1,5 +1,6 @@
 package ua.fulla.catalogimport;
 
+import java.io.IOException;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
@@ -68,8 +69,30 @@ class CatalogImportJob {
             log.warn("Import of {} failed: {}", code, e.getMessage());
             status = RunStatus.FAILED;
         }
+        if (status != RunStatus.FAILED) {
+            updateLogo(importer, fetcher);
+        }
         sync.finishRun(code, status);
         log.info("Import of {} finished: {} after {} requests", code, status, fetcher.requestsMade());
         return status;
+    }
+
+    /**
+     * After the products, if the request cap allows: one more polite request for the home page,
+     * whose logo URL is stored for the brand tile (ADR-0015). Never copies the image; an error
+     * here doesn't change the run's status, and a page without a logo keeps the last one found.
+     */
+    private void updateLogo(CatalogImporter importer, PoliteFetcher fetcher) {
+        if (!fetcher.hasRequestBudget()) {
+            return;
+        }
+        try {
+            String logo = SiteLogo.fetch(fetcher, importer.baseUrl());
+            if (logo != null) {
+                sync.saveLogo(importer.code(), logo);
+            }
+        } catch (IOException | RuntimeException e) {
+            log.warn("Logo of {} not read: {}", importer.code(), e.getMessage());
+        }
     }
 }

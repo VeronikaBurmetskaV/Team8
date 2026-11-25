@@ -5,42 +5,41 @@ import {
   useReducer,
   useRef,
   useState,
-  useSyncExternalStore,
 } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getFeed } from "../../api/client";
 import type { FeedCard } from "../../api/types";
-import { CloseIcon, FiltersIcon } from "../../shared/icons";
+import { FiltersIcon } from "../../shared/icons";
 import { catalogTexts as t } from "../../shared/messages.uk";
 import { favoriteList, useProductList } from "../../shared/productLists";
 import { feedQueryKey } from "../feed/FeedPage";
 import {
-  applyPriceFilter,
   brandOptions,
   CATALOG_PAGE_SIZE,
-  countActiveFilters,
+  sizeOptions,
+  withSelectedSizes,
   filterCatalog,
   filterChips,
   filterPanelReducer,
-  filtersKey,
   hasMore,
   isSingleBrandView,
   nextVisibleCount,
-  NO_PRICE_RANGE,
   parseFilters,
   priceRangeOf,
-  withBrandToggled,
-  withoutFilter,
-  withoutFilters,
-  withPriceRange,
   type FilterChip,
   type PriceRange,
 } from "./catalog";
+import { FilterChips, RestoreFiltersButton } from "./FilterChips";
+import { restoreLabel } from "./filterState";
+import { useCatalogFilters } from "./useCatalogFilters";
+import { BrandTiles } from "./BrandTiles";
+import { showBrandTiles } from "./brandGrid";
 import { CatalogTile, CatalogTileSkeleton } from "./CatalogTile";
 import { FilterPanel } from "./FilterPanel";
 import { HeroBanner } from "./HeroBanner";
 import { revealDelay, useReveal } from "../../shared/reveal";
+import { useMediaQuery } from "../../shared/useMediaQuery";
 import styles from "./CatalogPage.module.css";
 
 const PANEL_ID = "catalog-filters";
@@ -58,34 +57,60 @@ export function CatalogPage() {
   // Same query as the swipe feed: one request, one cache.
   const feed = useQuery({ queryKey: feedQueryKey, queryFn: getFeed });
   const allItems = feed.data?.items ?? NO_ITEMS;
-  const [searchParams, setSearchParams] = useSearchParams();
 
   const options = useMemo(() => brandOptions(allItems), [allItems]);
+  const sizes = useMemo(() => sizeOptions(allItems), [allItems]);
   // Unknown brands in the URL are ignored once the catalogue is known.
   const knownBrands = useMemo(
     () => (feed.isSuccess ? new Set(options.map((o) => o.key)) : null),
     [feed.isSuccess, options],
   );
+  // Unknown sizes in the URL are ignored once the catalogue is known.
+  const knownSizes = useMemo(
+    () => (feed.isSuccess ? new Set(sizes.map((o) => o.key)) : null),
+    [feed.isSuccess, sizes],
+  );
+  const scrollToList = useRef(false);
+  // «Знайдено N товарів» is announced only after the buyer changes a filter.
+  const [announce, setAnnounce] = useState(false);
+  /** Every filter change: list from its start (when asked), announced. */
+  const onFiltersChange = useCallback((scroll: boolean) => {
+    scrollToList.current = scroll;
+    setAnnounce(true);
+  }, []);
+  // The filters of / and /feed: the same hook, the same URL parameters (useCatalogFilters).
+  const [searchParamsForView] = useSearchParams();
   // «Сторінка бренду»: exactly one brand, no other filter. It is decided before unknown
   // brands are dropped, so a brand that has no products shows its own empty page.
-  const brandView = brandViewKey(searchParams);
-  const filters =
-    brandView !== null
-      ? parseFilters(searchParams)
-      : parseFilters(searchParams, knownBrands);
-  const filterKey = filtersKey(filters);
-  const items = useMemo(() => {
-    const raw = parseFilters(searchParams);
-    const applied = isSingleBrandView(raw)
-      ? raw
-      : parseFilters(searchParams, knownBrands);
-    return filterCatalog(allItems, applied);
-  }, [allItems, searchParams, knownBrands]);
+  const brandView = brandViewKey(searchParamsForView);
+  const {
+    filters,
+    filterKey,
+    activeCount,
+    toRestore,
+    toggleBrand,
+    toggleSize,
+    applyPrice: applyPriceRange,
+    resetPrice,
+    removeChip,
+    resetAll,
+    restore,
+  } = useCatalogFilters({
+    knownBrands,
+    knownSizes,
+    remember: brandView === null,
+    onChange: onFiltersChange,
+  });
+  const items = useMemo(
+    () => filterCatalog(allItems, filters),
+    // filterKey stands for the filters object, which is new on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allItems, filterKey],
+  );
   const brandLabel =
     brandView === null
       ? undefined
       : options.find((option) => option.key === brandView)?.label;
-  const activeCount = countActiveFilters(filters);
 
   // «Показати ще» counts within the filtered list; a filter change starts on the first page.
   const [paging, setPaging] = useState({
@@ -117,56 +142,19 @@ export function CatalogPage() {
     [revealToolbar],
   );
   const catalogRef = useRef<HTMLDivElement>(null);
-  const scrollToList = useRef(false);
-  // «Знайдено N товарів» is announced only after the buyer changes a filter.
-  const [announce, setAnnounce] = useState(false);
 
   const closeFilters = useCallback(() => {
     dispatch({ type: "close" });
     toggleRef.current?.focus();
   }, []);
 
-  /** Every filter change: a new URL entry (Back works), list from its start, announced. */
-  const changeFilters = useCallback(
-    (next: URLSearchParams, scroll: boolean) => {
-      setSearchParams(next);
-      scrollToList.current = scroll;
-      setAnnounce(true);
-    },
-    [setSearchParams],
-  );
-
   /** «Показати …» of the price group: the drawer closes, the laptop column stays. */
   const applyPrice = useCallback(
     (range: PriceRange) => {
-      const next = applyPriceFilter(searchParams, range, isDrawer);
-      changeFilters(next.params, true);
-      if (!next.panelOpen) dispatch({ type: "close" });
+      if (!applyPriceRange(range, isDrawer)) dispatch({ type: "close" });
       toggleRef.current?.focus({ preventScroll: true });
     },
-    [searchParams, isDrawer, changeFilters],
-  );
-
-  const resetPrice = useCallback(
-    () => changeFilters(withPriceRange(searchParams, NO_PRICE_RANGE), false),
-    [searchParams, changeFilters],
-  );
-
-  /** A brand click applies at once; the panel stays open for more. */
-  const toggleBrand = useCallback(
-    (key: string) => changeFilters(withBrandToggled(searchParams, key), true),
-    [searchParams, changeFilters],
-  );
-
-  const removeChip = useCallback(
-    (chipId: string) =>
-      changeFilters(withoutFilter(searchParams, chipId), false),
-    [searchParams, changeFilters],
-  );
-
-  const resetAll = useCallback(
-    () => changeFilters(withoutFilters(searchParams), false),
-    [searchParams, changeFilters],
+    [applyPriceRange, isDrawer],
   );
 
   // After a filter change from the panel the list starts at the top of the screen.
@@ -231,6 +219,13 @@ export function CatalogPage() {
         />
       )}
 
+      {showBrandTiles({
+        status: feed.status,
+        activeFilters: activeCount,
+        singleBrandView: brandView !== null,
+        brandCount: options.length,
+      }) && <BrandTiles options={feed.isPending ? null : options} />}
+
       <div ref={toolbarRefCallback} className={styles.toolbar}>
         <button
           ref={toggleRef}
@@ -263,6 +258,12 @@ export function CatalogPage() {
         )}
       </div>
       {!announceInPanel && announcement}
+      {toRestore !== null && feed.isSuccess && (
+        <RestoreFiltersButton
+          label={restoreLabel(toRestore, options)}
+          onRestore={restore}
+        />
+      )}
 
       <div
         ref={catalogRef}
@@ -280,6 +281,11 @@ export function CatalogPage() {
             brandOptions={feed.isPending ? null : options}
             selectedBrands={filters.brands}
             onToggleBrand={toggleBrand}
+            sizeOptions={
+              feed.isPending ? null : withSelectedSizes(sizes, filters.sizes)
+            }
+            selectedSizes={filters.sizes}
+            onToggleSize={toggleSize}
             activeCount={activeCount}
             onResetAll={resetAll}
             resultCount={items.length}
@@ -411,30 +417,12 @@ export function CatalogResults({
         </div>
       )}
 
-      {status === "success" && filtered && (
-        <div className={styles.chips}>
-          {chips.map((chip) => (
-            <button
-              key={chip.id}
-              type="button"
-              className={styles.chip}
-              aria-label={chip.removeLabel}
-              onClick={() => onRemoveChip(chip.id)}
-            >
-              {chip.label}
-              <CloseIcon />
-            </button>
-          ))}
-          {chips.length > 1 && (
-            <button
-              type="button"
-              className={styles.textButton}
-              onClick={onResetAll}
-            >
-              {t.resetAll}
-            </button>
-          )}
-        </div>
+      {status === "success" && (
+        <FilterChips
+          chips={chips}
+          onRemove={onRemoveChip}
+          onResetAll={onResetAll}
+        />
       )}
 
       {status === "success" && items.length === 0 && !filtered && (
@@ -480,18 +468,5 @@ export function CatalogResults({
         </div>
       )}
     </section>
-  );
-}
-
-/** True while the media query matches; follows window resizes. */
-function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (onChange) => {
-      const list = window.matchMedia(query);
-      list.addEventListener("change", onChange);
-      return () => list.removeEventListener("change", onChange);
-    },
-    () => window.matchMedia(query).matches,
-    () => false,
   );
 }

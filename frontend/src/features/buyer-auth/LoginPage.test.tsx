@@ -31,14 +31,57 @@ describe("/login", () => {
     expect(tabTag(html, "login-tab-brand")).toContain('aria-selected="false"');
   });
 
-  it("shows the buyer placeholder without a form on the default tab", () => {
+  it("shows the buyer login form on the default tab", () => {
     const html = render("/login");
-    expect(html).toContain("Тут скоро буде вхід для покупця");
-    expect(html).not.toContain("<form");
-    expect(html).not.toContain('type="password"');
-    // «Створити» is not a link yet: there is no buyer registration page.
-    expect(html).toContain("Створити");
-    expect(html).not.toContain('href="/register"');
+    expect(html).not.toContain("Тут скоро буде вхід для покупця");
+    expect(html).toContain("<form");
+    expect(html).toMatch(/<label[^>]*for="buyer-email"[^>]*>Email<\/label>/);
+    expect(html).toMatch(
+      /<label[^>]*for="buyer-password"[^>]*>Пароль<\/label>/,
+    );
+    expect(html).toMatch(
+      /<input[^>]*id="buyer-email"[^>]*autoComplete="email"/i,
+    );
+    expect(html).toMatch(/<input[^>]*autoComplete="current-password"[^>]*>/i);
+    expect(html).toContain('type="password"');
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Увійти<\/button>/);
+  });
+
+  it("has an eye toggle for the password", () => {
+    const html = render("/login");
+    const eye = html.match(/<button[^>]*aria-label="Показати пароль"[^>]*>/);
+    expect(eye?.[0]).toContain('aria-pressed="false"');
+    expect(eye?.[0]).toContain('aria-controls="buyer-password"');
+    expect(eye?.[0]).toContain('type="button"');
+  });
+
+  it("links the buyer tab to /register", () => {
+    const html = render("/login");
+    expect(html).toMatch(/<a[^>]*href="\/register"[^>]*>Зареєструватися<\/a>/);
+  });
+
+  it("keeps empty live regions for the common messages", () => {
+    const html = render("/login");
+    expect(html).toContain('role="status"');
+    expect(html).toContain('role="alert"');
+    expect(html).not.toContain("скоро запрацює");
+  });
+
+  it("draws the green line only under the active tab", () => {
+    for (const [url, active, inactive] of [
+      ["/login", "login-tab-buyer", "login-tab-brand"],
+      ["/login?tab=brand", "login-tab-brand", "login-tab-buyer"],
+    ] as const) {
+      const html = render(url);
+      const tab = (id: string) =>
+        html.match(
+          new RegExp(`<button[^>]*id="${id}"[^>]*>.*?</button>`),
+        )?.[0] ?? "";
+      expect(tab(active)).toMatch(
+        /<span[^>]*class="[^"]*_tabLine[^"]*"[^>]*aria-hidden="true"/,
+      );
+      expect(tab(inactive)).not.toContain("_tabLine");
+    }
   });
 
   it("opens the brand tab for ?tab=brand", () => {
@@ -46,8 +89,8 @@ describe("/login", () => {
     expect(tabTag(html, "login-tab-brand")).toContain('aria-selected="true"');
     expect(tabTag(html, "login-tab-brand")).toContain('tabindex="0"');
     expect(tabTag(html, "login-tab-buyer")).toContain('tabindex="-1"');
-    expect(html).toContain('type="password"');
-    expect(html).not.toContain("Тут скоро буде вхід для покупця");
+    expect(html).toContain('id="brand-password"');
+    expect(html).not.toContain('id="buyer-email"');
   });
 
   it("links the brand tab to /brand/register", () => {

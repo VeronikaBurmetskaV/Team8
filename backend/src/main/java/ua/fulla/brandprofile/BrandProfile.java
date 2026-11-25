@@ -9,6 +9,7 @@ public record BrandProfile(
         String name,
         UUID logoImageId,
         String logoUrl,
+        String websiteUrl,
         Instant consentGivenAt,
         String consentText,
         Instant createdAt,

@@ -8,7 +8,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import ua.fulla.common.BrandName;
 import ua.fulla.common.HttpsUrl;
+import ua.fulla.common.WebsiteUrl;
 import ua.fulla.common.SessionAccount;
 
 /** {@code /api/brand/profile} (api.md §2.1); ROLE_BRAND is required by SecurityConfig. */
@@ -22,12 +24,14 @@ class BrandProfileController {
      */
     record ProfileRequest(
             @BrandName String name,
+            @WebsiteUrl String websiteUrl,
             UUID logoImageId,
             @HttpsUrl(message = "PROFILE_INVALID: logoUrl must be an https:// URL") String logoUrl,
             Boolean consentGiven) {}
 
     record ProfileResponse(
             String name,
+            String websiteUrl,
             UUID logoImageId,
             String logoUrl,
             boolean consentGiven,
@@ -42,6 +46,7 @@ class BrandProfileController {
                 : profile.logoUrl();
             return new ProfileResponse(
                 profile.name(),
+                profile.websiteUrl(),
                 profile.logoImageId(),
                 profile.logoUrl(),
                 profile.consentGivenAt() != null,
@@ -66,7 +71,8 @@ class BrandProfileController {
     @PutMapping("/api/brand/profile")
     ProfileResponse save(@AuthenticationPrincipal SessionAccount brand, @Valid @RequestBody ProfileRequest request) {
         return ProfileResponse.of(
-            service.save(brand.accountId(), request.name(), request.logoImageId(), request.logoUrl(),
+            service.save(brand.accountId(), request.name(), request.websiteUrl(), request.logoImageId(),
+                request.logoUrl(),
                 request.consentGiven()));
     }
 }

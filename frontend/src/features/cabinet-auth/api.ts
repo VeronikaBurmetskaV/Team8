@@ -1,32 +1,21 @@
-import {
-  useMutation,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiPost } from "../../api/client";
 import type {
   BrandCredentialsRequest,
+  BrandRegisterRequest,
   BrandSessionResponse,
 } from "../../api/types";
-import { sessionQueryKey } from "../../shared/session";
+import { resetForNewSession } from "../../shared/session";
 
 /**
- * The account in this browser has changed: forget everything loaded for the previous one
- * (profile, products) and ask the server again who is logged in.
+ * POST /api/brand/register (US-21): creates the account with the brand name and website in
+ * the profile, and logs the brand in.
  */
-function resetForNewSession(queryClient: QueryClient) {
-  queryClient.removeQueries({
-    predicate: (query) => query.queryKey[0] !== sessionQueryKey[0],
-  });
-  return queryClient.invalidateQueries({ queryKey: sessionQueryKey });
-}
-
-/** POST /api/brand/register (US-21): creates the account and logs the brand in. */
 export function useRegisterBrand() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (credentials: BrandCredentialsRequest) =>
-      apiPost<BrandSessionResponse>("/api/brand/register", credentials),
+    mutationFn: (body: BrandRegisterRequest) =>
+      apiPost<BrandSessionResponse>("/api/brand/register", body),
     onSuccess: () => resetForNewSession(queryClient),
   });
 }

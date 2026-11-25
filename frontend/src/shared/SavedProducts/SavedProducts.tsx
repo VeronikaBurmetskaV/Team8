@@ -8,9 +8,14 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Link } from "react-router";
 import { CloseIcon } from "../icons";
-import { confirmTexts, savedProductsTexts as t } from "../messages.uk";
+import { isNearLimit } from "../favoritesLimit";
+import {
+  confirmTexts,
+  favoritesLimitTexts as limitTexts,
+  savedProductsTexts as t,
+} from "../messages.uk";
 import { ProductCard } from "../ProductCard/ProductCard";
-import type { SavedProduct } from "../productLists";
+import type { DetailedProduct } from "../productLists";
 import { ProductModal } from "./ProductModal";
 import {
   initialSavedProductsState,
@@ -23,7 +28,7 @@ import styles from "./SavedProducts.module.css";
 interface SavedProductsProps {
   titleId: string;
   title: string;
-  items: readonly SavedProduct[];
+  items: readonly DetailedProduct[];
   emptyText: string;
   /** Links of the empty state; the first one is the main action. */
   emptyLinks: readonly { to: string; text: string }[];
@@ -33,6 +38,8 @@ interface SavedProductsProps {
   removeLabel: (name: string) => string;
   /** Called after «Видалити» in the question on the card. */
   onRemove: (id: string) => void;
+  /** «Вподобане»: the limit, shown as «18 з 25» instead of the product count. */
+  limit?: number;
 }
 
 /** Where the focus goes after the next render. */
@@ -70,6 +77,7 @@ export function SavedProductsView({
   listLabel,
   removeLabel,
   onRemove,
+  limit,
   state,
   dispatch,
   reduceMotion,
@@ -100,8 +108,18 @@ export function SavedProductsView({
     <section className={styles.page} aria-labelledby={titleId}>
       <h1 id={titleId} className={styles.title} tabIndex={-1}>
         {title}
-        {items.length > 0 && (
-          <span className={styles.count}>{t.count(items.length)}</span>
+        {limit !== undefined ? (
+          <span
+            className={styles.count}
+            data-warning={isNearLimit(items.length, limit) || undefined}
+            aria-label={limitTexts.counterLabel(items.length, limit)}
+          >
+            {limitTexts.counter(items.length, limit)}
+          </span>
+        ) : (
+          items.length > 0 && (
+            <span className={styles.count}>{t.count(items.length)}</span>
+          )
         )}
       </h1>
 

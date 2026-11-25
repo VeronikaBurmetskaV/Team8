@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { Link } from "react-router";
-import { CompactBarView, isBarToggleClick } from "./BuyerHeader";
+import { CompactBarView, HeaderToggle, isBarToggleClick } from "./BuyerHeader";
 import { headerTexts as t } from "./messages.uk";
 import { headerReducer, INITIAL_HEADER_STATE } from "./headerState";
 
@@ -14,21 +14,22 @@ function elements(node: ReactNode): ReactElement<AnyProps>[] {
   return [node, ...elements(node.props.children)];
 }
 
-function bar(expanded: boolean) {
+function bar() {
   const onToggle = vi.fn();
   const onLogo = vi.fn();
-  const tree = CompactBarView({
-    expanded,
-    panelId: "header-panel",
-    onToggle,
-    onLogo,
-  });
+  const tree = CompactBarView({ onToggle, onLogo });
   const all = elements(tree);
   const root = all[0];
-  const arrow = all.find((element) => element.type === "button");
   const logo = all.find((element) => element.type === Link);
-  if (!root || !arrow || !logo) throw new Error("bar markup changed");
-  return { root, arrow, logo, onToggle, onLogo };
+  if (!root || !logo) throw new Error("bar markup changed");
+  return { root, logo, onToggle, onLogo };
+}
+
+/** The arrow of the shell (one element for the bar and the expanded header). */
+function arrow(expanded: boolean) {
+  const onToggle = vi.fn();
+  const button = HeaderToggle({ expanded, panelId: "header-panel", onToggle });
+  return { arrow: button, onToggle };
 }
 
 /** A click event whose target is (or is inside) `tag`, as the bar's onClick sees it. */
@@ -43,35 +44,48 @@ function clickOn(tag: "div" | "a" | "button") {
 
 describe("buyer header: thin bar", () => {
   it("appears once the page scrolls past the full header", () => {
-    const scrolled = headerReducer(INITIAL_HEADER_STATE, { type: "leftTop" });
+    const scrolled = headerReducer(INITIAL_HEADER_STATE, {
+      type: "scroll",
+      y: 600,
+      maxY: 5000,
+      fullHeight: 128,
+    });
     expect(scrolled.mode).toBe("compact");
     // The bar's own markup: small FULLA without «SWIPING» and the arrow.
-    const { logo } = bar(false);
+    const { logo } = bar();
     expect(logo.props.children).toBe("FULLA");
   });
 
   it("arrow: «Розгорнути меню», aria-expanded=false, controls the panel", () => {
-    const { arrow } = bar(false);
-    expect(arrow.props["aria-label"]).toBe(t.compactExpand);
-    expect(arrow.props["aria-label"]).toBe("Розгорнути меню");
-    expect(arrow.props["aria-expanded"]).toBe(false);
-    expect(arrow.props["aria-controls"]).toBe("header-panel");
-    expect(arrow.props.type).toBe("button");
+    const { arrow: button } = arrow(false);
+    expect(button.props["aria-label"]).toBe(t.compactExpand);
+    expect(button.props["aria-label"]).toBe("Розгорнути меню");
+    expect(button.props["aria-expanded"]).toBe(false);
+    expect(button.props["aria-controls"]).toBe("header-panel");
+    expect(button.props.type).toBe("button");
   });
 
   it("arrow when open: «Згорнути меню», aria-expanded=true", () => {
-    const { arrow, root } = bar(true);
-    expect(arrow.props["aria-label"]).toBe("Згорнути меню");
-    expect(arrow.props["aria-expanded"]).toBe(true);
-    expect(root.props["data-expanded"]).toBe(true);
+    const { arrow: button } = arrow(true);
+    expect(button.props["aria-label"]).toBe("Згорнути меню");
+    expect(button.props["aria-expanded"]).toBe(true);
+    // the chevron turns up (CSS rotate) by this attribute
+    expect(button.props["data-expanded"]).toBe(true);
   });
 
   it("a click on the arrow opens, and then closes, the header", () => {
-    const { arrow, onToggle } = bar(false);
-    (arrow.props.onClick as () => void)();
+    const { arrow: button, onToggle } = arrow(false);
+    (button.props.onClick as (event: { detail: number }) => void)({
+      detail: 1,
+    });
     expect(onToggle).toHaveBeenCalledTimes(1);
 
-    let state = headerReducer(INITIAL_HEADER_STATE, { type: "leftTop" });
+    let state = headerReducer(INITIAL_HEADER_STATE, {
+      type: "scroll",
+      y: 600,
+      maxY: 5000,
+      fullHeight: 128,
+    });
     state = headerReducer(state, { type: "toggle", y: 600 });
     expect(state.mode).toBe("expanded");
     state = headerReducer(state, { type: "toggle", y: 600 });
@@ -79,7 +93,7 @@ describe("buyer header: thin bar", () => {
   });
 
   it("a click on the bar itself toggles; on the logo or the arrow it does not (twice)", () => {
-    const { root, onToggle } = bar(false);
+    const { root, onToggle } = bar();
     const onClick = root.props.onClick as (event: unknown) => void;
     onClick(clickOn("div"));
     expect(onToggle).toHaveBeenCalledTimes(1);
@@ -90,7 +104,7 @@ describe("buyer header: thin bar", () => {
   });
 
   it("the logo leads to / and scrolls to the top", () => {
-    const { logo, onLogo } = bar(false);
+    const { logo, onLogo } = bar();
     expect(logo.props.to).toBe("/");
     expect(logo.props["aria-label"]).toBe(t.logoLabel);
     (logo.props.onClick as () => void)();
@@ -99,7 +113,12 @@ describe("buyer header: thin bar", () => {
 
   it("Esc and another page close the expanded header", () => {
     const open = headerReducer(
-      headerReducer(INITIAL_HEADER_STATE, { type: "leftTop" }),
+      headerReducer(INITIAL_HEADER_STATE, {
+        type: "scroll",
+        y: 600,
+        maxY: 5000,
+        fullHeight: 128,
+      }),
       { type: "toggle", y: 0 },
     );
     // BuyerHeader dispatches `collapse` on Esc (closesOnKey) and on a pathname change.

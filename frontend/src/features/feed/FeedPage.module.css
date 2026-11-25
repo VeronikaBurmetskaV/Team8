@@ -35,10 +35,29 @@
 .topBar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: var(--space-1);
   width: 100%;
   min-height: 0;
+}
+
+/* The catalogue's «Фільтри» (catalog/CatalogPage.module.css), a little lower to sit with «?». */
+.filtersButton {
+  min-height: 40px;
+  height: 40px;
+}
+
+/* Chips of the active filters and «Повернути фільтри», between «Фільтри» and the card. */
+.filterRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+/* The row takes room above the card: the card gets that much less height. */
+.page[data-has-filter-row="true"] {
+  --feed-chrome: calc(330px + var(--icon-button-size) + var(--space-1));
 }
 
 /* «?»: a small tooltip on hover and keyboard focus, the instruction on click. */

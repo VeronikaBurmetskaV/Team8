@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { PublicCard } from "../api/types";
+import type { FeedCard, PublicCard } from "../api/types";
 import {
   browserStorage,
   safeGet,
@@ -26,6 +26,37 @@ export type SavedProduct = Pick<
   PublicCard,
   "id" | "name" | "brandName" | "priceUah" | "photoUrl" | "productUrl"
 >;
+
+/** The details of an imported card (api.md §2.2); brand-made cards have none. */
+export type ProductDetails = Pick<
+  FeedCard,
+  "sizes" | "colors" | "material" | "description"
+>;
+
+/** A saved product with the details it has in the feed right now. */
+export type DetailedProduct = SavedProduct & ProductDetails;
+
+/**
+ * The lists keep only the card fields (never sizes or stock, which change), so «Вподобане»
+ * takes the details from the feed it already loads: the same product ID → its current sizes,
+ * colours, material and description. A product no longer in the feed keeps only its fields.
+ */
+export function withCurrentDetails(
+  items: readonly SavedProduct[],
+  feed: readonly FeedCard[] | undefined,
+): DetailedProduct[] {
+  const byId = new Map((feed ?? []).map((card) => [card.id, card]));
+  return items.map((item) => {
+    const card = byId.get(item.id);
+    if (card === undefined) return item;
+    const details: ProductDetails = {};
+    if (card.sizes !== undefined) details.sizes = card.sizes;
+    if (card.colors !== undefined) details.colors = card.colors;
+    if (card.material !== undefined) details.material = card.material;
+    if (card.description !== undefined) details.description = card.description;
+    return { ...item, ...details };
+  });
+}
 
 interface StoredList {
   version: 1;
@@ -183,31 +214,55 @@ export function createFavoriteList(
 /** The app's shared «Вподобане». */
 export const favoriteList = createFavoriteList();
 
+/** What an add to «Вподобане» does: adds, finds it already there, or hits the limit. */
+export type FavoriteAdd = "added" | "already" | "limit";
+
+/**
+ * Whether a product may go into «Вподобане» holding `items`: one already there is always fine
+ * (nothing changes); a new one only while there are fewer than `limit` (25 guest / 100 account,
+ * shared/favoritesLimit.ts).
+ */
+export function favoriteAddResult(
+  items: readonly { id: string }[],
+  id: string,
+  limit: number,
+): FavoriteAdd {
+  if (items.some((item) => item.id === id)) return "already";
+  return items.length >= limit ? "limit" : "added";
+}
+
 /**
  * Adds a product to «Вподобане»: a like in the swipe feed (swipe right or «Сподобалось»)
- * and the heart in the catalogue. Adding the same product again changes nothing.
+ * and the heart in the catalogue. Adding the same product again changes nothing; a new one
+ * over the limit is not added («limit»: the caller shows FavoritesLimitDialog).
  */
 export function addToFavorites(
   product: SavedProduct,
   list: ProductList = favoriteList,
-): readonly SavedProduct[] {
-  return list.add(product);
+  limit: number = Number.POSITIVE_INFINITY,
+): FavoriteAdd {
+  const result = favoriteAddResult(list.read(), product.id, limit);
+  if (result === "added") list.add(product);
+  return result;
 }
 
+/** What a click on the catalogue heart did. */
+export type FavoriteToggle = "added" | "removed" | "limit";
+
 /**
- * The heart on a catalogue tile: adds through `addToFavorites`, a second click removes.
- * Returns true when the product is in «Вподобане» afterwards.
+ * The heart on a catalogue tile: adds through `addToFavorites`, a second click removes. Over
+ * the limit nothing changes («limit»: the heart stays empty, the caller shows the dialog).
  */
 export function toggleFavorite(
   product: SavedProduct,
   list: ProductList = favoriteList,
-): boolean {
+  limit: number = Number.POSITIVE_INFINITY,
+): FavoriteToggle {
   if (list.has(product.id)) {
     list.remove(product.id);
-    return false;
+    return "removed";
   }
-  addToFavorites(product, list);
-  return true;
+  return addToFavorites(product, list, limit) === "limit" ? "limit" : "added";
 }
 
 /** The current items of a list; re-renders on changes in this tab and in other tabs. */

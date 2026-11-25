@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { brandNameInvalidMessage, messages } from "./messages.uk";
+import {
+  websiteUrlInvalidMessage,
+  brandNameInvalidMessage,
+  buyerAuthTexts,
+  messages,
+} from "./messages.uk";
 import {
   brandLoginSchema,
   brandNameSchema,
   brandRegisterSchema,
+  buyerLoginSchema,
+  buyerRegisterSchema,
   cardFormSchema,
+  isWebsiteUrl,
+  withHttps,
+  cleanWebsiteUrl,
+  normalizeWebsiteUrl,
   IMAGE_MAX_BYTES,
   isHttpsUrl,
   isHttpUrl,
@@ -15,11 +26,15 @@ import {
   cardPriceExamples,
   httpsUrlExamples,
   httpUrlExamples,
+  websiteUrlExamples,
+  websiteUrlNormalizedExamples,
   type ValidationExample,
 } from "./validation.examples";
 
 // The same examples as the backend tests BrandAuthTest and BrandProfileTest (R-T17).
 const PASSWORD = "secret-123";
+/** Valid name and website: the email and password tests change only their own field. */
+const BRAND = { name: "Lileya", websiteUrl: "https://lileya.com.ua" };
 
 /** Field name → messages of a failed parse. */
 function fieldErrors(result: {
@@ -39,6 +54,7 @@ describe("brandRegisterSchema: email", () => {
     "accepts %j",
     (email) => {
       const result = brandRegisterSchema.safeParse({
+        ...BRAND,
         email,
         password: PASSWORD,
       });
@@ -48,6 +64,7 @@ describe("brandRegisterSchema: email", () => {
 
   it("trims and lower-cases the email like the server", () => {
     const result = brandRegisterSchema.parse({
+      ...BRAND,
       email: "  Info@Brand.UA ",
       password: PASSWORD,
     });
@@ -67,7 +84,11 @@ describe("brandRegisterSchema: email", () => {
     "info@bra\u0007nd.ua", // a control character
     `${"a".repeat(246)}@brand.ua`, // 255 characters
   ])("rejects %j with the story text", (email) => {
-    const result = brandRegisterSchema.safeParse({ email, password: PASSWORD });
+    const result = brandRegisterSchema.safeParse({
+      ...BRAND,
+      email,
+      password: PASSWORD,
+    });
     expect(result.success).toBe(false);
     expect(fieldErrors(result)).toEqual({
       email: [messages.EMAIL_TAKEN_OR_INVALID],
@@ -77,7 +98,11 @@ describe("brandRegisterSchema: email", () => {
   it("accepts an email of exactly 254 characters", () => {
     const email = `${"a".repeat(245)}@brand.ua`;
     expect(email).toHaveLength(254);
-    const result = brandRegisterSchema.safeParse({ email, password: PASSWORD });
+    const result = brandRegisterSchema.safeParse({
+      ...BRAND,
+      email,
+      password: PASSWORD,
+    });
     expect(result.success).toBe(true);
   });
 });
@@ -89,6 +114,7 @@ describe("brandRegisterSchema: password", () => {
     "        ", // spaces count: the password is not trimmed
   ])("accepts %j", (password) => {
     const result = brandRegisterSchema.safeParse({
+      ...BRAND,
       email: "info@brand.ua",
       password,
     });
@@ -102,6 +128,7 @@ describe("brandRegisterSchema: password", () => {
     "я".repeat(37), // 37 characters, but 74 UTF-8 bytes
   ])("rejects %j", (password) => {
     const result = brandRegisterSchema.safeParse({
+      ...BRAND,
       email: "info@brand.ua",
       password,
     });
@@ -113,6 +140,7 @@ describe("brandRegisterSchema: password", () => {
 
   it("reports both fields when both are wrong", () => {
     const result = brandRegisterSchema.safeParse({
+      ...BRAND,
       email: "no-at-sign",
       password: "short",
     });
@@ -138,6 +166,136 @@ describe("brandLoginSchema", () => {
     expect(result.success).toBe(false);
     const texts = Object.values(fieldErrors(result)).flat();
     expect(texts).toEqual([messages.INVALID_CREDENTIALS]);
+  });
+});
+
+describe("buyerLoginSchema", () => {
+  it("asks for both fields when they are empty", () => {
+    const result = buyerLoginSchema.safeParse({ email: "  ", password: "" });
+    expect(fieldErrors(result)).toEqual({
+      email: [buyerAuthTexts.emailRequired],
+      password: [buyerAuthTexts.passwordRequired],
+    });
+  });
+
+  it.each(["buyer", "buyer@mail", "buyer@@mail.com", "bu yer@mail.com"])(
+    "rejects the email %j",
+    (email) => {
+      const result = buyerLoginSchema.safeParse({ email, password: PASSWORD });
+      expect(fieldErrors(result)).toEqual({
+        email: [buyerAuthTexts.emailInvalid],
+      });
+    },
+  );
+
+  it("accepts any non-empty password (the server decides)", () => {
+    const result = buyerLoginSchema.safeParse({
+      email: " buyer@mail.com ",
+      password: "1",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("buyerRegisterSchema", () => {
+  const valid = {
+    name: "Софія",
+    login: "Buyer@Mail.com",
+    password: PASSWORD,
+    confirmPassword: PASSWORD,
+  };
+
+  it("accepts an email or a phone in «Email або номер телефону»", () => {
+    expect(buyerRegisterSchema.safeParse(valid).success).toBe(true);
+    for (const login of [
+      "0671234567",
+      "+380 67 123 45 67",
+      "+48 601 234 567",
+    ]) {
+      expect(buyerRegisterSchema.safeParse({ ...valid, login }).success).toBe(
+        true,
+      );
+    }
+  });
+
+  it("rejects what is neither an email nor a phone", () => {
+    for (const login of ["", "nope", "067123", "buyer@mail"]) {
+      expect(
+        fieldErrors(buyerRegisterSchema.safeParse({ ...valid, login })),
+      ).toEqual({
+        login: [buyerAuthTexts.loginInvalid],
+      });
+    }
+    expect(buyerAuthTexts.loginInvalid).toBe(
+      "Введіть email або номер телефону у форматі +380…",
+    );
+  });
+
+  it("the name is required: 1–50 characters after trimming, not only spaces", () => {
+    expect(buyerRegisterSchema.parse({ ...valid, name: "  Софія " }).name).toBe(
+      "Софія",
+    );
+    for (const name of ["", "   "]) {
+      expect(
+        fieldErrors(buyerRegisterSchema.safeParse({ ...valid, name })),
+      ).toEqual({
+        name: [buyerAuthTexts.nameRequired],
+      });
+    }
+    expect(buyerAuthTexts.nameRequired).toBe("Введіть імʼя");
+    expect(
+      buyerRegisterSchema.safeParse({ ...valid, name: "я".repeat(50) }).success,
+    ).toBe(true);
+    expect(
+      fieldErrors(
+        buyerRegisterSchema.safeParse({ ...valid, name: "я".repeat(51) }),
+      ),
+    ).toEqual({ name: [buyerAuthTexts.nameInvalid] });
+  });
+
+  it("«Підтвердити пароль»: rejects passwords that do not match", () => {
+    expect(buyerAuthTexts.confirmPassword).toBe("Підтвердити пароль");
+    const result = buyerRegisterSchema.safeParse({
+      ...valid,
+      confirmPassword: `${PASSWORD}!`,
+    });
+    expect(fieldErrors(result)).toEqual({
+      confirmPassword: [buyerAuthTexts.passwordsMismatch],
+    });
+  });
+
+  it("shows the mismatch together with other errors", () => {
+    const result = buyerRegisterSchema.safeParse({
+      ...valid,
+      login: "nope",
+      confirmPassword: "other",
+    });
+    expect(fieldErrors(result)).toEqual({
+      login: [buyerAuthTexts.loginInvalid],
+      confirmPassword: [buyerAuthTexts.passwordsMismatch],
+    });
+  });
+
+  it("uses the backend password length (8 characters)", () => {
+    const result = buyerRegisterSchema.safeParse({
+      ...valid,
+      password: "1234567",
+      confirmPassword: "1234567",
+    });
+    expect(fieldErrors(result)).toEqual({
+      password: [messages.PASSWORD_TOO_SHORT],
+    });
+  });
+
+  it("asks to confirm the password when that field is empty", () => {
+    expect(buyerAuthTexts.confirmRequired).toBe("Підтвердіть пароль");
+    const result = buyerRegisterSchema.safeParse({
+      ...valid,
+      confirmPassword: "",
+    });
+    expect(fieldErrors(result)).toEqual({
+      confirmPassword: [buyerAuthTexts.confirmRequired],
+    });
   });
 });
 
@@ -281,5 +439,93 @@ describe("cardFormSchema", () => {
       priceUah: "2400",
       productUrl: "http://x.ua",
     });
+  });
+});
+
+describe("brandRegisterSchema: brand name and website (US-21)", () => {
+  const valid = { ...BRAND, email: "info@lileya.com.ua", password: PASSWORD };
+
+  it("accepts a full form and trims name and website", () => {
+    const result = brandRegisterSchema.parse({
+      ...valid,
+      name: "  Lileya ",
+      websiteUrl: " https://lileya.com.ua ",
+    });
+    expect(result.name).toBe("Lileya");
+    expect(result.websiteUrl).toBe("https://lileya.com.ua");
+  });
+
+  it.each(["", "L", "a".repeat(51), "Lil\u0000eya"])(
+    "rejects the name %j with the profile rule",
+    (name) => {
+      const result = brandRegisterSchema.safeParse({ ...valid, name });
+      expect(fieldErrors(result)).toEqual({ name: [brandNameInvalidMessage] });
+    },
+  );
+
+  it.each([
+    "",
+    "http://lileya.com.ua",
+    "lileya.com.ua",
+    "https://",
+    "https://lileya",
+  ])("rejects the website %j", (websiteUrl) => {
+    const result = brandRegisterSchema.safeParse({ ...valid, websiteUrl });
+    expect(fieldErrors(result)).toEqual({
+      websiteUrl: [websiteUrlInvalidMessage],
+    });
+  });
+
+  it("reports every wrong field at once", () => {
+    const result = brandRegisterSchema.safeParse({
+      name: "",
+      websiteUrl: "",
+      email: "",
+      password: "",
+    });
+    expect(Object.keys(fieldErrors(result))).toEqual([
+      "name",
+      "websiteUrl",
+      "email",
+      "password",
+    ]);
+  });
+});
+
+describe("isWebsiteUrl: the same examples as @WebsiteUrl", () => {
+  it.each(websiteUrlExamples.map((e) => [e.value.slice(0, 60), e] as const))(
+    "%j",
+    (_, example) => {
+      expect(isWebsiteUrl(example.value)).toBe(example.valid);
+    },
+  );
+});
+
+describe("withHttps: «brand.com.ua» gets https:// when the field loses focus", () => {
+  it.each([
+    ["brand.com.ua", "https://brand.com.ua"],
+    ["  brand.com.ua/uk ", "https://brand.com.ua/uk"],
+    ["//brand.com.ua", "https://brand.com.ua"],
+    ["https://brand.com.ua", "https://brand.com.ua"],
+    // Another scheme stays as typed: the error says what is wrong.
+    ["http://brand.com.ua", "http://brand.com.ua"],
+    ["", ""],
+  ])("%j → %j", (typed, expected) => {
+    expect(withHttps(typed)).toBe(expected);
+  });
+});
+
+describe("normalizeWebsiteUrl: the same examples as WebsiteUrlValidator.normalize", () => {
+  it.each(websiteUrlNormalizedExamples)("$value → $normalized", (example) => {
+    expect(normalizeWebsiteUrl(example.value)).toBe(example.normalized);
+  });
+
+  it("the field shows the clean link after it loses focus", () => {
+    expect(cleanWebsiteUrl(" goldi.ua/?srsltid=abc ")).toBe(
+      "https://goldi.ua/",
+    );
+    expect(cleanWebsiteUrl("https://goldi.ua/?lang=uk&utm_source=x")).toBe(
+      "https://goldi.ua/?lang=uk",
+    );
   });
 });

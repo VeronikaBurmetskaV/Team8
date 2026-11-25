@@ -12,7 +12,9 @@ import {
   hasPriceRange,
   type BrandOption,
   type PriceRange,
+  type SizeOption,
 } from "./catalog";
+import { SizeFilter } from "./SizeFilter";
 import { BrandFilter } from "./BrandFilter";
 import { FilterGroup } from "./FilterGroup";
 import { PriceFilter } from "./PriceFilter";
@@ -20,7 +22,10 @@ import styles from "./CatalogPage.module.css";
 
 interface FilterPanelProps {
   id: string;
-  /** Below --bp-desktop the panel is a drawer over the page; on a laptop, a column. */
+  /**
+   * A drawer over the page (catalogue below --bp-desktop, /feed on every size) or a column
+   * beside the grid (catalogue on a laptop).
+   */
   isDrawer: boolean;
   onClose: () => void;
   /** The price range applied in the URL (?minPrice=&maxPrice=). */
@@ -31,6 +36,10 @@ interface FilterPanelProps {
   brandOptions: readonly BrandOption[] | null;
   selectedBrands: readonly string[];
   onToggleBrand: (key: string) => void;
+  /** Sizes in stock (sizeOptions); null while loading. */
+  sizeOptions: readonly SizeOption[] | null;
+  selectedSizes: readonly string[];
+  onToggleSize: (key: string) => void;
   /** Active filters (each brand + price as one); «Скинути все» shows when above 0. */
   activeCount: number;
   onResetAll: () => void;
@@ -58,6 +67,9 @@ export function FilterPanel({
   brandOptions,
   selectedBrands,
   onToggleBrand,
+  sizeOptions,
+  selectedSizes,
+  onToggleSize,
   activeCount,
   onResetAll,
   resultCount,
@@ -115,6 +127,8 @@ export function FilterPanel({
         role={isDrawer ? "dialog" : undefined}
         aria-modal={isDrawer ? true : undefined}
         data-expanded={brandsExpanded}
+        // CSS lays the panel out by this, not by the window: /feed keeps the drawer on a laptop.
+        data-layout={isDrawer ? "drawer" : "column"}
         onKeyDown={onKeyDown}
       >
         <div className={styles.panelHeader}>
@@ -180,6 +194,25 @@ export function FilterPanel({
                 />
               </FilterGroup>
             )
+          ) : group === t.sizeGroup ? (
+            <FilterGroup
+              key={group}
+              id={`${id}-size`}
+              title={group}
+              summary={
+                selectedSizes.length > 0
+                  ? t.brandSelected(selectedSizes.length)
+                  : undefined
+              }
+              initialOpen={selectedSizes.length > 0}
+            >
+              <SizeFilter
+                id={`${id}-size`}
+                options={sizeOptions}
+                selected={selectedSizes}
+                onToggle={onToggleSize}
+              />
+            </FilterGroup>
           ) : (
             <FilterGroup key={group} id={`${id}-group-${index}`} title={group}>
               <p className={styles.groupSoon}>{t.soon}</p>
