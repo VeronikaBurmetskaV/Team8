@@ -16,6 +16,7 @@ function profile(state: ProfileState): BrandProfileResponse {
   const consented = state === "CONSENTED";
   return {
     name: state === "INCOMPLETE" ? null : "Тестовий бренд",
+    websiteUrl: null,
     logoImageId: null,
     logoUrl: null,
     logoDisplayUrl: null,
