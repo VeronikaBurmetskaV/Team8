@@ -319,7 +319,15 @@ export function FeedPage() {
   } else {
     content = (
       <div className={styles.stage}>
-        <div className={styles.deck} role="region" aria-label={t.cardRegion}>
+        <div
+          className={styles.deck}
+          role="region"
+          aria-label={t.cardRegion}
+          // Hide the next card while the top one is flipped or turning; show it at once when
+          // the top card flies off (the flip resets only after that). FeedPage.module.css.
+          data-flipped={flipped && flying === null}
+          data-flying={flying !== null}
+        >
           {under !== null && (
             <div
               key={under.id}

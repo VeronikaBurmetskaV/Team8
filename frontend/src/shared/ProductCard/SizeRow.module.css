@@ -6,7 +6,7 @@
   position: relative;
   display: flex;
   min-width: 0;
-  /* Room for the red count that sticks out over the top right corner. */
+  /* Room above and right of the circles for a size's red badge (.list reaches into it). */
   padding-top: calc(var(--size-count-badge) / 3);
   padding-right: calc(var(--size-count-badge) / 3);
 }
@@ -42,6 +42,22 @@
   user-select: none;
 }
 
+/* The visible list reaches into the row's padding above and on the right, so a size's red badge
+   sticking out of its circle is not cut off by overflow: hidden. Same place on screen as before. */
+.list {
+  margin: calc(var(--size-count-badge) / -3) calc(var(--size-count-badge) / -3)
+    0 0;
+  padding: calc(var(--size-count-badge) / 3) calc(var(--size-count-badge) / 3) 0
+    0;
+}
+
+/* With red badges: a wider gap (8px > the badge's 6px overhang), so a badge never covers the
+   next circle. fitSizes reads this gap from the measuring copy. */
+.row[data-badges="true"] .list,
+.row[data-badges="true"] .measure {
+  gap: var(--space-1);
+}
+
 /* The measuring copy takes no place and is never seen. */
 .measure {
   position: absolute;
@@ -73,19 +89,37 @@
   white-space: nowrap;
 }
 
+/* A sold-out size (card only): grey and struck through, like the back side's pill
+   (ProductCard.module.css .backSize[data-available="false"]). Same border width, so the
+   measuring copy keeps the same widths. */
+.dot[data-available="false"] {
+  border-color: var(--color-gray-border);
+  background-color: var(--color-offwhite);
+  color: var(--color-gray-text);
+  text-decoration: line-through;
+}
+
 .more {
   border-style: dashed;
   color: var(--color-gray-text);
 }
 
-/* 1–2 left (LOW_STOCK_SIZES): a red count over the top right corner of the group (white on red 5.6:1). */
-.count {
+/* The anchor of the size's own badge. */
+.dot {
+  position: relative;
+}
+
+/* 1–4 items left in THIS size (shared/sizes.ts lowStockQuantity): a red count over the top right
+   corner of its circle (white on red 5.6:1). Never struck through with a sold-out circle: a
+   sold-out size has no badge. */
+.badge {
   position: absolute;
   top: calc(var(--size-count-badge) / -3);
   right: calc(var(--size-count-badge) / -3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   min-width: var(--size-count-badge);
   height: var(--size-count-badge);
   padding: 0 calc(var(--size-count-badge) / 6);
@@ -95,6 +129,7 @@
   font-size: 0.6875rem;
   font-weight: var(--font-weight-bold);
   line-height: 1;
+  text-decoration: none;
 }
 
 /* Everything sold out: a small grey text instead of the circles. */

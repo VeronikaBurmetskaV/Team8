@@ -55,6 +55,41 @@ class JsonLdSitemapImporterTest {
     }
 
     @Test
+    void oneByOneLowStockPageGivesOnlyTheExplicitCounts() {
+        ImportedItem item = ONE_BY_ONE.parseProduct(Fixtures.text("onebyone-product-low-stock.html"),
+            "https://onebyone.ua/shtani-prjami-bezhevogo-koloru").orElseThrow();
+
+        assertThat(item.sizes()).containsExactly(
+            new ProductSize("XS", false),           // «sold out»: unavailable, count unknown
+            new ProductSize("S", true, 1),          // «(1 од.)»
+            new ProductSize("M", true),             // «(last size)» is ambiguous → unknown, not 1
+            new ProductSize("L", true),             // no note → unknown, never a guess
+            new ProductSize("XL", true, 2),         // «(2 од.)»
+            new ProductSize("XS/S", true, 4),       // a composite size is one size of its own
+            new ProductSize("XXL", true));          // written twice: never added up (3 + 1)
+        assertThat(item.sizes()).extracting(ProductSize::quantity)
+            .containsExactly(null, 1, null, null, 2, 4, null);
+    }
+
+    @Test
+    void oneByOneQuantityReadsOnlyAnExplicitCount() {
+        assertThat(JsonLdSitemapImporter.oneByOneQuantity("(2 од.)")).isEqualTo(2);
+        assertThat(JsonLdSitemapImporter.oneByOneQuantity(" ( 12 ОД ) ")).isEqualTo(12);
+        assertThat(JsonLdSitemapImporter.oneByOneQuantity("(0 од.)")).isZero();
+        for (String note : new String[] {"(last size)", "(sold out)", "(pre-order)", "(2)", "(2 шт.)",
+                "(-1 од.)", "до 2 од.", "", null}) {
+            assertThat(JsonLdSitemapImporter.oneByOneQuantity(note)).as(String.valueOf(note)).isNull();
+        }
+    }
+
+    @Test
+    void theSizesOfTheOtherFixturesHaveNoCount() {
+        ImportedItem oneByOne = ONE_BY_ONE.parseProduct(Fixtures.text("onebyone-product.html"),
+            "https://onebyone.ua/suknja-atlasna-rozhevogo-koloru").orElseThrow();
+        assertThat(oneByOne.sizes()).extracting(ProductSize::quantity).containsOnlyNulls();
+    }
+
+    @Test
     void soldOutOneByOnePageIsNotAvailable() {
         ImportedItem item = ONE_BY_ONE.parseProduct(Fixtures.text("onebyone-product-sold-out.html"),
             "https://onebyone.ua/kardigan-z-kishenjami-bezhevogo-koloru").orElseThrow();

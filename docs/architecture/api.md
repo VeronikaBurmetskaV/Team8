@@ -82,7 +82,7 @@ Shapes:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `sizes` | `[{ "label": string, "available": boolean }]` | Sizes in the source's order; `available: false` = out of stock |
+| `sizes` | `[{ "label": string, "available": boolean, "quantity"?: integer }]` | Sizes in the source's order; `available: false` = out of stock. `quantity` (optional, 2026-11-26) = the exact number of items left in that size, **only** when the source states it (today: One By One's «N од.»); left out when unknown, never `null`. Unknown is never turned into 0; `quantity: 0` always comes with `available: false`. A size written twice on a source page gets no `quantity` (counts are never added up); a composite size such as `XS/S` is one size with its own count. Every successful import replaces the whole list, so a count the source no longer states disappears. Clients that ignore the key keep working |
 | `colors` | `[{ "name": string, "hex": string \| null }]` | Colour name as the source gives it; `hex` is `#RRGGBB` from the importer's fixed table, `null` for an unknown name |
 | `material` | string | Plain text, ≤ 500 chars, e.g. «Матеріал верху: Поліестер 95%, Еластан 5%» |
 | `description` | string | Plain text (HTML removed on import), ≤ 5000 chars, lines separated by `\n` |
@@ -97,7 +97,7 @@ Shapes:
       "priceUah": 750,
       "photoUrl": "https://media2.vsisvoi.ua/uploads/…/a.jpg",
       "productUrl": "https://vsisvoi.ua/store/futbolka-sira-p-211-316-0001",
-      "sizes": [{ "label": "M", "available": true }, { "label": "L", "available": false }],
+      "sizes": [{ "label": "M", "available": true, "quantity": 2 }, { "label": "L", "available": false }],
       "colors": [{ "name": "сірий", "hex": "#9E9E9E" }],
       "material": "100% Бавовна",
       "description": "Фасон: оверсайз\nКолір: сірий"

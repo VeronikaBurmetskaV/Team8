@@ -180,6 +180,11 @@ export interface PublicCard {
 export interface ProductSize {
   label: string;
   available: boolean;
+  /**
+   * The exact number of items left in this size, only when the source states it (api.md §2.2).
+   * Absent = unknown: never treat it as 0, never derive it from anything else.
+   */
+  quantity?: number;
 }
 
 /**

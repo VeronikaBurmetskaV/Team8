@@ -211,6 +211,63 @@ class CatalogSyncTest {
             .query(String.class).single()).isEqualTo("partial");
     }
 
+    // ---------- per-size quantities (data-model.md §5.3) ----------
+
+    @Test
+    void quantitiesAreStoredUpdatedAndDroppedByTheNextSuccessfulRun() {
+        sync.apply(sourceId, complete(withSizes("A", new ProductSize("S", true, 2), new ProductSize("M", true))));
+        assertThat(card("A").get("sizes").toString()).isEqualTo(
+            "[{\"label\": \"S\", \"quantity\": 2, \"available\": true}, {\"label\": \"M\", \"available\": true}]");
+
+        // the next run reads new counts: they replace the old ones
+        sync.apply(sourceId, complete(withSizes("A", new ProductSize("S", true, 1), new ProductSize("M", true, 4))));
+        assertThat(card("A").get("sizes").toString()).isEqualTo(
+            "[{\"label\": \"S\", \"quantity\": 1, \"available\": true}, {\"label\": \"M\", \"quantity\": 4, \"available\": true}]");
+
+        // a successful run without counts: the old counts are not kept
+        sync.apply(sourceId, complete(withSizes("A", new ProductSize("S", true), new ProductSize("M", false))));
+        assertThat(card("A").get("sizes").toString()).isEqualTo(
+            "[{\"label\": \"S\", \"available\": true}, {\"label\": \"M\", \"available\": false}]");
+    }
+
+    @Test
+    void anIncompleteRunWithoutTheItemNeitherChangesItsSizesNorHidesIt() {
+        sync.apply(sourceId, complete(withSizes("A", new ProductSize("S", true, 2))));
+        String before = card("A").get("sizes").toString();
+
+        RunStatus status = sync.apply(sourceId, new ImportBatch(List.of(), false));
+
+        assertThat(status).isEqualTo(RunStatus.PARTIAL);
+        assertThat(card("A").get("sizes").toString()).isEqualTo(before);
+        assertThat(card("A").get("status")).as("never marked sold out by a failed read").isEqualTo("published");
+    }
+
+    @Test
+    void feedSendsAQuantityOnlyWhenItIsKnown() throws Exception {
+        sync.apply(sourceId, complete(withSizes("A",
+            new ProductSize("XS", true, 5), new ProductSize("S", true, 4), new ProductSize("M", true, 1),
+            new ProductSize("L", true), new ProductSize("XL", true, 0), new ProductSize("XS/S", false))));
+        String id = card("A").get("id").toString();
+
+        String json = mvc.perform(get("/api/feed")).andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString();
+
+        assertThat(feedCard(json, id).get("sizes")).isEqualTo(List.of(
+            Map.of("label", "XS", "available", true, "quantity", 5),
+            Map.of("label", "S", "available", true, "quantity", 4),
+            Map.of("label", "M", "available", true, "quantity", 1),
+            Map.of("label", "L", "available", true),
+            Map.of("label", "XL", "available", false, "quantity", 0),
+            Map.of("label", "XS/S", "available", false)));
+        assertThat(json).as("unknown is left out, never null").doesNotContain("\"quantity\":null");
+    }
+
+    static ImportedItem withSizes(String externalId, ProductSize... sizes) {
+        ImportedItem base = item(externalId, 1000, true);
+        return new ImportedItem(base.externalId(), base.brandName(), base.name(), base.priceUah(), base.photoUrl(),
+            base.productUrl(), true, List.of(sizes), base.colors(), base.material(), base.description());
+    }
+
     // ---------- GET /api/feed ----------
 
     @Test

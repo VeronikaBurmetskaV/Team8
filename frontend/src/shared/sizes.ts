@@ -83,40 +83,87 @@ export function sortSizes(sizes: readonly ProductSize[]): ProductSize[] {
   );
 }
 
-/** «Мало розмірів»: 1–LOW_STOCK_SIZES sizes left in stock, or none at all. */
-export type StockHint = { kind: "few"; count: number } | { kind: "none" };
+/**
+ * Every size is sold out. (There is no «few sizes left» hint: the number of sizes in stock says
+ * nothing about how many items are left, so it is never shown as a stock warning.)
+ */
+export type StockHint = { kind: "none" };
 
 /**
- * «Мало розмірів»: up to this many sizes in stock (1 or 2). The one threshold of the red count,
- * the «Залишилось N розміри» in the label of the size circles and every other «few» check:
- * they all read stockHint, which is the only place that compares with it.
+ * Every size once (by sizeKey), in the filter's order: the circles on the front of the card,
+ * sold-out ones included. A size is in stock when any of its spellings is; it keeps the first
+ * spelling in stock, else the first one. Empty labels are dropped.
  */
-export const LOW_STOCK_SIZES = 2;
-
-/**
- * The sizes in stock, each once (by sizeKey, the first spelling wins), in the filter's order:
- * the circles on the tile and on the front of the card.
- */
-export function sizesInStock(sizes: readonly ProductSize[]): ProductSize[] {
-  const seen = new Set<string>();
-  return sortSizes(sizes).filter((size) => {
+export function uniqueSizes(sizes: readonly ProductSize[]): ProductSize[] {
+  const result: ProductSize[] = [];
+  const indexByKey = new Map<string, number>();
+  for (const size of sortSizes(sizes)) {
     const key = sizeKey(size.label);
-    if (!size.available || key === "" || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    if (key === "") continue;
+    const index = indexByKey.get(key);
+    const merged = index === undefined ? undefined : result[index];
+    if (index === undefined || merged === undefined) {
+      indexByKey.set(key, result.length);
+      result.push(
+        size.quantity === undefined
+          ? { label: size.label, available: isInStock(size) }
+          : {
+              label: size.label,
+              available: isInStock(size),
+              quantity: size.quantity,
+            },
+      );
+    } else {
+      // The same size written twice (e.g. two colours): in stock when any copy is; its count is
+      // unknown, because counts of two copies are never added up or picked.
+      const available = merged.available || isInStock(size);
+      result[index] = {
+        label: merged.available || !isInStock(size) ? merged.label : size.label,
+        available,
+      };
+    }
+  }
+  return result;
+}
+
+/** In stock: available, and not stated to have 0 items left. */
+function isInStock(size: ProductSize): boolean {
+  return size.available && size.quantity !== 0;
 }
 
 /**
- * How many sizes are left: null without sizes (brand-made cards) or with 4+ in stock; «few»
- * with 1–LOW_STOCK_SIZES (the red count over the circles); «none» when every size is sold out.
+ * The sizes in stock, each once (by sizeKey, the first spelling in stock wins), in the filter's
+ * order: the circles on the tile.
+ */
+export function sizesInStock(sizes: readonly ProductSize[]): ProductSize[] {
+  return uniqueSizes(sizes).filter((size) => size.available);
+}
+
+/**
+ * A size gets the red badge with its number of items left when that number is known and from 1
+ * to LOW_STOCK_QUANTITY. Not final: a product decision, kept in this one place.
+ */
+export const LOW_STOCK_QUANTITY = 4;
+
+/**
+ * The number on the size's red badge, or null for no badge: only a size in stock whose exact
+ * count (from the source, api.md §2.2) is 1…LOW_STOCK_QUANTITY. Unknown counts, 5 or more, and
+ * sold-out sizes (grey and struck through instead) get no badge.
+ */
+export function lowStockQuantity(size: ProductSize): number | null {
+  const { quantity } = size;
+  if (!isInStock(size) || quantity === undefined) return null;
+  if (!Number.isInteger(quantity)) return null;
+  return quantity >= 1 && quantity <= LOW_STOCK_QUANTITY ? quantity : null;
+}
+
+/**
+ * «none» when the card has sizes and every one is sold out (the small grey «Немає в наявності»
+ * instead of the circles); null otherwise, also without sizes (brand-made cards).
  */
 export function stockHint(
   sizes: readonly ProductSize[] | undefined,
 ): StockHint | null {
   if (sizes === undefined || sizes.length === 0) return null;
-  const count = sizesInStock(sizes).length;
-  if (count === 0) return { kind: "none" };
-  if (count <= LOW_STOCK_SIZES) return { kind: "few", count };
-  return null;
+  return sizesInStock(sizes).length === 0 ? { kind: "none" } : null;
 }
