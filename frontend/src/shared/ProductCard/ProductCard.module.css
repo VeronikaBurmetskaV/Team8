@@ -15,7 +15,7 @@
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 550ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform var(--card-flip-duration) cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
 .inner[data-flipped="true"] {
@@ -49,7 +49,8 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  background-color: var(--color-gray-border);
+  /* Neutral bands beside a photo that does not match the box (object-fit: contain). */
+  background-color: var(--color-offwhite);
 }
 
 /* Photo + something over it (photoOverlay): the overlay is outside the blurred box. */
@@ -95,8 +96,10 @@
   display: block;
   width: 100%;
   height: 100%;
-  /* Scaled proportionally, cropped instead of stretched (US-08.1 CL). */
-  object-fit: cover;
+  /* The whole photo, scaled proportionally: never cropped, never stretched (US-08.1 CL, A-14).
+     A photo of another shape leaves neutral bands of the photo box around it. */
+  object-fit: contain;
+  object-position: center;
   user-select: none;
   -webkit-user-drag: none;
   pointer-events: none;
@@ -367,6 +370,40 @@
 .backSizeNote {
   color: var(--color-gray-text);
   font-size: var(--font-size-xs);
+}
+
+/* 1–4 items left in this size: the same red badge as on the front (SizeRow.module.css .badge),
+   on the top right corner of its own pill. The list gets room above for the first line, and
+   pill and note a gap wider than the badge's 6px overhang, so the badge never covers the note. */
+.backSizes[data-badges="true"] {
+  padding-top: calc(var(--size-count-badge) / 3);
+}
+
+.backSizes[data-badges="true"] .backSize {
+  gap: var(--space-1);
+}
+
+.backSizePill {
+  position: relative;
+}
+
+.backSizeBadge {
+  position: absolute;
+  top: calc(var(--size-count-badge) / -3);
+  right: calc(var(--size-count-badge) / -3);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: var(--size-count-badge);
+  height: var(--size-count-badge);
+  padding: 0 calc(var(--size-count-badge) / 6);
+  border-radius: var(--radius-pill);
+  background-color: var(--color-danger);
+  color: var(--color-on-danger);
+  font-size: 0.6875rem;
+  font-weight: var(--font-weight-bold);
+  line-height: 1;
 }
 
 .noDetails {

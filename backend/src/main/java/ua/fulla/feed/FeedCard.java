@@ -21,8 +21,11 @@ record FeedCard(
         @JsonInclude(JsonInclude.Include.NON_NULL) String material,
         @JsonInclude(JsonInclude.Include.NON_NULL) String description) {
 
-    /** {@code {"label":"M","available":true}}, in site order. */
-    record Size(String label, boolean available) {}
+    /**
+     * {@code {"label":"M","available":true}}, in site order; {@code "quantity":2} only when the
+     * source stated the exact number of items left (left out when unknown, never {@code null}).
+     */
+    record Size(String label, boolean available, @JsonInclude(JsonInclude.Include.NON_NULL) Integer quantity) {}
 
     /** {@code {"name":"бежевий","hex":"#D9C4A5"}}; {@code hex} is null for an unknown colour name. */
     record Color(String name, String hex) {}

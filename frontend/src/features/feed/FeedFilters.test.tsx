@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -189,5 +190,43 @@ describe("/feed with the size filter", () => {
     expect(renderFeed("/feed?size=M")).toContain(
       'aria-label="Скинути фільтр: розмір M"',
     );
+  });
+});
+
+describe("the next card while the top card is flipped (no see-through flip)", () => {
+  const css = readFileSync("src/features/feed/FeedPage.module.css", "utf8");
+
+  it("the deck tells its CSS whether the top card is flipped or flying off", () => {
+    const deck = render("/feed").match(/<div[^>]*role="region"[^>]*>/)?.[0];
+    expect(deck).toContain('data-flipped="false"');
+    expect(deck).toContain('data-flying="false"');
+  });
+
+  it("hides the next card at once on a flip and shows it only after the flip back", () => {
+    expect(css).toMatch(
+      /\.deck\[data-flipped="true"\] > \.underCard\s*{[^}]*visibility: hidden;[^}]*transition: none;/,
+    );
+    expect(css).toMatch(
+      /\.underCard\s*{[^}]*transition: visibility 0s linear var\(--card-flip-duration\);/,
+    );
+  });
+
+  it("shows the next card at once when the top card flies off, and without motion", () => {
+    expect(css).toMatch(
+      /\.deck\[data-flying="true"\] > \.underCard\s*{\s*transition: none;/,
+    );
+    expect(css).toMatch(
+      /prefers-reduced-motion: reduce\)[\s\S]*\.underCard\s*{[^}]*transition: none;/,
+    );
+  });
+
+  it("uses the card's own flip duration", () => {
+    const card = readFileSync(
+      "src/shared/ProductCard/ProductCard.module.css",
+      "utf8",
+    );
+    const tokens = readFileSync("src/shared/tokens.css", "utf8");
+    expect(card).toMatch(/transition: transform var\(--card-flip-duration\)/);
+    expect(tokens).toMatch(/--card-flip-duration: \d+ms;/);
   });
 });

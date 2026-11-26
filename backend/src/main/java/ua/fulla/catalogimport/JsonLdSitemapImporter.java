@@ -19,6 +19,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
@@ -231,24 +233,61 @@ class JsonLdSitemapImporter implements CatalogImporter {
 
     // ---------- HTML ----------
 
-    /** One By One: {@code <label class="product-size__item [sold]"><input …><big>M <small>(…)</small></big>}. */
+    /**
+     * One By One: {@code <label class="product-size__item [sold|last]"><input …><big>M <small>(…)</small></big>}.
+     * The {@code <small>} note is «(sold out)», «(pre-order)», «(last size)» or, on the live site,
+     * an exact count such as «(2 од.)». Only that explicit count becomes a quantity
+     * ({@link #oneByOneQuantity}); «last size» is ambiguous (the last item of the size, or the
+     * last size left) and stays unknown, like a size without a note.
+     */
     private static List<ProductSize> oneByOneSizes(Document doc) {
-        Map<String, Boolean> sizes = new LinkedHashMap<>();
+        Map<String, List<ProductSize>> sizes = new LinkedHashMap<>();
         for (Element item : doc.select(".product-size-box .product-size__item")) {
             Element big = item.selectFirst("big");
             if (big == null) {
                 continue;
             }
             Element copy = big.clone();
+            Element small = copy.selectFirst("small");
+            Integer quantity = small == null ? null : oneByOneQuantity(small.text());
             copy.select("small").remove();
             String label = ImportText.clean(copy.text());
             Element input = item.selectFirst("input");
             boolean available = !item.hasClass("sold") && (input == null || !input.hasAttr("disabled"));
             if (label != null) {
-                sizes.merge(label, available, Boolean::logicalOr);
+                sizes.computeIfAbsent(label, key -> new ArrayList<>()).add(new ProductSize(label, available, quantity));
             }
         }
-        return toSizes(sizes);
+        List<ProductSize> result = new ArrayList<>();
+        sizes.values().forEach(same -> result.add(mergeSameLabel(same)));
+        return result;
+    }
+
+    /** «(2 од.)» — the one form of an explicit count on One By One. Anything else: null (unknown). */
+    private static final Pattern ONE_BY_ONE_COUNT =
+        Pattern.compile("\\(\\s*(\\d{1,5})\\s*од\\.?\\s*\\)", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    /** The exact number of items in a One By One size note, or null when the note states none. */
+    static Integer oneByOneQuantity(String note) {
+        String text = ImportText.clean(note);
+        if (text == null) {
+            return null;
+        }
+        Matcher matcher = ONE_BY_ONE_COUNT.matcher(text);
+        return matcher.matches() ? Integer.valueOf(matcher.group(1)) : null;
+    }
+
+    /**
+     * One size written more than once on a page: available when any copy is. A count is kept only
+     * when the label appears once; two copies (e.g. two colours) are never added up or guessed.
+     */
+    static ProductSize mergeSameLabel(List<ProductSize> same) {
+        ProductSize first = same.getFirst();
+        if (same.size() == 1) {
+            return first;
+        }
+        boolean available = same.stream().anyMatch(ProductSize::available);
+        return new ProductSize(first.label(), available, null);
     }
 
     /** Cher'17: {@code <label class="checkbox-list__item" data-type="normal"><input name="sizes" …><span class="checkbox-list__text">M/L</span>}. */

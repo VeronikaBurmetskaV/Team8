@@ -146,6 +146,19 @@
   transform: scale(0.96) translateY(8px);
   opacity: 0.85;
   pointer-events: none;
+  /* Back after a flip only once the top card has turned back (.deck data-flipped, FeedPage.tsx). */
+  transition: visibility 0s linear var(--card-flip-duration);
+}
+
+/* The top card is flipped or turning: its footprint narrows, so the next card is hidden. */
+.deck[data-flipped="true"] > .underCard {
+  visibility: hidden;
+  transition: none;
+}
+
+/* The top card flies off (maybe still flipped): the next card is there at once. */
+.deck[data-flying="true"] > .underCard {
+  transition: none;
 }
 
 .swipeCard {
@@ -519,5 +532,6 @@
 
   .underCard {
     transform: none;
+    transition: none;
   }
 }

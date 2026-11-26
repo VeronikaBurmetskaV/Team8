@@ -206,6 +206,16 @@ export const productCardTexts = {
   moreSizesLabel: (count: number) =>
     `Ще ${count} ${pluralUk(count, ["розмір", "розміри", "розмірів"])}`,
   outOfStock: "Немає в наявності",
+  /** A sold-out size circle on the front side: «M, Немає в наявності». */
+  soldOutSizeLabel: (label: string) => `${label}, Немає в наявності`,
+  /**
+   * A size with its red badge (1–4 items left, shared/sizes.ts lowStockQuantity), for screen
+   * readers: «M, залишилось 2 шт.». Wording pending the team lead's confirmation.
+   */
+  lowStockSizeLabel: (label: string, count: number) =>
+    `${label}, залишилось ${count} шт.`,
+  /** The note next to such a size on the back side: «Залишилось 2 шт.». Same pending wording. */
+  lowStockNote: (count: number) => `Залишилось ${count} шт.`,
   colors: "Колір",
   material: "Матеріал",
   description: "Опис",
@@ -216,14 +226,11 @@ export const productCardTexts = {
   backLabel: "Перевернути картку назад до фото",
   detailsTitle: "Деталі товару",
   noDetails: "Бренд ще не додав деталей до цього товару.",
-  /** 1–2 sizes in stock (shared/sizes.ts stockHint, LOW_STOCK_SIZES): in the label of the size circles. */
-  stockFew: (count: number) =>
-    `${pluralUk(count, ["Залишився", "Залишилось", "Залишилось"])} ${count} ${pluralUk(count, ["розмір", "розміри", "розмірів"])}`,
   /** The small grey text instead of the circles when every size is sold out. */
   stockNone: "Немає в наявності",
-  /** The label of the size circles: «Доступні розміри: S, M. Залишилось 2 розміри». */
-  sizesInStockLabel: (labels: readonly string[], few: string | null) =>
-    `Доступні розміри: ${labels.join(", ")}.${few === null ? "" : ` ${few}`}`,
+  /** The label of the size circles: «Доступні розміри: S, M.» (the sizes in stock). */
+  sizesInStockLabel: (labels: readonly string[]) =>
+    `Доступні розміри: ${labels.join(", ")}.`,
 } as const;
 
 /** The swipe feed page (/feed). */

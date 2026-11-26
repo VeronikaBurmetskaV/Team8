@@ -4,7 +4,7 @@ import type { FeedCard, ProductColor } from "../../api/types";
 import { RotateIcon } from "../icons";
 import { productCardTexts as t } from "../messages.uk";
 import { formatPrice } from "../price";
-import { sortSizes } from "../sizes";
+import { lowStockQuantity, uniqueSizes } from "../sizes";
 import styles from "./ProductCard.module.css";
 import { SizeRow } from "./SizeRow";
 
@@ -65,8 +65,9 @@ export function ProductCard({
     onFlippedChange?.(value);
   };
 
-  // The back lists every size in the filter's order (the front shows what fits in a line).
-  const sizes = sortSizes(card.sizes ?? []);
+  // The back lists every size once, in the filter's order, by the same rules as the front
+  // (uniqueSizes: a size written twice never shows two counts); the front shows what fits.
+  const sizes = uniqueSizes(card.sizes ?? []);
   const colors = card.colors ?? [];
   const hasDetails =
     Boolean(card.material) ||
@@ -156,23 +157,45 @@ export function ProductCard({
               {sizes.length > 0 && (
                 <section className={styles.section}>
                   <h3 className={styles.sectionTitle}>{t.sizes}</h3>
-                  <ul className={styles.backSizes} aria-label={t.sizes}>
-                    {sizes.map((size) => (
-                      <li
-                        key={size.label}
-                        className={styles.backSize}
-                        data-available={size.available}
-                      >
-                        <span className={styles.backSizePill}>
-                          {size.label}
-                        </span>
-                        {!size.available && (
-                          <span className={styles.backSizeNote}>
-                            {t.outOfStock}
+                  <ul
+                    className={styles.backSizes}
+                    aria-label={t.sizes}
+                    data-badges={sizes.some(
+                      (size) => lowStockQuantity(size) !== null,
+                    )}
+                  >
+                    {sizes.map((size) => {
+                      const count = lowStockQuantity(size);
+                      return (
+                        <li
+                          key={size.label}
+                          className={styles.backSize}
+                          data-available={size.available}
+                        >
+                          <span className={styles.backSizePill}>
+                            {size.label}
+                            {count !== null && (
+                              <span
+                                className={styles.backSizeBadge}
+                                aria-hidden="true"
+                              >
+                                {count}
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </li>
-                    ))}
+                          {!size.available && (
+                            <span className={styles.backSizeNote}>
+                              {t.outOfStock}
+                            </span>
+                          )}
+                          {count !== null && (
+                            <span className={styles.backSizeNote}>
+                              {t.lowStockNote(count)}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
               )}

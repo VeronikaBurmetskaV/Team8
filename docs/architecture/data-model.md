@@ -245,7 +245,7 @@ One row for One By One ("One By One") and one for Cher'17 ("CHER'17"). Всі. �
 | `source_brand_id` | `uuid` | yes | FK `(source_brand_id, source_id)` → `source_brands(id, source_id)` (the brand must belong to the same source) | Importer |
 | `external_id` | `varchar(100)` | yes | `UNIQUE (source_id, external_id)` | Importer: Всі. Свої `g:item_group_id`; One By One / Cher'17 canonical product URL path |
 | `last_synced_at` | `timestamptz` | yes | — | Importer, every successful upsert |
-| `sizes` | `jsonb` | yes | `CHECK (sizes IS NULL OR jsonb_typeof(sizes) = 'array')`; shape `[{"label":"M","available":true}]`, in site order | Importer (Всі. Свої: one feed item per size; others: HTML via Jsoup) |
+| `sizes` | `jsonb` | yes | `CHECK (sizes IS NULL OR jsonb_typeof(sizes) = 'array')`; shape `[{"label":"M","available":true}]`, in site order; optional `"quantity": n` (integer ≥ 0, 2026-11-26) only when the source states the exact number of items left in that size — absent = unknown, never stored as `null` or guessed; `0` implies `available: false`; an unavailable size never keeps a positive count; a label repeated on the page gets no count. No migration: rows without the key read as unknown (`ProductSize`) | Importer (Всі. Свої: one feed item per size; others: HTML via Jsoup) |
 | `colors` | `jsonb` | yes | `CHECK (colors IS NULL OR jsonb_typeof(colors) = 'array')`; shape `[{"name":"бежевий","hex":"#D9C4A5"}]`; `hex` is `null` when the name isn't in the importer's fixed name → hex table | Importer |
 | `material` | `varchar(500)` | yes | plain text, e.g. «Віскоза 95%, Еластан 5%» | Importer |
 | `description` | `text` | yes | `CHECK (description IS NULL OR char_length(description) <= 5000)`; **plain text only** (HTML stripped by Jsoup) | Importer |
