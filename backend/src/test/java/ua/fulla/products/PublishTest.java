@@ -17,6 +17,11 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -245,6 +250,84 @@ class PublishTest {
         assertThat(Instant.parse(publishedAt)).isAfter(Instant.parse("2026-01-01T00:00:00Z"));
     }
 
+    // ---------- QA audit 6.3: gaps found in the tests above ----------
+
+    // T-1, ADR-0009: two presses of «Опублікувати у стрічку» at the same moment. The conditional
+    // UPDATE lets exactly one through; the sequential double publish above cannot catch a
+    // check-then-update written in Java.
+    @Test
+    void twoParallelPublishesOfOneDraftGiveOneOkAndOneInvalidState() throws Exception {
+        Brand brand = brand("Lileya", true);
+        String id = createCard(brand);
+        CountDownLatch start = new CountDownLatch(1);
+        Callable<String> attempt = () -> {
+            start.await();
+            var response = publish(brand, id).andReturn().getResponse();
+            return response.getStatus() == 200 ? "200"
+                : response.getStatus() + " " + JsonPath.read(response.getContentAsString(), "$.error.code");
+        };
+
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<String> first = pool.submit(attempt);
+            Future<String> second = pool.submit(attempt);
+            start.countDown();
+
+            assertThat(List.of(first.get(), second.get())).containsExactlyInAnyOrder("200", "409 INVALID_STATE");
+        } finally {
+            pool.shutdown();
+        }
+        assertThat(row(id).get("status")).isEqualTo("published");
+        assertThat(feedIds().stream().filter(id::equals)).hasSize(1);
+    }
+
+    // INV-10, T-3 for a hand-made card (only the imported card was covered, in BrandSiteImportTest):
+    // a Published card is read-only, and a new price goes unpublish → edit → publish.
+    @Test
+    void aPublishedCardIsNotEditableAndANewPriceGoesThroughUnpublish() throws Exception {
+        Brand brand = brand("Lileya", true);
+        String id = createCard(brand);
+        publish(brand, id).andExpect(status().isOk());
+
+        expectError(edit(brand, id, 1999, ProductTest.PRODUCT_URL), 409, "CARD_NOT_EDITABLE");
+        assertThat(priceInDb(id)).isEqualTo(2400);
+        assertThat(row(id).get("status")).isEqualTo("published");
+
+        unpublish(brand, id).andExpect(status().isOk());
+        edit(brand, id, 1999, ProductTest.PRODUCT_URL)
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.priceUah").value(1999))
+            .andExpect(jsonPath("$.status").value("DRAFT"));
+        publish(brand, id).andExpect(status().isOk());
+
+        String feed = mvc.perform(get("/api/feed")).andReturn().getResponse().getContentAsString();
+        List<Integer> prices = JsonPath.read(feed, "$.items[?(@.id == '" + id + "')].priceUah");
+        assertThat(prices).containsExactly(1999);
+    }
+
+    // US-26 S1/S2 on edit: the same field rules as create, and only the owner may edit (Q-04: 404).
+    @Test
+    void editingADraftHasTheCreateRulesAndOnlyTheOwnerMayEdit() throws Exception {
+        Brand owner = brand("Lileya", false);
+        Brand other = brand("Goldi", true);
+        String id = createCard(owner);
+
+        expectError(edit(owner, id, 2400, "сукня"), 400, "CARD_INVALID_URL")
+            .andExpect(jsonPath("$.error.fields.productUrl").value("CARD_INVALID_URL"));
+        expectError(edit(owner, id, 0, ProductTest.PRODUCT_URL), 400, "CARD_INVALID_PRICE_OR_PHOTO")
+            .andExpect(jsonPath("$.error.fields.priceUah").value("CARD_INVALID_PRICE_OR_PHOTO"));
+        expectError(edit(other, id, 1, ProductTest.PRODUCT_URL), 404, "NOT_FOUND");
+        expectError(edit(owner, UUID.randomUUID().toString(), 1, ProductTest.PRODUCT_URL), 404, "NOT_FOUND");
+        assertThat(priceInDb(id)).isEqualTo(2400);
+
+        // no consent is needed to edit a draft (domain-model.md §4.1: ACTIVE edits drafts)
+        edit(owner, id, 2600, "https://brand-site.ua/linen-dress-v2")
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.priceUah").value(2600))
+            .andExpect(jsonPath("$.productUrl").value("https://brand-site.ua/linen-dress-v2"));
+        assertThat(priceInDb(id)).isEqualTo(2600);
+    }
+
     // ---------- security ----------
 
     @Test
@@ -294,6 +377,18 @@ class PublishTest {
 
     private ResultActions unpublish(Brand brand, String id) throws Exception {
         return mvc.perform(post("/api/brand/products/" + id + "/unpublish").with(csrf()).session(brand.session()));
+    }
+
+    private ResultActions edit(Brand brand, String id, int priceUah, String productUrl) throws Exception {
+        return mvc.perform(put("/api/brand/products/" + id).with(csrf()).session(brand.session())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":\"Лляна сукня міді\",\"priceUah\":" + priceUah + ",\"photoImageId\":null,"
+                + "\"photoUrl\":\"" + ProductTest.PHOTO_URL + "\",\"productUrl\":\"" + productUrl + "\"}"));
+    }
+
+    private Integer priceInDb(String id) {
+        return jdbc.sql("SELECT price_uah FROM products WHERE id = :id")
+            .param("id", UUID.fromString(id)).query(Integer.class).single();
     }
 
     /** The single error envelope: { "error": { "code", "message", "fields"? } }. */

@@ -67,7 +67,8 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
-            <scope>runtime</scope>
+            <!-- compile, not runtime: BrandProfileService reads the constraint name from
+                 PSQLException#getServerErrorMessage(), independent of the server language -->
         </dependency>
         <!-- Local database for the dev profile (ADR-0004); also used by the test provider -->
         <dependency>

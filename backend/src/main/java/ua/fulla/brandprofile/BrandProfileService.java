@@ -8,6 +8,8 @@ import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.ServerErrorMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -45,7 +47,12 @@ public class BrandProfileService {
         "brand_profiles_one_logo_source", "logo",
         "brand_profiles_logo_image_fk", "logo",
         "brand_profiles_consent_pair", "consentGiven");
-    private static final Pattern CONSTRAINT = Pattern.compile("constraint \"([a-z_]+)\"");
+    /**
+     * Any double-quoted identifier in a server message. PostgreSQL translates the text around the
+     * names (lc_messages: «violates check constraint» / «порушує перевірне обмеження»), never the
+     * names themselves, so the fallback looks for a known constraint name among them.
+     */
+    private static final Pattern QUOTED_NAME = Pattern.compile("\"([a-z0-9_]+)\"");
     private static final Pattern TOO_LONG = Pattern.compile("character varying\\((\\d+)\\)");
 
     private final BrandProfileRepository repository;
@@ -173,12 +180,30 @@ public class BrandProfileService {
         }
     }
 
-    /** The field behind a constraint name or a «value too long» error; null when unknown. */
+    /**
+     * The field behind a constraint name or a «value too long» error; null when unknown.
+     *
+     * <p>Independent of the server language: the constraint name is read from the structured
+     * field of the PostgreSQL error ({@link ServerErrorMessage#getConstraint()}), and only when the
+     * driver gives none, from the quoted names in the message. The «too long» case is matched by
+     * the type name {@code character varying(n)}, which PostgreSQL never translates either.
+     */
     static String blamedField(DataIntegrityViolationException e) {
+        for (Throwable cause = e; cause != null; cause = cause.getCause()) {
+            if (cause instanceof PSQLException psql && psql.getServerErrorMessage() != null) {
+                String constraint = psql.getServerErrorMessage().getConstraint();
+                if (constraint != null) {
+                    return CONSTRAINT_FIELDS.get(constraint);
+                }
+            }
+        }
         String message = String.valueOf(e.getMostSpecificCause().getMessage());
-        Matcher constraint = CONSTRAINT.matcher(message);
-        if (constraint.find()) {
-            return CONSTRAINT_FIELDS.get(constraint.group(1));
+        Matcher quoted = QUOTED_NAME.matcher(message);
+        while (quoted.find()) {
+            String field = CONSTRAINT_FIELDS.get(quoted.group(1));
+            if (field != null) {
+                return field;
+            }
         }
         Matcher tooLong = TOO_LONG.matcher(message);
         if (tooLong.find()) {
